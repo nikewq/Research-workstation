@@ -35,7 +35,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .companion-counter{font-size:11px;color:var(--text2);text-align:center;margin-top:6px;opacity:.7}
 .role-badge{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid var(--primary);cursor:pointer;transition:.15s;font-size:12px;color:var(--primary)}
 .role-badge:hover{background:var(--primary);color:#fff}
-.role-option{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:10px}
+.role-option{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:10px;flex-direction:row}
 .role-option:hover,.role-option.selected{border-color:var(--primary);background:rgba(var(--primary-rgb,99,102,241),.08)}
 .role-option-emoji{font-size:26px}
 .role-option-info{flex:1}
@@ -228,8 +228,26 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
     <!-- Step 1: Identity -->
     <div class="setup-step active" id="step-1">
-      <div class="setup-title">👋 欢迎使用 PhD Workstation</div>
-      <div class="setup-subtitle">一次设置，为你量身定制博士工作台</div>
+      <div class="setup-title">👋 欢迎使用研习台</div>
+      <div class="setup-subtitle">选择你的身份，开始专属学习之旅</div>
+      <!-- 角色选择 -->
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <div class="role-option" data-role="undergrad" onclick="selectSetupRole('undergrad')" style="flex:1;padding:10px 8px;flex-direction:column;align-items:center;text-align:center;gap:4px">
+          <div class="role-option-emoji">📚</div>
+          <div class="role-option-title" style="font-size:13px">本科生</div>
+          <div class="role-check" style="font-size:13px">✓</div>
+        </div>
+        <div class="role-option" data-role="master" onclick="selectSetupRole('master')" style="flex:1;padding:10px 8px;flex-direction:column;align-items:center;text-align:center;gap:4px">
+          <div class="role-option-emoji">🔬</div>
+          <div class="role-option-title" style="font-size:13px">硕士生</div>
+          <div class="role-check" style="font-size:13px">✓</div>
+        </div>
+        <div class="role-option selected" data-role="phd" onclick="selectSetupRole('phd')" style="flex:1;padding:10px 8px;flex-direction:column;align-items:center;text-align:center;gap:4px">
+          <div class="role-option-emoji">🎓</div>
+          <div class="role-option-title" style="font-size:13px">博士生</div>
+          <div class="role-check" style="font-size:13px">✓</div>
+        </div>
+      </div>
       <div class="form-row">
         <div><label>你的名字</label><input id="s-name" placeholder="如：张三"></div>
       </div>
@@ -238,7 +256,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
         <div><label>研究领域 (简短)</label><input id="s-field" placeholder="如：计算机视觉"></div>
       </div>
       <div class="form-row">
-        <div><label>博士入学日期</label><input id="s-start" type="date"></div>
+        <div><label id="start-date-label">入学日期</label><input id="s-start" type="date"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="skipSetup()">跳过</button>
@@ -897,6 +915,7 @@ function finishSetup() {
   cfg.univ = document.getElementById('s-univ').value.trim();
   cfg.field = document.getElementById('s-field').value.trim();
   cfg.startDate = document.getElementById('s-start').value;
+  cfg.role = _setupRole || 'phd';
   cfg.projects = setupProjects.length ? setupProjects : [{id:uid(),name:'项目A',color:'#7c3aed'}];
   cfg.areas = setupAreasTemp;
   cfg.setupDone = true;
@@ -912,7 +931,7 @@ function finishSetup() {
 }
 function skipSetup() {
   const cfg = getCfg();
-  cfg.name = '同学'; cfg.setupDone = true;
+  cfg.name = '同学'; cfg.setupDone = true; cfg.role = _setupRole || 'phd';
   cfg.projects = [{id:uid(),name:'项目A',color:'#7c3aed'},{id:uid(),name:'项目B',color:'#059669'}];
   saveCfg(cfg);
   sv(K.habitDefs, DEFAULT_HABITS);
@@ -980,6 +999,16 @@ const ROLE_CONFIG={
   undergrad:{emoji:'📚',name:'本科生',label:'本科第 N 天'},
   master:   {emoji:'🔬',name:'硕士生',label:'硕士第 N 天'},
   phd:      {emoji:'🎓',name:'博士生',label:'博士第 N 天'},
+}
+const ROLE_DATE_LABEL={undergrad:'本科入学日期',master:'硕士入学日期',phd:'博士入学日期'}
+let _setupRole = 'phd';
+function selectSetupRole(role){
+  _setupRole = role;
+  // 向导中的卡片（3列小卡）
+  document.querySelectorAll('#step-1 .role-option').forEach(el=>el.classList.toggle('selected',el.dataset.role===role));
+  // 动态更新日期标签
+  const lbl=document.getElementById('start-date-label');
+  if(lbl) lbl.textContent=ROLE_DATE_LABEL[role]||'入学日期';
 }
 function updatePhdDay(){
   const cfg=getCfg();
