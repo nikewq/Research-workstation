@@ -43,6 +43,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .role-option-desc{font-size:11px;color:var(--text2)}
 .role-check{font-size:16px;color:var(--primary);opacity:0;transition:.15s}
 .role-option.selected .role-check{opacity:1}
+.wall-mood{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s;white-space:nowrap}
+.wall-mood:hover{border-color:var(--primary);color:var(--text)}
+.wall-mood.active{background:var(--primary-soft);color:var(--primary);border-color:var(--primary);font-weight:600}
 .wall-tab{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
 .wall-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .wall-type-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
@@ -432,11 +435,10 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <button class="wall-type-btn" data-type="help" onclick="selectWallType(this)">🆘 求助</button>
       <button class="wall-type-btn" data-type="vent" onclick="selectWallType(this)">💬 吐槽</button>
     </div>
-    <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="wall-day" type="number" min="0" max="9999" placeholder="第几天"
-        style="width:110px;flex-shrink:0">
-      <input id="wall-msg" maxlength="500" placeholder="说点什么（500字内）"
-        style="flex:1;min-width:120px">
+    <!-- 今日状态快选 -->
+    <div id="wall-mood-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div id="wall-form" style="display:flex;gap:8px;align-items:center">
+      <input id="wall-msg" maxlength="500" placeholder="说点什么…" style="flex:1">
       <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
     </div>
     <div id="wall-tip" style="font-size:11px;color:var(--text2);margin-top:6px;display:none"></div>
@@ -1630,20 +1632,32 @@ function _getWallId(){
 }
 
 // 渲染"你是 XX"身份标签
-function _getRolePrefix(){
-  const cfg=getCfg();
-  const map={undergrad:'本科',master:'硕士',phd:'博士'};
-  return map[cfg.role||'phd']||'博士';
+
+const _WALL_MOODS=[
+  {e:'🦸',l:'卷王模式'},{e:'😴',l:'今日摸鱼'},{e:'🧘',l:'佛系研究生'},
+  {e:'🔥',l:'在燃！'},{e:'🌊',l:'摆烂选手'},{e:'😭',l:'快崩溃了'},
+  {e:'💪',l:'努力中'},{e:'🎯',l:'专注达人'},{e:'🍵',l:'喝茶等灵感'},
+  {e:'🚀',l:'冲冲冲'},{e:'🤯',l:'脑子爆炸'},{e:'✨',l:'普通一天'},
+]
+let _wallMood=null
+function _renderMoodBar(){
+  const bar=document.getElementById('wall-mood-bar')
+  if(!bar) return
+  bar.innerHTML=_WALL_MOODS.map(m=>`
+    <button class="wall-mood${_wallMood===m.l?' active':''}" onclick="_selectMood('${m.l}','${m.e}',this)">${m.e} ${m.l}</button>
+  `).join('')
 }
-function _updateWallDayPlaceholder(){
-  const el=document.getElementById('wall-day');
-  if(el) el.placeholder=_getRolePrefix()+'第几天';
+function _selectMood(label,emoji,btn){
+  if(_wallMood===label){ _wallMood=null; document.querySelectorAll('.wall-mood').forEach(b=>b.classList.remove('active')); return; }
+  _wallMood=label
+  document.querySelectorAll('.wall-mood').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
 }
 function _renderIdentity(){
   const me=_getWallId()
   const el=document.getElementById('wall-identity')
   if(el) el.innerHTML=`<span style="user-select:none">你是 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b></span>`
-  _updateWallDayPlaceholder()
+  _renderMoodBar()
 }
 
 // 当前激活的 tab 和 发帖类型
@@ -1699,7 +1713,7 @@ async function loadWall(){
         <span style="font-size:18px;flex-shrink:0;line-height:1">${escHtml(d.avatar||'🌿')}</span>
         <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0">${escHtml(d.nickname||'?')}</span>
         ${_tagBadge(d.tag)}
-        <span style="font-size:11px;color:var(--primary);white-space:nowrap;flex-shrink:0">${_getRolePrefix()}第${d.day}天</span>
+
         <span style="font-size:13px;color:var(--text);flex:1;word-break:break-all">${escHtml(d.msg)}</span>
         <span style="font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0">${relTime(d.created_at)}</span>
       </div>`).join('')
@@ -1713,21 +1727,23 @@ function escHtml(s){
 
 async function submitWall(){
   const me=_getWallId()
-  const day=parseInt(document.getElementById('wall-day').value)||0
-  const msg=document.getElementById('wall-msg').value.trim()
+  const rawMsg=document.getElementById('wall-msg').value.trim()
   const tip=document.getElementById('wall-tip')
-  if(!msg){tip.textContent='请写点什么';tip.style.display='block';return}
-  if(msg.length>500){tip.textContent='最多500个字';tip.style.display='block';return}
+  if(!rawMsg){tip.textContent='请写点什么';tip.style.display='block';return}
+  if(rawMsg.length>500){tip.textContent='最多500个字';tip.style.display='block';return}
+  // 如果选了今日状态，前缀附加到消息
+  const msg=_wallMood?`[${_wallMood}] ${rawMsg}`:rawMsg
   tip.style.display='none'
   try{
     const r=await fetch(`${_SB_URL}/rest/v1/wall`,{
       method:'POST',
       headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({day,msg,nickname:me.n,avatar:me.e,tag:_wallCurrentType})
+      body:JSON.stringify({day:0,msg,nickname:me.n,avatar:me.e,tag:_wallCurrentType})
     })
     if(r.ok){
-      document.getElementById('wall-day').value=''
       document.getElementById('wall-msg').value=''
+      _wallMood=null
+      _renderMoodBar()
       tip.textContent='✅ 已发布'
       tip.style.display='block'
       setTimeout(()=>{tip.style.display='none'},2000)
