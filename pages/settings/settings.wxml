@@ -4,7 +4,7 @@
     <view class="form-item"><text class="label">姓名</text><input class="input" value="{{f.name}}" bindinput="onInput" data-field="name"/></view>
     <view class="form-item"><text class="label">研究领域</text><input class="input" placeholder="如：计算机视觉" value="{{f.field}}" bindinput="onInput" data-field="field"/></view>
     <view class="form-item"><text class="label">学校/机构</text><input class="input" value="{{f.univ}}" bindinput="onInput" data-field="univ"/></view>
-    <view class="form-item"><text class="label">博士入学日期</text>
+    <view class="form-item"><text class="label">入学日期</text>
       <picker mode="date" value="{{f.startDate}}" bindchange="onDate">
         <view class="picker-wrap">{{f.startDate || '请选择'}}</view>
       </picker>

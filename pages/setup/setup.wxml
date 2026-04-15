@@ -2,7 +2,7 @@
   <!-- Header -->
   <view class="setup-header">
     <view class="setup-logo">🎓</view>
-    <view class="setup-app-name">PhD Workstation</view>
+    <view class="setup-app-name">My Study Workstation</view>
     <view class="setup-tagline">个人科研自律工作台</view>
   </view>
 
@@ -36,7 +36,7 @@
       <input class="input full-input" placeholder="如：清华大学" value="{{form.univ}}" bindinput="onInput" data-field="univ"/>
     </view>
     <view class="form-item">
-      <text class="label">博士入学日期</text>
+      <text class="label">入学日期</text>
       <picker mode="date" value="{{form.startDate}}" bindchange="onDateChange">
         <view class="picker-wrap full-input">{{form.startDate || '请选择日期 →'}}</view>
       </picker>

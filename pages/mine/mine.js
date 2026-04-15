@@ -53,7 +53,7 @@ Page({
   // 分享给微信好友时的卡片内容（无任何个人信息）
   onShareAppMessage() {
     return {
-      title: 'PhD Workstation — 博士科研自律工作台',
+      title: 'My Study Workstation — 博士科研自律工作台',
       path: '/pages/overview/overview',
     }
   },
