@@ -13,16 +13,17 @@
     "pages/stats/stats"
   ],
   "tabBar": {
+    "custom": true,
     "color": "#8b949e",
     "selectedColor": "#7c3aed",
     "backgroundColor": "#161b22",
     "borderStyle": "black",
     "list": [
-      { "pagePath": "pages/overview/overview",      "text": "概览", "iconPath": "icons/tab_icon.png", "selectedIconPath": "icons/tab_icon.png" },
-      { "pagePath": "pages/tasks/tasks",            "text": "任务", "iconPath": "icons/tab_icon.png", "selectedIconPath": "icons/tab_icon.png" },
-      { "pagePath": "pages/focus/focus",            "text": "专注", "iconPath": "icons/tab_icon.png", "selectedIconPath": "icons/tab_icon.png" },
-      { "pagePath": "pages/submissions/submissions","text": "投稿", "iconPath": "icons/tab_icon.png", "selectedIconPath": "icons/tab_icon.png" },
-      { "pagePath": "pages/mine/mine",              "text": "我的", "iconPath": "icons/tab_icon.png", "selectedIconPath": "icons/tab_icon.png" }
+      { "pagePath": "pages/overview/overview",     "text": "概览"  },
+      { "pagePath": "pages/tasks/tasks",           "text": "任务"  },
+      { "pagePath": "pages/focus/focus",           "text": "专注"  },
+      { "pagePath": "pages/submissions/submissions","text": "投稿"  },
+      { "pagePath": "pages/mine/mine",             "text": "我的"  }
     ]
   },
   "window": {
