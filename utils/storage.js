@@ -18,16 +18,24 @@ const DEFAULT_HABITS = [
   { id: 'dh5', name: '早睡',       emoji: '😴' },
 ]
 
-// 安全读取：真机上 getStorageSync 对不存在的 key 返回 ''，
-// 但部分版本返回 undefined 或 null，统一兜底
+// 安全读取：真机 getStorageSync 对不存在的 key 可能返回 null/undefined/''
+// 同时过滤数组中的 null 元素（防止 {...null} 在旧版 V8 上崩溃）
 function ld(key, defaultVal) {
   try {
     const v = wx.getStorageSync(key)
     if (v === null || v === undefined || v === '') return defaultVal
-    // 期望数组但拿到非数组，回退默认
-    if (Array.isArray(defaultVal) && !Array.isArray(v)) return defaultVal
-    // 期望对象但拿到数组，回退默认
-    if (!Array.isArray(defaultVal) && typeof defaultVal === 'object' && Array.isArray(v)) return defaultVal
+    const expectArr = Array.isArray(defaultVal)
+    const expectObj = !expectArr && defaultVal !== null && typeof defaultVal === 'object'
+    if (expectArr) {
+      // 类型不符直接回退
+      if (!Array.isArray(v)) return defaultVal
+      // 过滤 null/undefined 元素：旧版 V8 对 {...null} 会抛 TypeError
+      return v.filter(function(item) { return item !== null && item !== undefined })
+    }
+    if (expectObj) {
+      // 期望对象但拿到数组或原始值，回退默认
+      if (Array.isArray(v) || v === null || typeof v !== 'object') return defaultVal
+    }
     return v
   } catch (e) {
     return defaultVal
