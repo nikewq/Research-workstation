@@ -33,6 +33,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .phd-counter{font-size:11px;color:var(--text2);text-align:center}
 .phd-counter span{font-size:22px;font-weight:700;color:var(--primary);display:block}
 .companion-counter{font-size:11px;color:var(--text2);text-align:center;margin-top:6px;opacity:.7}
+.role-badge{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid var(--primary);cursor:pointer;transition:.15s;font-size:12px;color:var(--primary)}
+.role-badge:hover{background:var(--primary);color:#fff}
+.role-option{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:10px}
+.role-option:hover,.role-option.selected{border-color:var(--primary);background:rgba(var(--primary-rgb,99,102,241),.08)}
+.role-option-emoji{font-size:26px}
+.role-option-info{flex:1}
+.role-option-title{font-size:14px;font-weight:600;margin-bottom:2px}
+.role-option-desc{font-size:11px;color:var(--text2)}
+.role-check{font-size:16px;color:var(--primary);opacity:0;transition:.15s}
+.role-option.selected .role-check{opacity:1}
 .wall-tab{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
 .wall-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .wall-type-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
@@ -329,7 +339,10 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="nav-item" id="importBtn"><span class="nav-icon">📥</span>导入数据</div>
   <input type="file" id="importFile" accept=".json" style="display:none">
   <div class="sidebar-bottom">
-    <div class="phd-counter"><span id="phd-day">—</span>博士第 N 天</div>
+    <div class="phd-counter"><span id="phd-day">—</span><span id="roleLabel">博士第 N 天</span></div>
+    <div class="role-badge" id="role-badge" onclick="openRoleModal()" title="点击切换角色">
+      <span id="role-emoji">🎓</span><span id="role-name">设置角色</span>
+    </div>
     <div class="companion-counter" id="busuanzi_container_site_uv" style="display:none">
       🌐 同行者 <span id="busuanzi_value_site_uv">…</span> 人
     </div>
@@ -640,6 +653,36 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 </main>
 
 <!-- ── Edit Task Modal ── -->
+<div class="modal-overlay" id="roleModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">🎓 选择你的身份</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px">选择后计数器将匹配你的角色</p>
+    <div class="role-option" data-role="undergrad" onclick="selectRole('undergrad')">
+      <div class="role-option-emoji">📚</div>
+      <div class="role-option-info"><div class="role-option-title">本科生</div><div class="role-option-desc">本科第 N 天 · 好好学习，天天向上</div></div>
+      <div class="role-check">✓</div>
+    </div>
+    <div class="role-option" data-role="master" onclick="selectRole('master')">
+      <div class="role-option-emoji">🔬</div>
+      <div class="role-option-info"><div class="role-option-title">硕士生</div><div class="role-option-desc">硕士第 N 天 · 研究探索，砥砺前行</div></div>
+      <div class="role-check">✓</div>
+    </div>
+    <div class="role-option" data-role="phd" onclick="selectRole('phd')">
+      <div class="role-option-emoji">🎓</div>
+      <div class="role-option-info"><div class="role-option-title">博士生</div><div class="role-option-desc">博士第 N 天 · 科研苦旅，坚持到底</div></div>
+      <div class="role-check">✓</div>
+    </div>
+    <div style="margin-top:4px">
+      <label style="font-size:12px;color:var(--text2);margin-bottom:6px;display:block">入学 / 开始日期</label>
+      <input type="date" id="role-start-date" style="width:100%">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('roleModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveRole()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="editTaskModal">
   <div class="modal">
     <div class="modal-title">编辑任务</div>
@@ -933,11 +976,46 @@ function updateClock() {
   if(el) el.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
 }
 function pad(n){return String(n).padStart(2,'0')}
-function updatePhdDay() {
+const ROLE_CONFIG={
+  undergrad:{emoji:'📚',name:'本科生',label:'本科第 N 天'},
+  master:   {emoji:'🔬',name:'硕士生',label:'硕士第 N 天'},
+  phd:      {emoji:'🎓',name:'博士生',label:'博士第 N 天'},
+}
+function updatePhdDay(){
   const cfg=getCfg();
   if(!cfg.startDate){document.getElementById('phd-day').textContent='?';return;}
   const d=Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1;
   document.getElementById('phd-day').textContent=d>0?d:'?';
+  const role=ROLE_CONFIG[cfg.role||'phd'];
+  const lbl=document.getElementById('roleLabel');
+  const ei=document.getElementById('role-emoji');
+  const ni=document.getElementById('role-name');
+  if(lbl) lbl.textContent=role.label;
+  if(ei) ei.textContent=role.emoji;
+  if(ni) ni.textContent=role.name;
+}
+let _pendingRole=null;
+function openRoleModal(){
+  const cfg=getCfg();
+  _pendingRole=cfg.role||'phd';
+  document.querySelectorAll('.role-option').forEach(el=>el.classList.toggle('selected',el.dataset.role===_pendingRole));
+  const di=document.getElementById('role-start-date');
+  if(di) di.value=cfg.startDate||'';
+  openModal('roleModal');
+}
+function selectRole(role){
+  _pendingRole=role;
+  document.querySelectorAll('.role-option').forEach(el=>el.classList.toggle('selected',el.dataset.role===role));
+}
+function saveRole(){
+  const cfg=getCfg();
+  cfg.role=_pendingRole||'phd';
+  const dv=document.getElementById('role-start-date').value;
+  if(dv) cfg.startDate=dv;
+  saveCfg(cfg);
+  updatePhdDay();
+  closeModal('roleModal');
+  toast('✅ 身份已更新');
 }
 function updateTodayDate() {
   const el=document.getElementById('ov-date');
