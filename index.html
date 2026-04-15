@@ -404,7 +404,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
         style="width:110px;flex-shrink:0">
-      <input id="wall-msg" maxlength="30" placeholder="说点什么（30字内）"
+      <input id="wall-msg" maxlength="500" placeholder="说点什么（500字内）"
         style="flex:1;min-width:120px">
       <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
     </div>
@@ -1587,7 +1587,7 @@ async function submitWall(){
   const msg=document.getElementById('wall-msg').value.trim()
   const tip=document.getElementById('wall-tip')
   if(!msg){tip.textContent='请写点什么';tip.style.display='block';return}
-  if(msg.length>30){tip.textContent='最多30个字';tip.style.display='block';return}
+  if(msg.length>500){tip.textContent='最多500个字';tip.style.display='block';return}
   tip.style.display='none'
   try{
     const r=await fetch(`${_SB_URL}/rest/v1/wall`,{
