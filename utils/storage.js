@@ -11,35 +11,70 @@ const K = {
 }
 
 const DEFAULT_HABITS = [
-  { id: 'dh1', name: '读文献',    emoji: '📄' },
+  { id: 'dh1', name: '读文献',     emoji: '📄' },
   { id: 'dh2', name: '写代码/实验', emoji: '💻' },
-  { id: 'dh3', name: '论文写作',  emoji: '✍️' },
-  { id: 'dh4', name: '运动',      emoji: '🏃' },
-  { id: 'dh5', name: '早睡',      emoji: '😴' },
+  { id: 'dh3', name: '论文写作',   emoji: '✍️' },
+  { id: 'dh4', name: '运动',       emoji: '🏃' },
+  { id: 'dh5', name: '早睡',       emoji: '😴' },
 ]
 
+// 安全读取：真机上 getStorageSync 对不存在的 key 返回 ''，
+// 但部分版本返回 undefined 或 null，统一兜底
 function ld(key, defaultVal) {
   try {
     const v = wx.getStorageSync(key)
-    return (v !== '' && v !== null && v !== undefined) ? v : defaultVal
-  } catch (e) { return defaultVal }
+    if (v === null || v === undefined || v === '') return defaultVal
+    // 期望数组但拿到非数组，回退默认
+    if (Array.isArray(defaultVal) && !Array.isArray(v)) return defaultVal
+    // 期望对象但拿到数组，回退默认
+    if (!Array.isArray(defaultVal) && typeof defaultVal === 'object' && Array.isArray(v)) return defaultVal
+    return v
+  } catch (e) {
+    return defaultVal
+  }
 }
+
 function sv(key, val) {
   try { wx.setStorageSync(key, val) } catch (e) {}
 }
 
-function getCfg() {
-  return Object.assign(
-    { name: '', field: '', univ: '', startDate: '', projects: [], areas: [], setupDone: false },
-    ld(K.cfg, {})
-  )
+const CFG_DEFAULTS = {
+  name: '', field: '', univ: '', startDate: '',
+  projects: [], areas: [], setupDone: false
 }
-function saveCfg(c) { sv(K.cfg, c) }
+
+function getCfg() {
+  try {
+    const stored = ld(K.cfg, null)
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
+      return Object.assign({}, CFG_DEFAULTS)
+    }
+    // 逐字段合并，防止 stored 里某个字段是 null
+    const cfg = Object.assign({}, CFG_DEFAULTS)
+    Object.keys(CFG_DEFAULTS).forEach(k => {
+      if (stored[k] !== null && stored[k] !== undefined) {
+        cfg[k] = stored[k]
+      }
+    })
+    return cfg
+  } catch (e) {
+    return Object.assign({}, CFG_DEFAULTS)
+  }
+}
+
+function saveCfg(c) {
+  try { sv(K.cfg, c) } catch (e) {}
+}
 
 function getHabitDefs() {
-  return ld(K.habitDefs, DEFAULT_HABITS)
+  const v = ld(K.habitDefs, null)
+  if (!v || !Array.isArray(v) || v.length === 0) return DEFAULT_HABITS.slice()
+  return v
 }
-function saveHabitDefs(d) { sv(K.habitDefs, d) }
+
+function saveHabitDefs(d) {
+  sv(K.habitDefs, Array.isArray(d) ? d : DEFAULT_HABITS.slice())
+}
 
 module.exports = {
   K, DEFAULT_HABITS,
