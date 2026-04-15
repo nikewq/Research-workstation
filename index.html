@@ -815,7 +815,8 @@ const K = {
 const ld = k => { try { return JSON.parse(localStorage.getItem(k)) || (k===K.habits?{}:[]); } catch { return k===K.habits?{}:[]; } };
 const sv = (k,v) => localStorage.setItem(k, JSON.stringify(v));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-const today = () => new Date().toISOString().slice(0,10);
+const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const today = () => localDate(new Date());
 
 function getCfg() {
   return {
@@ -1313,7 +1314,7 @@ function toggleHabit(id){
 function delHabitDef(id){saveHabitDefs(getHabitDefs().filter(d=>d.id!==id));renderHabits();}
 function getStreak(id){
   const h=ld(K.habits);let s=0,d=new Date();
-  while(s<365){const ds=d.toISOString().slice(0,10);if(h[ds]&&h[ds][id]){s++;d.setDate(d.getDate()-1);}else break;}
+  while(s<365){const ds=localDate(d);if(h[ds]&&h[ds][id]){s++;d.setDate(d.getDate()-1);}else break;}
   return s;
 }
 function renderHabits(){
@@ -1330,7 +1331,7 @@ function renderHabits(){
 function renderHabitWeek(){
   const el=document.getElementById('habit-week');if(!el)return;
   const defs=getHabitDefs(),h=ld(K.habits);
-  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return localDate(d);});
   const dl=['日','一','二','三','四','五','六'];
   el.innerHTML=defs.map(d=>`<div class="habit-week-row">
     <span style="font-size:15px">${d.emoji}</span>
@@ -1521,14 +1522,14 @@ function updateStats(){
   document.getElementById('s-habits').textContent=`${habDone}/${defs.length}`;
   // Streak
   const cks=ld(K.checkins);let streak=0,d=new Date();
-  while(streak<365){const ds=d.toISOString().slice(0,10);if(cks.find(c=>c.date===ds)){streak++;d.setDate(d.getDate()-1);}else break;}
+  while(streak<365){const ds=localDate(d);if(cks.find(c=>c.date===ds)){streak++;d.setDate(d.getDate()-1);}else break;}
   document.getElementById('s-streak').textContent=streak;
 }
 
 let chartsInited=false;
 function renderCharts(){
   if(chartsInited)return;chartsInited=true;
-  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return localDate(d);});
   const labels=days.map(d=>['日','一','二','三','四','五','六'][new Date(d+'T12:00').getDay()]);
   const cOpts={responsive:true,maintainAspectRatio:false,
     plugins:{legend:{display:false}},
