@@ -2,9 +2,14 @@ const { getCfg } = require('./utils/storage')
 
 App({
   onLaunch() {
-    // 全局错误兜底：捕获未处理异常，防止白屏
+    // 全局错误捕获：真机调试时弹出错误位置，定位后可删除
     wx.onError && wx.onError(function(msg) {
       console.error('[Global Error]', msg)
+      wx.showModal({
+        title: '崩溃位置',
+        content: String(msg).slice(0, 300),
+        showCancel: false
+      })
     })
     try {
       const cfg = getCfg()
