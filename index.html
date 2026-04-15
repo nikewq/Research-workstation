@@ -433,7 +433,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <button class="wall-type-btn" data-type="vent" onclick="selectWallType(this)">💬 吐槽</button>
     </div>
     <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
+      <input id="wall-day" type="number" min="0" max="9999" placeholder="第几天"
         style="width:110px;flex-shrink:0">
       <input id="wall-msg" maxlength="500" placeholder="说点什么（500字内）"
         style="flex:1;min-width:120px">
@@ -1630,10 +1630,20 @@ function _getWallId(){
 }
 
 // 渲染"你是 XX"身份标签
+function _getRolePrefix(){
+  const cfg=getCfg();
+  const map={undergrad:'本科',master:'硕士',phd:'博士'};
+  return map[cfg.role||'phd']||'博士';
+}
+function _updateWallDayPlaceholder(){
+  const el=document.getElementById('wall-day');
+  if(el) el.placeholder=_getRolePrefix()+'第几天';
+}
 function _renderIdentity(){
   const me=_getWallId()
   const el=document.getElementById('wall-identity')
   if(el) el.innerHTML=`<span style="user-select:none">你是 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b></span>`
+  _updateWallDayPlaceholder()
 }
 
 // 当前激活的 tab 和 发帖类型
@@ -1689,7 +1699,7 @@ async function loadWall(){
         <span style="font-size:18px;flex-shrink:0;line-height:1">${escHtml(d.avatar||'🌿')}</span>
         <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0">${escHtml(d.nickname||'?')}</span>
         ${_tagBadge(d.tag)}
-        <span style="font-size:11px;color:var(--primary);white-space:nowrap;flex-shrink:0">第${d.day}天</span>
+        <span style="font-size:11px;color:var(--primary);white-space:nowrap;flex-shrink:0">${_getRolePrefix()}第${d.day}天</span>
         <span style="font-size:13px;color:var(--text);flex:1;word-break:break-all">${escHtml(d.msg)}</span>
         <span style="font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0">${relTime(d.created_at)}</span>
       </div>`).join('')
