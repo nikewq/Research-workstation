@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="32%" r="72%">
+      <stop offset="0%"   stop-color="#18084a"/>
+      <stop offset="100%" stop-color="#06080f"/>
+    </radialGradient>
+    <linearGradient id="arcG" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#5b21b6"/>
+      <stop offset="55%"  stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#c4b5fd"/>
+    </linearGradient>
+    <linearGradient id="capG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#e0d4ff" stop-opacity="0.9"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ① 背景 -->
+  <rect width="512" height="512" rx="88" ry="88" fill="url(#bg)"/>
+
+  <!-- 内圆淡晕（氛围光） -->
+  <circle cx="256" cy="238" r="155" fill="none" stroke="#7c3aed"
+    stroke-width="40" stroke-opacity="0.07"/>
+
+  <!-- ② 研究轨道弧 255° (逆时针 300°→45°) -->
+  <path d="M 322.0,123.7 A 132,132 0 1,0 349.3,331.3"
+    fill="none" stroke="url(#arcG)" stroke-width="17"
+    stroke-linecap="round" filter="url(#glow)"/>
+
+  <!-- ③ 里程碑菱形（弧终点右下） -->
+  <polygon points="349,318 362,331 349,344 336,331"
+    fill="white" filter="url(#softglow)"/>
+
+  <!-- ④ 博士帽 ──────────────────────── -->
+  <!-- 帽板 -->
+  <rect x="219" y="218" width="74" height="14" rx="3" fill="url(#capG)"/>
+  <!-- 帽顶小圆钮 -->
+  <circle cx="256" cy="218" r="5.5" fill="#a78bfa"/>
+  <!-- 帽身（梯形） -->
+  <polygon points="221,232 291,232 280,262 232,262" fill="url(#capG)"/>
+  <!-- 流苏线 -->
+  <line x1="293" y1="225" x2="311" y2="249"
+    stroke="#a78bfa" stroke-width="3" stroke-linecap="round"/>
+  <!-- 流苏珠 -->
+  <circle cx="311" cy="254" r="5.5" fill="#a78bfa" filter="url(#softglow)"/>
+
+  <!-- ⑤ 工作台进度线 -->
+  <line x1="222" y1="292" x2="290" y2="292"
+    stroke="#9d7afe" stroke-width="3.5" stroke-linecap="round" opacity="0.85"/>
+  <line x1="222" y1="317" x2="272" y2="317"
+    stroke="#9d7afe" stroke-width="3.5" stroke-linecap="round" opacity="0.63"/>
+  <line x1="222" y1="342" x2="258" y2="342"
+    stroke="#9d7afe" stroke-width="3.5" stroke-linecap="round" opacity="0.41"/>
+
+</svg>
