@@ -33,6 +33,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .phd-counter{font-size:11px;color:var(--text2);text-align:center}
 .phd-counter span{font-size:22px;font-weight:700;color:var(--primary);display:block}
 .companion-counter{font-size:11px;color:var(--text2);text-align:center;margin-top:6px;opacity:.7}
+.wall-tab{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
+.wall-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.wall-type-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
+.wall-type-btn.active{background:var(--primary-light,#e8f4fd);color:var(--primary);border-color:var(--primary);font-weight:600}
+.wall-tag-share{background:#e8f7ee;color:#2a9d5c;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
+.wall-tag-help{background:#fff0e6;color:#e07b39;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
+.wall-tag-vent{background:#f0eeff;color:#6c5ce7;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
 
 /* Main */
 #main{margin-left:200px;flex:1;padding:24px;min-height:100vh}
@@ -379,12 +386,25 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <div class="card-title" style="margin-bottom:0">🌿 同行者</div>
       <span style="font-size:11px;color:var(--text2)">匿名 · 互相见证</span>
     </div>
+    <!-- 分类 tab 筛选 -->
+    <div id="wall-tabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="wall-tab active" data-tag="all" onclick="switchWallTab(this)">全部</button>
+      <button class="wall-tab" data-tag="share" onclick="switchWallTab(this)">🎉 分享</button>
+      <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
+      <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
+    </div>
     <div id="wall-list" style="min-height:40px"></div>
-    <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-top:10px;margin-bottom:4px"></div>
+    <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-top:10px;margin-bottom:6px"></div>
+    <!-- 发帖类型选择 + 表单 -->
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <button class="wall-type-btn active" data-type="share" onclick="selectWallType(this)">🎉 分享</button>
+      <button class="wall-type-btn" data-type="help" onclick="selectWallType(this)">🆘 求助</button>
+      <button class="wall-type-btn" data-type="vent" onclick="selectWallType(this)">💬 吐槽</button>
+    </div>
     <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
         style="width:110px;flex-shrink:0">
-      <input id="wall-msg" maxlength="20" placeholder="留一句话（20字内）"
+      <input id="wall-msg" maxlength="30" placeholder="说点什么（30字内）"
         style="flex:1;min-width:120px">
       <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
     </div>
@@ -1496,6 +1516,30 @@ function _renderIdentity(){
   if(el) el.innerHTML=`<span style="user-select:none">你是 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b></span>`
 }
 
+// 当前激活的 tab 和 发帖类型
+let _wallCurrentTag='all'
+let _wallCurrentType='share'
+
+function switchWallTab(btn){
+  document.querySelectorAll('.wall-tab').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  _wallCurrentTag=btn.dataset.tag
+  loadWall()
+}
+
+function selectWallType(btn){
+  document.querySelectorAll('.wall-type-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  _wallCurrentType=btn.dataset.type
+}
+
+// tag 对应显示文字
+const _TAG_LABELS={share:'分享',help:'求助',vent:'吐槽'}
+function _tagBadge(tag){
+  if(!tag) return ''
+  return `<span class="wall-tag-${tag}">${_TAG_LABELS[tag]||tag}</span>`
+}
+
 function relTime(ts){
   const s=Math.floor((Date.now()-new Date(ts))/1000)
   if(s<60) return '刚刚'
@@ -1507,21 +1551,24 @@ function relTime(ts){
 
 async function loadWall(){
   try{
-    const r=await fetch(`${_SB_URL}/rest/v1/wall?select=day,msg,nickname,avatar,created_at&order=created_at.desc&limit=10`,{
+    let url=`${_SB_URL}/rest/v1/wall?select=day,msg,nickname,avatar,tag,created_at&order=created_at.desc&limit=15`
+    if(_wallCurrentTag && _wallCurrentTag!=='all') url+=`&tag=eq.${_wallCurrentTag}`
+    const r=await fetch(url,{
       headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}
     })
     if(!r.ok) return
     const data=await r.json()
     const el=document.getElementById('wall-list')
     if(!data.length){
-      el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px 0">还没有留言，成为第一个吧 🌱</div>'
+      el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px 0">这里还没有留言，成为第一个吧 🌱</div>'
       _renderIdentity()
       return
     }
     el.innerHTML=data.map(d=>`
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border)">
         <span style="font-size:18px;flex-shrink:0;line-height:1">${escHtml(d.avatar||'🌿')}</span>
-        <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0;min-width:44px">${escHtml(d.nickname||'Anonymous')}</span>
+        <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0">${escHtml(d.nickname||'?')}</span>
+        ${_tagBadge(d.tag)}
         <span style="font-size:11px;color:var(--primary);white-space:nowrap;flex-shrink:0">第${d.day}天</span>
         <span style="font-size:13px;color:var(--text);flex:1;word-break:break-all">${escHtml(d.msg)}</span>
         <span style="font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0">${relTime(d.created_at)}</span>
@@ -1540,13 +1587,13 @@ async function submitWall(){
   const msg=document.getElementById('wall-msg').value.trim()
   const tip=document.getElementById('wall-tip')
   if(!msg){tip.textContent='请写点什么';tip.style.display='block';return}
-  if(msg.length>20){tip.textContent='最多20个字';tip.style.display='block';return}
+  if(msg.length>30){tip.textContent='最多30个字';tip.style.display='block';return}
   tip.style.display='none'
   try{
     const r=await fetch(`${_SB_URL}/rest/v1/wall`,{
       method:'POST',
       headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({day,msg,nickname:me.n,avatar:me.e})
+      body:JSON.stringify({day,msg,nickname:me.n,avatar:me.e,tag:_wallCurrentType})
     })
     if(r.ok){
       document.getElementById('wall-day').value=''
