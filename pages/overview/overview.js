@@ -11,7 +11,7 @@ Page({
   },
   _clockTimer: null,
 
-  onLoad() { this.refresh() },
+  onLoad() { try { this.refresh() } catch(e) { wx.showModal({ title:'onLoad crash', content:String(e).slice(0,300), showCancel:false }) } },
   onShow() {
     this.refresh()
     if (this._clockTimer) clearInterval(this._clockTimer)
@@ -23,6 +23,11 @@ Page({
   onUnload() { if (this._clockTimer) clearInterval(this._clockTimer) },
 
   refresh() {
+    try { this._refresh() } catch(e) {
+      wx.showModal({ title: 'overview crash', content: String(e).slice(0,300), showCancel: false })
+    }
+  },
+  _refresh() {
     const cfg = getCfg()
     const td = today()
     const d = new Date()

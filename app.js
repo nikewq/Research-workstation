@@ -1,23 +1,21 @@
 const { getCfg } = require('./utils/storage')
 
 App({
-  onLaunch() {
-    // 全局错误捕获：真机调试时弹出错误位置，定位后可删除
-    wx.onError && wx.onError(function(msg) {
-      console.error('[Global Error]', msg)
-      wx.showModal({
-        title: '崩溃位置',
-        content: String(msg).slice(0, 300),
-        showCancel: false
-      })
+  // App 内置钩子，早于所有页面 onLoad 注册，可捕获任何页面的未处理异常
+  onError(msg) {
+    wx.showModal({
+      title: '崩溃位置（调试用）',
+      content: String(msg).slice(0, 300),
+      showCancel: false
     })
+  },
+  onLaunch() {
     try {
       const cfg = getCfg()
       if (!cfg.setupDone) {
         wx.reLaunch({ url: '/pages/setup/setup' })
       }
     } catch (e) {
-      console.error('[onLaunch]', e)
       wx.reLaunch({ url: '/pages/setup/setup' })
     }
   },
