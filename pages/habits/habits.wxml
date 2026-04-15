@@ -1,0 +1,38 @@
+<scroll-view scroll-y class="container">
+  <!-- Add habit -->
+  <view class="card">
+    <view class="card-title">添加习惯</view>
+    <view class="flex gap-12">
+      <input class="input" style="flex:1" placeholder="习惯名称…" value="{{newName}}" bindinput="onName"/>
+      <input class="input" style="width:80rpx;text-align:center" placeholder="🔥" value="{{newEmoji}}" bindinput="onEmoji"/>
+      <view class="btn btn-primary btn-sm" bindtap="addHabit">添加</view>
+    </view>
+  </view>
+
+  <!-- Today -->
+  <view class="card">
+    <view class="card-title">今日打卡</view>
+    <view wx:if="{{habits.length===0}}" class="empty"><view class="empty-icon">🔥</view><text>添加你的每日习惯</text></view>
+    <view wx:for="{{habits}}" wx:key="id" class="habit-row">
+      <view class="habit-check {{item.done?'done':''}}" bindtap="toggle" data-id="{{item.id}}">{{item.done?'✓':''}}</view>
+      <text style="font-size:36rpx">{{item.emoji}}</text>
+      <text style="flex:1;font-size:28rpx">{{item.name}}</text>
+      <text wx:if="{{item.streak>0}}" style="font-size:24rpx;color:#f59e0b;font-weight:700">🔥{{item.streak}}天</text>
+      <view class="del-btn" bindtap="delHabit" data-id="{{item.id}}">×</view>
+    </view>
+  </view>
+
+  <!-- Week view -->
+  <view class="card">
+    <view class="card-title">本周完成</view>
+    <view class="week-header">
+      <view style="width:140rpx"></view>
+      <view wx:for="{{weekDays}}" wx:key="*this" class="week-day-label">{{item}}</view>
+    </view>
+    <view wx:for="{{weekRows}}" wx:key="id" class="week-row">
+      <text style="width:140rpx;font-size:24rpx" class="text-muted">{{item.name}}</text>
+      <view wx:for="{{item.days}}" wx:key="*this" wx:for-item="d"
+        class="week-cell {{d.done?'done':''}} {{d.today?'today':''}}">{{d.label}}</view>
+    </view>
+  </view>
+</scroll-view>

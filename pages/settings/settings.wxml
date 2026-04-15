@@ -1,0 +1,33 @@
+<scroll-view scroll-y class="container">
+  <view class="card">
+    <view class="card-title">基本信息</view>
+    <view class="form-item"><text class="label">姓名</text><input class="input" value="{{f.name}}" bindinput="onInput" data-field="name"/></view>
+    <view class="form-item"><text class="label">研究领域</text><input class="input" placeholder="如：计算机视觉" value="{{f.field}}" bindinput="onInput" data-field="field"/></view>
+    <view class="form-item"><text class="label">学校/机构</text><input class="input" value="{{f.univ}}" bindinput="onInput" data-field="univ"/></view>
+    <view class="form-item"><text class="label">博士入学日期</text>
+      <picker mode="date" value="{{f.startDate}}" bindchange="onDate">
+        <view class="picker-wrap">{{f.startDate || '请选择'}}</view>
+      </picker>
+    </view>
+    <view class="btn btn-primary btn-full" bindtap="save">保存</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">项目管理</view>
+    <view wx:for="{{projects}}" wx:key="id" class="proj-row">
+      <view class="proj-dot" style="background:{{item.color}}"></view>
+      <text style="flex:1;font-size:28rpx">{{item.name}}</text>
+      <view class="btn btn-danger btn-sm" bindtap="delProj" data-id="{{item.id}}">×</view>
+    </view>
+    <view class="flex gap-12 mt-16">
+      <input class="input" style="flex:1" placeholder="新项目名称" value="{{newProj}}" bindinput="onNewProj"/>
+      <input class="input" type="color" style="width:60rpx;padding:8rpx" value="{{newColor}}" bindinput="onNewColor"/>
+      <view class="btn btn-ghost btn-sm" bindtap="addProj">添加</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title" style="color:#ef4444">危险区域</view>
+    <view class="btn btn-danger btn-full" bindtap="reset">🗑 清除所有数据，重新设置</view>
+  </view>
+</scroll-view>

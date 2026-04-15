@@ -1,0 +1,57 @@
+<view class="container">
+  <!-- Add task -->
+  <view class="card">
+    <view class="card-title">新建任务</view>
+    <view class="form-item">
+      <input class="input" placeholder="任务名称…" value="{{newTask.title}}"
+        bindinput="onTitleInput" confirm-type="done" bindconfirm="addTask"/>
+    </view>
+    <view class="form-row">
+      <view class="form-item">
+        <text class="label">项目</text>
+        <picker range="{{projNames}}" value="{{newTask.projIdx}}" bindchange="onProjChange">
+          <view class="picker-wrap">{{projNames[newTask.projIdx] || '选择项目'}}</view>
+        </picker>
+      </view>
+      <view class="form-item">
+        <text class="label">优先级</text>
+        <picker range="{{prioLabels}}" value="{{newTask.prioIdx}}" bindchange="onPrioChange">
+          <view class="picker-wrap">{{prioLabels[newTask.prioIdx]}}</view>
+        </picker>
+      </view>
+    </view>
+    <view class="form-item">
+      <text class="label">截止日期（可选）</text>
+      <picker mode="date" value="{{newTask.due}}" bindchange="onDueChange">
+        <view class="picker-wrap">{{newTask.due || '不设置'}}</view>
+      </picker>
+    </view>
+    <view class="btn btn-primary btn-full" bindtap="addTask">➕ 添加任务</view>
+  </view>
+
+  <!-- Filter -->
+  <scroll-view scroll-x class="filter-row">
+    <view wx:for="{{filters}}" wx:key="val"
+      class="filter-chip {{activeFilter===item.val?'active':''}}"
+      bindtap="setFilter" data-val="{{item.val}}">{{item.label}}</view>
+  </scroll-view>
+  <view class="task-count">{{filteredTasks.length}} 个任务</view>
+
+  <!-- List -->
+  <view wx:if="{{filteredTasks.length === 0}}" class="empty">
+    <view class="empty-icon">✅</view><text>暂无任务</text>
+  </view>
+  <view wx:for="{{filteredTasks}}" wx:key="id" class="list-item">
+    <view class="pdot pdot-{{item.prio}}"></view>
+    <view class="checkbox {{item.status==='done'?'checked':''}}"
+      bindtap="toggleTask" data-id="{{item.id}}">{{item.status==='done'?'✓':''}}</view>
+    <view class="flex-1" bindtap="toggleTask" data-id="{{item.id}}">
+      <view class="task-title {{item.status==='done'?'line-through text-muted':''}}">{{item.title}}</view>
+      <view class="flex gap-8 mt-8">
+        <view class="tag" style="background:{{item.projColor}}22;color:{{item.projColor}}">{{item.projName}}</view>
+        <view wx:if="{{item.due}}" class="text-xs {{item.overdue?'text-red':'text-muted'}}">📅 {{item.due}}</view>
+      </view>
+    </view>
+    <view class="del-btn" bindtap="delTask" data-id="{{item.id}}">🗑</view>
+  </view>
+</view>

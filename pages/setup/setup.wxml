@@ -1,0 +1,102 @@
+<view class="setup-page">
+  <!-- Header -->
+  <view class="setup-header">
+    <view class="setup-logo">🎓</view>
+    <view class="setup-app-name">PhD Workstation</view>
+    <view class="setup-tagline">个人科研自律工作台</view>
+  </view>
+
+  <!-- Progress -->
+  <view class="progress-bar">
+    <view wx:for="{{[1,2,3,4]}}" wx:key="*this"
+      class="prog-dot {{step >= item ? 'done' : ''}}"></view>
+  </view>
+  <view class="step-label">第 {{step}} 步 / 4</view>
+
+  <!-- Step 1: Basic Info -->
+  <view class="step-box" wx:if="{{step === 1}}">
+    <view class="step-title">👋 基本信息</view>
+    <view class="form-item">
+      <text class="label">你的名字</text>
+      <input class="input" placeholder="如：张三" value="{{form.name}}" bindinput="onInput" data-field="name"/>
+    </view>
+    <view class="form-item">
+      <text class="label">研究领域</text>
+      <input class="input" placeholder="如：计算机视觉、NLP…" value="{{form.field}}" bindinput="onInput" data-field="field"/>
+    </view>
+    <view class="form-item">
+      <text class="label">学校/机构（可选）</text>
+      <input class="input" placeholder="如：清华大学" value="{{form.univ}}" bindinput="onInput" data-field="univ"/>
+    </view>
+    <view class="form-item">
+      <text class="label">博士入学日期</text>
+      <picker mode="date" value="{{form.startDate}}" bindchange="onDateChange">
+        <view class="picker-wrap">{{form.startDate || '请选择日期'}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- Step 2: Projects -->
+  <view class="step-box" wx:if="{{step === 2}}">
+    <view class="step-title">📁 科研项目</view>
+    <view class="step-desc">添加你的主要科研项目（最多6个）</view>
+    <view wx:for="{{projects}}" wx:key="id" class="proj-row">
+      <view class="proj-color" style="background:{{item.color}}"></view>
+      <input class="input" style="flex:1" value="{{item.name}}"
+        bindinput="onProjName" data-idx="{{index}}"/>
+      <view class="del-btn" bindtap="delProject" data-idx="{{index}}">×</view>
+    </view>
+    <view class="add-proj-row">
+      <input class="input" style="flex:1" placeholder="项目名称" value="{{newProjName}}"
+        bindinput="onNewProjName"/>
+      <view class="color-picker-row">
+        <view wx:for="{{colorPalette}}" wx:key="*this"
+          class="color-dot {{newProjColor === item ? 'selected' : ''}}"
+          style="background:{{item}}" bindtap="pickColor" data-color="{{item}}"></view>
+      </view>
+      <view class="btn btn-ghost btn-sm" bindtap="addProject">+ 添加</view>
+    </view>
+  </view>
+
+  <!-- Step 3: Habits -->
+  <view class="step-box" wx:if="{{step === 3}}">
+    <view class="step-title">🔥 每日习惯</view>
+    <view class="step-desc">选择要追踪的习惯</view>
+    <view wx:for="{{defaultHabits}}" wx:key="id"
+      class="habit-option {{selectedHabits[item.id] ? 'selected' : ''}}"
+      bindtap="toggleHabitSel" data-id="{{item.id}}">
+      <text style="font-size:40rpx">{{item.emoji}}</text>
+      <text style="flex:1;font-size:28rpx">{{item.name}}</text>
+      <text wx:if="{{selectedHabits[item.id]}}" style="color:#7c3aed">✓</text>
+    </view>
+  </view>
+
+  <!-- Step 4: Done -->
+  <view class="step-box" wx:if="{{step === 4}}">
+    <view class="done-icon">🚀</view>
+    <view class="step-title" style="text-align:center">设置完成！</view>
+    <view class="step-desc" style="text-align:center">工作台已为你量身定制，开始你的博士之路吧！</view>
+    <view class="summary-card">
+      <view class="summary-row">
+        <text class="text-muted">姓名</text><text>{{form.name}}</text>
+      </view>
+      <view class="summary-row">
+        <text class="text-muted">研究方向</text><text>{{form.field}}</text>
+      </view>
+      <view class="summary-row">
+        <text class="text-muted">入学日期</text><text>{{form.startDate}}</text>
+      </view>
+      <view class="summary-row">
+        <text class="text-muted">项目数</text><text>{{projects.length}} 个</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Navigation -->
+  <view class="step-nav">
+    <view class="btn btn-ghost" bindtap="prevStep" wx:if="{{step > 1}}">← 上一步</view>
+    <view style="flex:1"></view>
+    <view class="btn btn-primary" bindtap="nextStep" wx:if="{{step < 4}}">下一步 →</view>
+    <view class="btn btn-primary" bindtap="finishSetup" wx:if="{{step === 4}}">🚀 开始使用</view>
+  </view>
+</view>

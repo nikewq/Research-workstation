@@ -1,0 +1,34 @@
+<scroll-view scroll-y class="container">
+  <view class="card">
+    <view class="card-title">今日记录</view>
+    <view class="form-item">
+      <text class="label">今日心情</text>
+      <view class="mood-row">
+        <view wx:for="{{moods}}" wx:key="*this"
+          class="mood-btn {{selMood===item?'active':''}}"
+          bindtap="selMoodFn" data-m="{{item}}">{{item}}</view>
+      </view>
+    </view>
+    <view class="form-item"><text class="label">🏆 今日亮点</text>
+      <textarea class="textarea" placeholder="今天做成了什么？" value="{{f.wins}}" bindinput="onInput" data-field="wins"/></view>
+    <view class="form-item"><text class="label">😮‍💨 卡点/困难</text>
+      <textarea class="textarea" placeholder="哪里卡住了？" value="{{f.struggles}}" bindinput="onInput" data-field="struggles"/></view>
+    <view class="form-item"><text class="label">🎯 明日计划</text>
+      <textarea class="textarea" placeholder="明天最重要的3件事…" value="{{f.tomorrow}}" bindinput="onInput" data-field="tomorrow"/></view>
+    <view class="form-item"><text class="label">💙 一句话感恩</text>
+      <input class="input" placeholder="今天感激的一件事…" value="{{f.gratitude}}" bindinput="onInput" data-field="gratitude"/></view>
+    <view class="btn btn-primary btn-full mt-24" bindtap="save">💾 保存今日反思</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">历史记录</view>
+    <view wx:if="{{history.length===0}}" class="empty"><view class="empty-icon">🌙</view><text>暂无记录</text></view>
+    <view wx:for="{{history}}" wx:key="id" class="ref-item">
+      <view class="ref-header">{{item.mood}} {{item.date}}</view>
+      <view wx:if="{{item.wins}}" class="ref-row"><text class="ref-key">🏆 </text><text>{{item.wins}}</text></view>
+      <view wx:if="{{item.struggles}}" class="ref-row"><text class="ref-key">😮‍💨 </text><text>{{item.struggles}}</text></view>
+      <view wx:if="{{item.tomorrow}}" class="ref-row"><text class="ref-key">🎯 </text><text>{{item.tomorrow}}</text></view>
+      <view wx:if="{{item.gratitude}}" class="ref-row text-muted"><text>💙 {{item.gratitude}}</text></view>
+    </view>
+  </view>
+</scroll-view>

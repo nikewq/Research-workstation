@@ -1,0 +1,30 @@
+<view class="container">
+  <view class="tip-card">💡 点击工具卡片即可复制命令到剪贴板</view>
+
+  <view class="card mb-24">
+    <view class="card-title">添加工具</view>
+    <view class="form-row">
+      <view class="form-item"><text class="label">名称</text><input class="input" placeholder="工具名称" value="{{f.label}}" bindinput="onInput" data-field="label"/></view>
+      <view class="form-item"><text class="label">图标</text><input class="input" style="text-align:center" placeholder="⚡" value="{{f.icon}}" bindinput="onInput" data-field="icon"/></view>
+    </view>
+    <view class="form-item"><text class="label">命令/链接</text><input class="input" placeholder="/skill 或 https://…" value="{{f.cmd}}" bindinput="onInput" data-field="cmd"/></view>
+    <view class="form-item"><text class="label">描述（可选）</text><input class="input" placeholder="简短说明" value="{{f.desc}}" bindinput="onInput" data-field="desc"/></view>
+    <view class="btn btn-primary btn-full" bindtap="addTool">➕ 添加</view>
+  </view>
+
+  <view wx:if="{{tools.length===0}}" class="empty"><view class="empty-icon">⚡</view><text>添加你的常用工具</text></view>
+  <view wx:for="{{tools}}" wx:key="id" class="tool-card" bindtap="copyTool" data-id="{{item.id}}">
+    <view class="flex items-center justify-between">
+      <view class="flex items-center gap-16">
+        <text style="font-size:44rpx">{{item.icon}}</text>
+        <view>
+          <view style="font-size:30rpx;font-weight:700;color:#7c3aed">{{item.label}}</view>
+          <view wx:if="{{item.desc}}" class="text-sm text-muted mt-8">{{item.desc}}</view>
+        </view>
+      </view>
+      <view class="btn btn-danger btn-sm" catchtap="delTool" data-id="{{item.id}}">×</view>
+    </view>
+    <view style="font-size:22rpx;color:#8b949e;margin-top:12rpx;font-family:monospace">{{item.cmd}}</view>
+    <view style="font-size:22rpx;color:#8b949e;margin-top:8rpx">👆 点击复制</view>
+  </view>
+</view>

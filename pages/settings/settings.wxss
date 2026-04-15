@@ -1,0 +1,2 @@
+.proj-row { display:flex;align-items:center;gap:16rpx;padding:16rpx 0;border-bottom:1rpx solid #30363d; }
+.proj-dot { width:24rpx;height:24rpx;border-radius:50%; }

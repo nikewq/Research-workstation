@@ -1,0 +1,8 @@
+.habit-row { display:flex;align-items:center;gap:16rpx;padding:16rpx 0;border-bottom:1rpx solid #30363d; }
+.del-btn { font-size:32rpx;color:#8b949e;padding:4rpx 12rpx; }
+.week-header { display:flex;align-items:center;gap:8rpx;margin-bottom:8rpx; }
+.week-day-label { flex:1;text-align:center;font-size:20rpx;color:#8b949e; }
+.week-row { display:flex;align-items:center;gap:8rpx;margin-bottom:10rpx; }
+.week-cell { flex:1;height:36rpx;border-radius:6rpx;background:#1c2128;display:flex;align-items:center;justify-content:center;font-size:18rpx;color:#8b949e; }
+.week-cell.done { background:#059669;color:#fff; }
+.week-cell.today { border:1rpx solid #059669; }

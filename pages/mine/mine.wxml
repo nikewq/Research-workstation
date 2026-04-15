@@ -1,0 +1,42 @@
+<view class="container">
+  <!-- Profile card -->
+  <view class="profile-card">
+    <view class="avatar">🎓</view>
+    <view class="profile-info">
+      <view class="profile-name">{{name}}</view>
+      <view class="profile-field">{{field}}</view>
+      <view class="profile-univ text-muted text-sm">{{univ}}</view>
+    </view>
+    <view class="phd-badge">
+      <view class="phd-num">{{phdDay}}</view>
+      <view class="phd-lbl">第N天</view>
+    </view>
+  </view>
+
+  <!-- Menu list -->
+  <view class="card">
+    <view class="menu-item" bindtap="go" data-url="/pages/habits/habits">
+      <text class="menu-icon">🔥</text><text class="menu-label">习惯打卡</text><text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="go" data-url="/pages/tools/tools">
+      <text class="menu-icon">⚡</text><text class="menu-label">工具面板</text><text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="go" data-url="/pages/reflection/reflection">
+      <text class="menu-icon">🌙</text><text class="menu-label">反思日记</text><text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="go" data-url="/pages/stats/stats">
+      <text class="menu-icon">📈</text><text class="menu-label">统计图表</text><text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="go" data-url="/pages/settings/settings">
+      <text class="menu-icon">⚙️</text><text class="menu-label">个人设置</text><text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- Data -->
+  <view class="card">
+    <view class="card-title">数据管理</view>
+    <view class="btn btn-ghost btn-full mb-16" bindtap="exportData">💾 导出数据 (JSON)</view>
+    <view class="btn btn-ghost btn-full" bindtap="importData">📥 导入数据</view>
+    <view class="text-xs text-muted mt-16" style="text-align:center">数据存储在本地，不上传服务器</view>
+  </view>
+</view>

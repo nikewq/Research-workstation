@@ -1,0 +1,7 @@
+.mood-row { display:flex;gap:12rpx;flex-wrap:wrap; }
+.mood-btn { font-size:48rpx;padding:8rpx 16rpx;border-radius:12rpx;border:2rpx solid transparent; }
+.mood-btn.active { border-color:#7c3aed;background:rgba(124,58,237,.1); }
+.ref-item { padding:20rpx 0;border-bottom:1rpx solid #30363d; }
+.ref-header { font-size:24rpx;color:#8b949e;margin-bottom:10rpx; }
+.ref-row { font-size:26rpx;line-height:1.6;margin-bottom:6rpx; }
+.ref-key { font-weight:600; }

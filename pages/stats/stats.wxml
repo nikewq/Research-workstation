@@ -1,0 +1,49 @@
+<scroll-view scroll-y class="container">
+  <!-- Tasks 7d -->
+  <view class="card">
+    <view class="card-title">近7天完成任务</view>
+    <view class="bar-chart">
+      <view wx:for="{{taskChart}}" wx:key="day" class="bar-col">
+        <view class="bar-val">{{item.val}}</view>
+        <view class="bar" style="height:{{item.pct}}%"></view>
+        <view class="bar-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Pomos 7d -->
+  <view class="card">
+    <view class="card-title">近7天番茄钟 🍅</view>
+    <view class="bar-chart">
+      <view wx:for="{{pomoChart}}" wx:key="day" class="bar-col">
+        <view class="bar-val">{{item.val}}</view>
+        <view class="bar pomo-bar" style="height:{{item.pct}}%"></view>
+        <view class="bar-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Summary stats -->
+  <view class="card">
+    <view class="card-title">总览</view>
+    <view class="summary-grid">
+      <view class="sum-item"><view class="sum-val text-purple">{{total.tasks}}</view><view class="sum-label">总完成任务</view></view>
+      <view class="sum-item"><view class="sum-val text-red">{{total.pomos}}</view><view class="sum-label">总番茄钟</view></view>
+      <view class="sum-item"><view class="sum-val text-orange">{{total.subs}}</view><view class="sum-label">投稿记录</view></view>
+      <view class="sum-item"><view class="sum-val text-green">{{total.days}}</view><view class="sum-label">签到天数</view></view>
+    </view>
+  </view>
+
+  <!-- Project breakdown -->
+  <view class="card">
+    <view class="card-title">任务项目分布</view>
+    <view wx:if="{{projChart.length===0}}" class="empty" style="padding:40rpx"><text>暂无完成任务</text></view>
+    <view wx:for="{{projChart}}" wx:key="name" class="proj-bar-row">
+      <text style="width:140rpx;font-size:24rpx" class="text-muted">{{item.name}}</text>
+      <view style="flex:1;background:#1c2128;border-radius:6rpx;height:24rpx;margin:0 16rpx">
+        <view style="width:{{item.pct}}%;height:100%;border-radius:6rpx;background:{{item.color}}"></view>
+      </view>
+      <text style="font-size:24rpx;font-weight:700;color:{{item.color}}">{{item.val}}</text>
+    </view>
+  </view>
+</scroll-view>

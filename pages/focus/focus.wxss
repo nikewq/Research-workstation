@@ -1,0 +1,12 @@
+.pomo-card { text-align: center; }
+.pomo-display { padding: 40rpx 0; }
+.pomo-time { font-size: 120rpx; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -4rpx; }
+.pomo-time.work { color: #7c3aed; }
+.pomo-time.break { color: #059669; }
+.pomo-label { font-size: 28rpx; color: #8b949e; margin-top: 8rpx; }
+.pomo-dots { display: flex; justify-content: center; gap: 16rpx; margin: 16rpx 0; }
+.pomo-dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: #30363d; }
+.pomo-dot.done { background: #7c3aed; }
+.pomo-settings { display: flex; gap: 24rpx; margin-top: 32rpx; text-align: left; }
+.pomo-set-item { flex: 1; }
+.pomo-log-item { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid #30363d; font-size: 28rpx; }

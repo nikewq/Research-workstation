@@ -1,0 +1,16 @@
+.stats-row { display: flex; gap: 12rpx; margin-bottom: 24rpx; }
+.sub-item { background: #1c2128; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx; border-left: 6rpx solid #30363d; }
+.sub-item.status-submitted { border-left-color: #f59e0b; }
+.sub-item.status-accepted  { border-left-color: #059669; }
+.sub-item.status-revision  { border-left-color: #7c3aed; }
+.sub-item.status-rejected  { border-left-color: #ef4444; }
+.sub-title { font-size: 30rpx; font-weight: 600; }
+.sub-notes { font-size: 24rpx; color: #8b949e; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #30363d; }
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; }
+.modal-box {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 101;
+  background: #161b22; border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-size: 36rpx; font-weight: 700; margin-bottom: 24rpx; }
