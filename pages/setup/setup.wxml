@@ -16,22 +16,29 @@
   <!-- Step 1: Basic Info -->
   <view class="step-box" wx:if="{{step === 1}}">
     <view class="step-title">👋 基本信息</view>
+
+    <!-- 说明提示 -->
+    <view class="info-tip">
+      <text class="info-tip-icon">💡</text>
+      <text class="info-tip-text">以下信息仅存储在你的手机本地，用于个人研究方向定制、任务项目标签生成及博士进度追踪，不会上传至任何服务器。</text>
+    </view>
+
     <view class="form-item">
       <text class="label">你的名字</text>
-      <input class="input" placeholder="如：张三" value="{{form.name}}" bindinput="onInput" data-field="name"/>
+      <input class="input full-input" placeholder="如：张三" value="{{form.name}}" bindinput="onInput" data-field="name"/>
     </view>
     <view class="form-item">
       <text class="label">研究领域</text>
-      <input class="input" placeholder="如：计算机视觉、NLP…" value="{{form.field}}" bindinput="onInput" data-field="field"/>
+      <input class="input full-input" placeholder="如：计算机视觉、NLP、强化学习…" value="{{form.field}}" bindinput="onInput" data-field="field"/>
     </view>
     <view class="form-item">
-      <text class="label">学校/机构（可选）</text>
-      <input class="input" placeholder="如：清华大学" value="{{form.univ}}" bindinput="onInput" data-field="univ"/>
+      <text class="label">学校 / 机构（可选）</text>
+      <input class="input full-input" placeholder="如：清华大学" value="{{form.univ}}" bindinput="onInput" data-field="univ"/>
     </view>
     <view class="form-item">
       <text class="label">博士入学日期</text>
       <picker mode="date" value="{{form.startDate}}" bindchange="onDateChange">
-        <view class="picker-wrap">{{form.startDate || '请选择日期'}}</view>
+        <view class="picker-wrap full-input">{{form.startDate || '请选择日期 →'}}</view>
       </picker>
     </view>
   </view>
