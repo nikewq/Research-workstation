@@ -641,7 +641,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     </div>
     <div class="form-row c2">
       <div><label>学校/机构</label><input id="set-univ" placeholder="学校名称"></div>
-      <div><label>博士入学日期</label><input type="date" id="set-start"></div>
+      <div><label id="set-start-label">博士入学日期</label><input type="date" id="set-start"></div>
     </div>
     <button class="btn btn-primary" onclick="saveBasicSettings()">保存基本信息</button>
   </div>
@@ -1492,6 +1492,8 @@ function populateSettingsForm(){
   document.getElementById('set-field').value=cfg.field||'';
   document.getElementById('set-univ').value=cfg.univ||'';
   document.getElementById('set-start').value=cfg.startDate||'';
+  const lbl=document.getElementById('set-start-label');
+  if(lbl) lbl.textContent=ROLE_DATE_LABEL[cfg.role||'phd']||'入学日期';
   renderProjSettings();renderAreaTagsSettings();
 }
 function saveBasicSettings(){
