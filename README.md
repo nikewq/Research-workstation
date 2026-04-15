@@ -94,6 +94,21 @@ Research-workstation/
     └── config-sample.json  # 数据结构示例
 ```
 
+## 🙏 致谢
+
+本项目在以下优秀作品的基础上整合改进，向三位作者致谢：
+
+| 作者 | 项目 | 核心特性 |
+|------|------|---------|
+| **@yuyu** | [博士上班打卡系统](http://xhslink.com/o/9BIzPsokBFU) | 详细考勤记录、假期管理、图表统计 |
+| **@去码头搞点薯条🍟** | 多巴胺版 To be a Doctor | 多巴胺配色、专注计时、任务管理、饮食日记、情绪记录、观心反思、统计看板 |
+| **@五歌儿** | [博士生自律打卡系统（ADHD特供版）](http://xhslink.com/o/6249SsRQ83S) | 起居打卡、习惯追踪、时间块日历、手机克制、成就系统、Chart.js 图表 |
+
+在三位的基础上，本项目整合所有精华并新增：
+- 📄 **投稿管理**：投稿全程状态追踪（审核中 / 修改中 / 录用 / 拒稿 / 撤稿）
+- ✏️ **编辑 / 删除**：所有记录均支持修改和删除
+- 💾 **数据导入 / 导出**：全量 JSON 备份与跨设备恢复
+
 ## 🤝 贡献
 
 欢迎 PR 和 Issue！
@@ -198,6 +213,21 @@ Research-workstation/
 └── examples/
     └── config-sample.json  # Data schema reference
 ```
+
+## 🙏 Acknowledgements
+
+This project integrates and builds upon three excellent works. Many thanks to their authors:
+
+| Author | Project | Key Features |
+|--------|---------|-------------|
+| **@yuyu** | [PhD Attendance System](http://xhslink.com/o/9BIzPsokBFU) | Attendance records, holiday management, chart statistics |
+| **@去码头搞点薯条🍟** | Dopamine Version — To be a Doctor | Dopamine color scheme, focus timer, task management, food diary, emotion tracking, reflection journal, stats dashboard |
+| **@五歌儿** | [PhD Self-discipline System (ADHD Edition)](http://xhslink.com/o/6249SsRQ83S) | Sleep/wake tracking, habit tracking, time-block calendar, phone restraint, achievement system, Chart.js charts |
+
+Built on top of their work, this project adds:
+- 📄 **Submission Tracker**: Full paper status tracking (Under Review / Revision / Accepted / Rejected / Withdrawn)
+- ✏️ **Edit / Delete**: All records are editable and deletable
+- 💾 **Data Import / Export**: Full JSON backup and cross-device restore
 
 ## 🤝 Contributing
 
