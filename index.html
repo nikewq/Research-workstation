@@ -356,6 +356,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
   <div class="nav-group">设置</div>
   <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
+  <div class="nav-item" onclick="openSyncModal()"><span class="nav-icon">☁️</span>云同步</div>
   <div class="nav-item" id="exportBtn"><span class="nav-icon">💾</span>导出数据</div>
   <div class="nav-item" id="importBtn"><span class="nav-icon">📥</span>导入数据</div>
   <input type="file" id="importFile" accept=".json" style="display:none">
@@ -673,6 +674,43 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 </main>
 
 <!-- ── Edit Task Modal ── -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">☁️ 云同步</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">用同步码在不同设备间恢复你的个人设置和配置</p>
+
+    <!-- 我的同步码 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">我的同步码</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="sync-code-display" style="font-size:22px;font-weight:700;letter-spacing:3px;color:var(--primary);flex:1;font-family:monospace">——</div>
+        <button class="btn btn-ghost btn-sm" onclick="copySyncCode()">复制</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px">换设备时输入此码即可恢复所有设置</div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="saveProfileCloud()">
+      ☁️ 立即同步到云端
+    </button>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin-bottom:16px">
+
+    <!-- 导入同步码 -->
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">在新设备上恢复</div>
+    <div style="display:flex;gap:8px">
+      <input id="sync-code-input" placeholder="输入同步码，如 MAPLE42" maxlength="12"
+        style="flex:1;text-transform:uppercase;letter-spacing:2px;font-family:monospace"
+        oninput="this.value=this.value.toUpperCase()">
+      <button class="btn btn-ghost" onclick="loadProfileCloud()">导入</button>
+    </div>
+    <div id="sync-tip" style="font-size:12px;margin-top:8px;display:none"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('syncModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="roleModal">
   <div class="modal" style="max-width:400px">
     <div class="modal-title">🎓 选择你的身份</div>
@@ -930,6 +968,9 @@ function finishSetup() {
   document.getElementById('setup-overlay').style.display = 'none';
   initApp();
   toast(`🎉 欢迎，${cfg.name}！工作台已就绪！`);
+  // 自动生成同步码并上传
+  _getOrCreateSyncCode();
+  setTimeout(saveProfileCloud, 800);
 }
 function skipSetup() {
   const cfg = getCfg();
@@ -1601,7 +1642,95 @@ initSetupWizard();
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <script>
 // ── 打卡树洞 ────────────────────────────────────────
+// ══════════════════════════════════════
+//  云同步（同步码）
+// ══════════════════════════════════════
 const _SB_URL = 'https://fbaznbvlymfqtycqlmjz.supabase.co'
+const _SB_KEY_SYNC = 'sb_publishable_BvP_LZ0d_-HMcykIaoUCNw_xKkxKwzz'
+
+// 生成同步码：形如 MAPLE42（词+2位数）
+const _SYNC_WORDS = ['MAPLE','KIWI','FERN','SAGE','IRIS','MANGO','OLIVE',
+  'BERRY','DAISY','BASIL','CLOVER','POPPY','WILLOW','LEMON','CEDAR']
+function _genSyncCode(){
+  const w = _SYNC_WORDS[Math.floor(Math.random()*_SYNC_WORDS.length)]
+  const n = String(Math.floor(Math.random()*90)+10)
+  return w + n
+}
+function _getOrCreateSyncCode(){
+  let code = localStorage.getItem('_sync_code')
+  if(!code){ code = _genSyncCode(); localStorage.setItem('_sync_code', code) }
+  return code
+}
+
+function openSyncModal(){
+  document.getElementById('sync-code-display').textContent = _getOrCreateSyncCode()
+  document.getElementById('sync-tip').style.display = 'none'
+  document.getElementById('sync-code-input').value = ''
+  openModal('syncModal')
+}
+
+function copySyncCode(){
+  const code = _getOrCreateSyncCode()
+  navigator.clipboard.writeText(code).then(()=>toast('✅ 同步码已复制'))
+    .catch(()=>{ toast('同步码：' + code) })
+}
+
+async function saveProfileCloud(){
+  const code = _getOrCreateSyncCode()
+  const tip = document.getElementById('sync-tip')
+  const data = {
+    cfg: getCfg(),
+    habitDefs: ld(K.habitDefs, []),
+    tools: ld(K.tools, []),
+  }
+  try{
+    const r = await fetch(`${_SB_URL}/rest/v1/profiles`, {
+      method: 'POST',
+      headers: {
+        'apikey': _SB_KEY_SYNC, 'Authorization': 'Bearer ' + _SB_KEY_SYNC,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify({ code, data, updated_at: new Date().toISOString() })
+    })
+    if(r.ok){
+      toast('✅ 已同步到云端！同步码：' + code)
+      tip.textContent = '✅ 同步成功！'; tip.style.color='var(--green)'; tip.style.display='block'
+    } else {
+      const e = await r.json().catch(()=>({}))
+      tip.textContent = '同步失败：' + (e.message||r.status); tip.style.color='var(--red)'; tip.style.display='block'
+    }
+  } catch(e){
+    tip.textContent = '网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block'
+  }
+}
+
+async function loadProfileCloud(){
+  const code = document.getElementById('sync-code-input').value.trim().toUpperCase()
+  const tip = document.getElementById('sync-tip')
+  if(!code){ tip.textContent='请输入同步码'; tip.style.color='var(--text2)'; tip.style.display='block'; return }
+  try{
+    const r = await fetch(`${_SB_URL}/rest/v1/profiles?code=eq.${encodeURIComponent(code)}&select=data`, {
+      headers: { 'apikey': _SB_KEY_SYNC, 'Authorization': 'Bearer ' + _SB_KEY_SYNC }
+    })
+    if(!r.ok){ tip.textContent='查询失败 ('+r.status+')'; tip.style.color='var(--red)'; tip.style.display='block'; return }
+    const rows = await r.json()
+    if(!rows.length){ tip.textContent='未找到该同步码，请检查是否正确'; tip.style.color='var(--red)'; tip.style.display='block'; return }
+    const d = rows[0].data
+    if(d.cfg) saveCfg({...getCfg(), ...d.cfg})
+    if(d.habitDefs) sv(K.habitDefs, d.habitDefs)
+    if(d.tools) sv(K.tools, d.tools)
+    // 保存该设备的同步码
+    localStorage.setItem('_sync_code', code)
+    closeModal('syncModal')
+    toast('✅ 数据已恢复！正在刷新…')
+    setTimeout(()=>location.reload(), 1200)
+  } catch(e){
+    tip.textContent='网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block'
+  }
+}
+
+
 const _SB_KEY = 'sb_publishable_BvP_LZ0d_-HMcykIaoUCNw_xKkxKwzz'
 
 // 名字池：叠字昵称 / 水果植物 / 可爱动物
