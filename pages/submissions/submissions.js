@@ -7,7 +7,7 @@ const SUB_LBL = { submitted:'审核中', revision:'修改中', accepted:'✅ 录
 Page({
   data: {
     subs: [], stats: { total:0, submitted:0, accepted:0, revision:0 },
-    showModal: false, editId: null,
+    showModal: false, editId: '',
     statusLabels: STATUS_LABELS,
     form: { title:'', venue:'', statusIdx:0, submitDate:'', notes:'' },
   },
@@ -30,7 +30,7 @@ Page({
   },
 
   showAddModal() {
-    this.setData({ showModal: true, editId: null, form: { title:'', venue:'', statusIdx:0, submitDate: today(), notes:'' } })
+    this.setData({ showModal: true, editId: '', form: { title:'', venue:'', statusIdx:0, submitDate: today(), notes:'' } })
   },
   closeModal() { this.setData({ showModal: false }) },
 
