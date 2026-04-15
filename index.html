@@ -53,6 +53,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .wall-tag-share{background:#e8f7ee;color:#2a9d5c;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
 .wall-tag-help{background:#fff0e6;color:#e07b39;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
 .wall-tag-vent{background:#f0eeff;color:#6c5ce7;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
+.ai-reply{background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(99,102,241,.05));border-left:2px solid #10b981;border-radius:0 6px 6px 0;padding:8px 10px;margin-top:7px;font-size:12px;line-height:1.65;color:var(--text)}
+.ai-reply-hd{font-size:10px;color:#10b981;font-weight:700;letter-spacing:.3px;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.ai-reply-hd span{opacity:.7;font-weight:400}
+@keyframes ai-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.ai-loading .ai-reply-hd::after{content:'';display:inline-block;width:5px;height:5px;background:#10b981;border-radius:50%;margin-left:4px;animation:ai-pulse 1.2s ease-in-out infinite}
 
 /* Main */
 #main{margin-left:200px;flex:1;padding:24px;min-height:100vh}
@@ -1993,6 +1998,85 @@ function relTime(ts){
   const d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日'
 }
 
+// ── AI 回复引擎 ──────────────────────────────────
+// Groq key 存储在 Supabase site_config 表（见 README SQL）
+let _aiKeyCache=null
+async function _getAIKey(){
+  if(_aiKeyCache) return _aiKeyCache
+  const cached=sessionStorage.getItem('_gk')
+  if(cached){_aiKeyCache=cached;return cached}
+  try{
+    const r=await fetch(`${_SB_URL}/rest/v1/site_config?key=eq.groq_key&select=value`,{
+      headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}
+    })
+    const d=await r.json()
+    const k=d[0]?.value
+    if(k&&k.startsWith('gsk_')){_aiKeyCache=k;sessionStorage.setItem('_gk',k);return k}
+  }catch(_){}
+  return null
+}
+
+const _DISTRESS=['崩溃','绝望','想放弃','撑不住','不想做了','退学','抑郁','好难受','太累了','怎么办','帮帮我','救命','好痛苦','迷茫','绷不住','熬不住','坚持不下去','想哭','心态崩了','不知道该怎么']
+function _needsAI(tag,msg){
+  if(tag==='help') return true
+  if(tag==='vent'&&_DISTRESS.some(k=>msg.includes(k))) return true
+  return false
+}
+
+const _aiCache={}  // sessionStorage-level cache: id -> reply
+async function _callGroq(id,msg){
+  if(_aiCache[id]) return _aiCache[id]
+  const key=await _getAIKey()
+  if(!key) return null
+  const prompt=`你是一位走过科研低谷、最终走出来的前辈研究者，内心温暖而有智慧。\n一位研究者写道：「${msg}」\n请用50-80字给出回应：温暖真实、包含一个具体可操作的小建议、像老朋友说话（不说教）、可以有一点幽默但不轻浮。直接开始，不要称呼，不要分段，不要说"我理解你"。`
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[{role:'user',content:prompt}],
+        max_tokens:200,temperature:0.85
+      })
+    })
+    if(!r.ok) return null
+    const data=await r.json()
+    const reply=data.choices?.[0]?.message?.content?.trim()||null
+    if(reply) _aiCache[id]=reply
+    return reply
+  }catch(_){return null}
+}
+
+async function _generateAndShow(item){
+  const elId=`ai-${item._domId}`
+  const reply=await _callGroq(item._domId, item.msg)
+  const el=document.getElementById(elId)
+  if(!el) return
+  if(!reply){el.remove();return}
+  el.classList.remove('ai-loading')
+  el.innerHTML=`<div class="ai-reply-hd">💬 来自过来人 <span>· AI 生成</span></div>${escHtml(reply)}`
+}
+
+function _renderWallItem(d,idx){
+  const domId=d.created_at+idx  // unique stable key per render
+  d._domId=domId
+  const needs=_needsAI(d.tag,d.msg)
+  const aiBlock=needs
+    ?`<div class="ai-reply ai-loading" id="ai-${domId}"><div class="ai-reply-hd">💬 过来人正在思考…</div></div>`
+    :''
+  return`<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
+      <span style="font-size:18px;line-height:1">${escHtml(d.avatar||'🌿')}</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text)">${escHtml(d.nickname||'?')}</span>
+      ${_tagBadge(d.tag)}
+      ${d.day?`<span style="font-size:11px;color:var(--primary)">第${d.day}天</span>`:''}
+      <span style="font-size:11px;color:var(--text2);margin-left:auto">${relTime(d.created_at)}</span>
+    </div>
+    <div style="font-size:13px;color:var(--text);line-height:1.55;word-break:break-all">${escHtml(d.msg)}</div>
+    ${aiBlock}
+  </div>`
+}
+
 async function loadWall(){
   try{
     let url=`${_SB_URL}/rest/v1/wall?select=day,msg,nickname,avatar,tag,created_at&order=created_at.desc&limit=15`
@@ -2008,16 +2092,10 @@ async function loadWall(){
       _renderIdentity()
       return
     }
-    el.innerHTML=data.map(d=>`
-      <div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:18px;flex-shrink:0;line-height:1">${escHtml(d.avatar||'🌿')}</span>
-        <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0">${escHtml(d.nickname||'?')}</span>
-        ${_tagBadge(d.tag)}
-
-        <span style="font-size:13px;color:var(--text);flex:1;word-break:break-all">${escHtml(d.msg)}</span>
-        <span style="font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0">${relTime(d.created_at)}</span>
-      </div>`).join('')
+    el.innerHTML=data.map((d,i)=>_renderWallItem(d,i)).join('')
     _renderIdentity()
+    // 触发 AI 回复（异步，不阻塞渲染）
+    data.forEach(d=>{ if(_needsAI(d.tag,d.msg)) _generateAndShow(d) })
   }catch(e){}
 }
 
@@ -2031,7 +2109,6 @@ async function submitWall(){
   const tip=document.getElementById('wall-tip')
   if(!rawMsg){tip.textContent='请写点什么';tip.style.display='block';return}
   if(rawMsg.length>500){tip.textContent='最多500个字';tip.style.display='block';return}
-  // 如果选了今日状态，前缀附加到消息
   const msg=_wallMood?`[${_wallMood}] ${rawMsg}`:rawMsg
   tip.style.display='none'
   try{
