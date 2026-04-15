@@ -380,7 +380,8 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <span style="font-size:11px;color:var(--text2)">匿名 · 互相见证</span>
     </div>
     <div id="wall-list" style="min-height:40px"></div>
-    <div id="wall-form" style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+    <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-top:10px;margin-bottom:4px"></div>
+    <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
         style="width:110px;flex-shrink:0">
       <input id="wall-msg" maxlength="20" placeholder="留一句话（20字内）"
@@ -1461,6 +1462,40 @@ initSetupWizard();
 const _SB_URL = 'https://fbaznbvlymfqtycqlmjz.supabase.co'
 const _SB_KEY = 'sb_publishable_BvP_LZ0d_-HMcykIaoUCNw_xKkxKwzz'
 
+// 名字池：叠字昵称 / 水果植物 / 可爱动物
+const _WALL_IDS = [
+  {n:'Momo',e:'🍑'},{n:'Coco',e:'🥥'},{n:'Boba',e:'🧋'},{n:'Lulu',e:'🌸'},
+  {n:'Kiki',e:'🐱'},{n:'Mimi',e:'🐭'},{n:'Nini',e:'🐰'},{n:'Toto',e:'🌿'},
+  {n:'Gogo',e:'🐸'},{n:'Lolo',e:'🦦'},{n:'Bubu',e:'🐼'},{n:'Dodo',e:'🐤'},
+  {n:'Mango',e:'🥭'},{n:'Peach',e:'🍑'},{n:'Kiwi',e:'🥝'},{n:'Berry',e:'🫐'},
+  {n:'Cherry',e:'🍒'},{n:'Pear',e:'🍐'},{n:'Plum',e:'💜'},{n:'Fig',e:'🌰'},
+  {n:'Olive',e:'🫒'},{n:'Melon',e:'🍈'},{n:'Lychee',e:'🍡'},{n:'Yuzu',e:'🍋'},
+  {n:'Fern',e:'🌿'},{n:'Ivy',e:'🌱'},{n:'Sage',e:'🍃'},{n:'Lily',e:'🌷'},
+  {n:'Daisy',e:'🌼'},{n:'Clover',e:'🍀'},{n:'Maple',e:'🍁'},{n:'Poppy',e:'🌺'},
+  {n:'Willow',e:'🌳'},{n:'Mint',e:'💚'},{n:'Basil',e:'🪴'},{n:'Iris',e:'🪻'},
+  {n:'Bunny',e:'🐇'},{n:'Otter',e:'🦦'},{n:'Koala',e:'🐨'},{n:'Panda',e:'🐼'},
+  {n:'Llama',e:'🦙'},{n:'Fawn',e:'🦌'},{n:'Wren',e:'🐦'},{n:'Finch',e:'🐤'},
+  {n:'Hamster',e:'🐹'},{n:'Capybara',e:'🦫'},{n:'Duckling',e:'🐥'},{n:'Cub',e:'🐻'},
+]
+
+// 获取/创建本设备身份（localStorage 持久化）
+function _getWallId(){
+  let id=localStorage.getItem('_wall_id')
+  if(!id){
+    const pick=_WALL_IDS[Math.floor(Math.random()*_WALL_IDS.length)]
+    id=JSON.stringify(pick)
+    localStorage.setItem('_wall_id',id)
+  }
+  try{ return JSON.parse(id) }catch(e){ return _WALL_IDS[0] }
+}
+
+// 渲染"你是 XX"身份标签
+function _renderIdentity(){
+  const me=_getWallId()
+  const el=document.getElementById('wall-identity')
+  if(el) el.innerHTML=`<span style="user-select:none">你是 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b></span>`
+}
+
 function relTime(ts){
   const s=Math.floor((Date.now()-new Date(ts))/1000)
   if(s<60) return '刚刚'
@@ -1472,22 +1507,26 @@ function relTime(ts){
 
 async function loadWall(){
   try{
-    const r=await fetch(`${_SB_URL}/rest/v1/wall?select=day,msg,created_at&order=created_at.desc&limit=8`,{
+    const r=await fetch(`${_SB_URL}/rest/v1/wall?select=day,msg,nickname,avatar,created_at&order=created_at.desc&limit=10`,{
       headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}
     })
     if(!r.ok) return
     const data=await r.json()
     const el=document.getElementById('wall-list')
     if(!data.length){
-      el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px 0">还没有留言，成为第一个吧 👆</div>'
+      el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px 0">还没有留言，成为第一个吧 🌱</div>'
+      _renderIdentity()
       return
     }
     el.innerHTML=data.map(d=>`
-      <div style="display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:18px;flex-shrink:0;line-height:1">${escHtml(d.avatar||'🌿')}</span>
+        <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0;min-width:44px">${escHtml(d.nickname||'Anonymous')}</span>
         <span style="font-size:11px;color:var(--primary);white-space:nowrap;flex-shrink:0">第${d.day}天</span>
-        <span style="font-size:13px;color:var(--text);flex:1">${escHtml(d.msg)}</span>
+        <span style="font-size:13px;color:var(--text);flex:1;word-break:break-all">${escHtml(d.msg)}</span>
         <span style="font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0">${relTime(d.created_at)}</span>
       </div>`).join('')
+    _renderIdentity()
   }catch(e){}
 }
 
@@ -1496,6 +1535,7 @@ function escHtml(s){
 }
 
 async function submitWall(){
+  const me=_getWallId()
   const day=parseInt(document.getElementById('wall-day').value)||0
   const msg=document.getElementById('wall-msg').value.trim()
   const tip=document.getElementById('wall-tip')
@@ -1506,7 +1546,7 @@ async function submitWall(){
     const r=await fetch(`${_SB_URL}/rest/v1/wall`,{
       method:'POST',
       headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({day,msg})
+      body:JSON.stringify({day,msg,nickname:me.n,avatar:me.e})
     })
     if(r.ok){
       document.getElementById('wall-day').value=''
