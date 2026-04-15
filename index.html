@@ -400,6 +400,19 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="stat-card stat-orange"><div class="stat-value" id="s-habits">0/0</div><div class="stat-label">习惯完成</div></div>
     <div class="stat-card stat-blue"><div class="stat-value" id="s-streak">0</div><div class="stat-label">连续打卡天</div></div>
   </div>
+  <!-- 研究者身份卡 -->
+  <div class="card" id="identity-card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;padding:14px 18px;cursor:pointer;border-left:3px solid #8b949e" onclick="rerollIdentityDesc()" title="点击换一句话">
+    <div id="identity-avatar" style="font-size:36px;flex-shrink:0;line-height:1">🌱</div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span id="identity-name" style="font-size:15px;font-weight:700">初始化中</span>
+        <span id="identity-rank" style="font-size:11px;padding:2px 7px;border-radius:999px;font-weight:600;background:rgba(255,255,255,0.08)">—</span>
+      </div>
+      <div id="identity-desc" style="font-size:12px;color:var(--text2);line-height:1.5"></div>
+      <div id="identity-tip" style="font-size:11px;margin-top:5px;opacity:0.55;font-style:italic"></div>
+    </div>
+  </div>
+
   <div class="grid-2">
     <div class="card">
       <div class="section-header"><div class="card-title" style="margin-bottom:0">待做任务</div><button class="btn btn-ghost btn-sm" onclick="switchPage('tasks')">全部</button></div>
@@ -994,6 +1007,7 @@ function initApp() {
   updatePhdDay();
   renderCheckin();
   renderOverview();
+  renderIdentityCard();
   renderTasks();
   renderHabits();
   renderSubmissions();
@@ -1111,6 +1125,141 @@ function updateTodayDate() {
 // ══════════════════════════════════════
 //  CHECK-IN
 // ══════════════════════════════════════
+// ══════════════════════════════════════
+//  幽默签到语录
+// ══════════════════════════════════════
+function _pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function _checkinQuip(h){
+  if(h<6)  return['🌙 凌晨签到？GPU都在睡，你还在醒着','🦉 你和黎明之间只隔一个epoch','🌃 凌晨奋斗者，今天稳进前十'];
+  if(h<9)  return['🌅 早鸟签到！朝霞都在给你鼓掌','☀️ 早安！你已经赢在起跑线了','🐓 鸡都没你早，今日无敌'];
+  if(h<11) return['✅ 上午签到，状态优秀！','🚀 上午冲刺开始！全力以赴！','💡 脑子最清醒的时段，好好把握'];
+  if(h<13) return['🌞 中午才来？"大器晚成型"选手','😴 昨晚几点睡的……算了，来了就好','☕ 午前签到，今天还有救！'];
+  if(h<16) return['🍱 吃完午饭才来，考核记负分（开玩笑）','😤 下午签到…成绩从零开始算','🌤 午后阳光，你终于出现了'];
+  if(h<19) return['🌆 傍晚签到，今晚得补回来','🔬 傍晚的实验室，你是今天最拼的','🐢 慢工出细活，只要来了就好'];
+  if(h<22) return['🌇 晚上签到，晚但没缺席','🌙 夜班研究员，辛苦了！','⭐ 今天前半天算薛定谔的科研'];
+  return['🌃 深夜签到…你还好吗？','🦇 连蝙蝠都睡了，你还在卷','⭐ 星星见证努力，但请记得睡觉'];
+}
+function _checkoutQuip(h){
+  if(h<12) return['😲 才几点你就撤了？！','🤨 这就跑了？数据都没跑完呢','🐔 半天工作制，效率选手'];
+  if(h<15) return['🌞 午后收工，效率高的秘密！','☕ 下午好好休息，明天继续','🍃 适当休息也是科研的一部分'];
+  if(h<18) return['✅ 正常下班！向人类看齐！','🎉 标准工时，太难得了！','🌟 准时签出，生活工作兼顾大神'];
+  if(h<20) return['🌆 加班了一点，辛苦！','👏 傍晚收工，今天值了','🍜 去吃饭！你赢得了这一餐'];
+  if(h<22) return['🌙 晚上才结束，今天付出了很多','🔥 晚班结束，GPU该降温了','💪 夜里收工，今天的努力算数'];
+  return['🌃 深夜签出…去睡觉！命令！','🦉 熬夜伤身，明天早点来','🛌 超额完成了，快去睡觉'];
+}
+
+// ══════════════════════════════════════
+//  研究者身份系统
+// ══════════════════════════════════════
+const RESEARCHER_IDS={
+  ascetic:    {rank:'S',emoji:'🏯',name:'修行者',   color:'#a855f7',
+    descs:['连续60天不间断，这已经不是科研了，这是修炼。',
+           '你的实验室是道场，代码是经文，数据是禅定的对象。',
+           '连续60天？导师对你无话可说了，只剩五体投地。']},
+  awakened:   {rank:'S',emoji:'⚡',name:'觉醒者',   color:'#f59e0b',
+    descs:['早起的鸟儿有论文，你解锁了晨间秘术。',
+           '当别人还在睡梦中，你已经跑完了一个epoch。',
+           '30天的清晨见证了你的觉醒，连导师都不敢比你早。']},
+  grinder:    {rank:'A',emoji:'🔥',name:'卷王',     color:'#ef4444',
+    descs:['GPU都在为你发热，注意休息……真的。',
+           '日均工时超9小时，身体在抗议，但代码在进步。',
+           '卷王，但可持续的卷才是真的卷。保重！']},
+  nightowl:   {rank:'A',emoji:'🌙',name:'深夜修士', color:'#6366f1',
+    descs:['深夜的实验室，只有风扇声和你的键盘声。',
+           '星星见证你的坚持，但床也在想你。',
+           '你和黎明之间只隔一个epoch的训练。']},
+  clearheaded:{rank:'A',emoji:'🌅',name:'清醒者',   color:'#10b981',
+    descs:['清晨签到，大脑最清醒的时段运转——这是高效的秘密。',
+           '你是早起的修行者，朝霞是专属签到奖励。',
+           '当世界还没醒，你已经有了今天的第一个idea。']},
+  steady:     {rank:'B',emoji:'💪',name:'稳健者',   color:'#3b82f6',
+    descs:['两周连续打卡，习惯正在悄悄生根。',
+           '不是最卷的，但是最稳的——稳健是一种实力。',
+           '14天，够让大脑把科研当成本能了。继续！']},
+  meditator:  {rank:'B',emoji:'🧘',name:'冥想者',   color:'#8b5cf6',
+    descs:['科研不只是埋头冲刺，偶尔沉淀才能走得更远。',
+           '你的节奏是 deliberate practice，不是无效内卷。',
+           '冥想者的路更长，但弯路更少。']},
+  pilgrim:    {rank:'B',emoji:'🚶',name:'行路人',   color:'#64748b',
+    descs:['每天都在前进，哪怕只有一小步，也是一步。',
+           '科研是场马拉松，你还在路上，这就够了。',
+           '保持节奏，终点会悄悄靠近。']},
+  newbie:     {rank:'C',emoji:'🌱',name:'新手村民', color:'#22c55e',
+    descs:['欢迎来到科研的修罗场！前三天最难，撑住！',
+           '每个修行者都从村民开始，你的传说刚刚开篇。',
+           '新手保护期内，先把第一个习惯坚持下来！']},
+  sleeper:    {rank:'C',emoji:'😴',name:'沉睡者',   color:'#94a3b8',
+    descs:['今天还没签到？实验在等你，数据在等你，deadline 也在等你。',
+           '沉睡者，你的 GPU 已经凉了，快来加热！',
+           '早起的鸟有虫吃，晚起的……也有虫，只是虫死了。']},
+  slacker:    {rank:'C',emoji:'🌊',name:'摆烂选手', color:'#fb923c',
+    descs:['摆烂是一时的，deadline 是永恒的。',
+           '佛系也要有底线，今天签个到先？',
+           '科研逃不掉的，不如早点和解。']},
+  hibernating:{rank:'D',emoji:'🦥',name:'冬眠中',   color:'#a3a3a3',
+    descs:['三天没出现……你还好吗？',
+           '实验室的植物都比你勤快（每天光合作用）。',
+           '偶尔消失是人之常情，别让实验也跟着蒸发了。']},
+};
+const _NEXT_RANK={
+  hibernating:'先签一次到，重回 C 级',
+  slacker:    '连续签到 3 天，晋升「行路人」',
+  sleeper:    '今天签到，立刻升级',
+  newbie:     '累计签到 5 天，解锁「行路人」',
+  pilgrim:    '连续 7 天签到，解锁「冥想者」',
+  meditator:  '连续 14 天签到，解锁「稳健者」',
+  steady:     '连续 30 天 + 早起 40%，解锁「清醒者」',
+  clearheaded:'继续保持，冲击「觉醒者」需连续 30 天',
+  nightowl:   '试着早点签到，解锁「清醒者」',
+  grinder:    '注意休息——可持续的卷才是长久之道',
+  awakened:   '再坚持 30 天 + 日均工时 ≥ 6h，解锁传说「修行者」',
+  ascetic:    '✨ 已达最高境界，传说中的修行者，继续！',
+};
+function _calcIdentity(){
+  const cks=ld(K.checkins),h=ld(K.habits),defs=getHabitDefs(),total=cks.length;
+  const last14=[];for(let i=0;i<14;i++){const d=new Date();d.setDate(d.getDate()-i);last14.push(localDate(d));}
+  let streak=0;{const d=new Date();while(streak<365){const ds=localDate(d);if(cks.find(c=>c.date===ds)){streak++;d.setDate(d.getDate()-1);}else break;}}
+  const rec=cks.filter(c=>last14.includes(c.date)),act=rec.length;
+  const ciH=rec.filter(c=>c.ci).map(c=>parseInt(c.ci.split(':')[0]));
+  const avgCI=ciH.length?ciH.reduce((a,b)=>a+b)/ciH.length:12;
+  const wm=rec.filter(c=>c.ci&&c.co).map(c=>{const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number);return(oh*60+om)-(ih*60+im);}).filter(m=>m>0);
+  const avgW=wm.length?wm.reduce((a,b)=>a+b)/wm.length/60:0;
+  const nightN=rec.filter(c=>c.co&&parseInt(c.co.split(':')[0])>=22).length;
+  const nightR=act>0?nightN/act:0;
+  const earlyN=rec.filter(c=>c.ci&&parseInt(c.ci.split(':')[0])<9).length;
+  const earlyR=act>0?earlyN/act:0;
+  let hr=0;if(defs.length>0){let t=0,dn=0;last14.forEach(date=>{const hd=h[date]||{};defs.forEach(def=>{t++;if(hd[def.id])dn++;});});hr=t>0?dn/t:0;}
+  const tdCI=!!cks.find(c=>c.date===today());
+  const sorted=[...cks].sort((a,b)=>b.date.localeCompare(a.date));
+  const daysSince=sorted[0]?Math.floor((new Date(today())-new Date(sorted[0].date))/86400000):999;
+  if(daysSince>=3)        return'hibernating';
+  if(total<3)             return'newbie';
+  if(!tdCI&&act<=3)       return'slacker';
+  if(!tdCI)               return'sleeper';
+  if(streak>=60&&avgW>=6&&hr>=0.6) return'ascetic';
+  if(streak>=30&&earlyR>=0.5)      return'awakened';
+  if(avgW>=9||(earlyN>=4&&avgCI<7)) return'grinder';
+  if(nightR>=0.5&&streak>=7)       return'nightowl';
+  if(earlyR>=0.4&&avgW>=4)         return'clearheaded';
+  if(streak>=14)          return'steady';
+  if(streak>=7)           return'meditator';
+  return'pilgrim';
+}
+let _idKey=null,_idIdx=0;
+function renderIdentityCard(){
+  const card=document.getElementById('identity-card');if(!card)return;
+  const key=_calcIdentity(),id=RESEARCHER_IDS[key];if(!id)return;
+  if(key!==_idKey){_idKey=key;_idIdx=0;}
+  document.getElementById('identity-avatar').textContent=id.emoji;
+  document.getElementById('identity-name').textContent=id.name;
+  const rk=document.getElementById('identity-rank');
+  rk.textContent=id.rank+' 级';rk.style.background=id.color+'33';rk.style.color=id.color;
+  card.style.borderLeft=`3px solid ${id.color}`;
+  document.getElementById('identity-desc').textContent=id.descs[_idIdx%id.descs.length];
+  document.getElementById('identity-tip').textContent='💡 '+(_NEXT_RANK[key]||'');
+}
+function rerollIdentityDesc(){_idIdx++;renderIdentityCard();}
+
 function getTodayCI(){return ld(K.checkins).find(c=>c.date===today())||null;}
 function _checkinQuip(h){
   if(h<6)  return ['🌙 深夜奋斗者，向你致敬（建议去睡觉）','🦉 夜猫子实验室开张了','🌃 凌晨签到，DDL加速你成长'];
@@ -1135,14 +1284,12 @@ function handleCheckin(){
   const list=ld(K.checkins);
   if(!list.find(c=>c.date===today()))
     list.push({id:uid(),date:today(),ci:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),co:null});
-  sv(K.checkins,list); renderCheckin();
-  toast(_pick(_checkinQuip(new Date().getHours())));
+  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); toast(_pick(_checkinQuip(new Date().getHours())));
 }
 function handleCheckout(){
   const list=ld(K.checkins),idx=list.findIndex(c=>c.date===today());
   if(idx>=0) list[idx].co=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-  sv(K.checkins,list); renderCheckin();
-  toast(_pick(_checkoutQuip(new Date().getHours())));
+  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); toast(_pick(_checkoutQuip(new Date().getHours())));
 }
 function renderCheckin(){
   const c=getTodayCI();
@@ -1484,6 +1631,7 @@ function renderRefHistory(){
 //  OVERVIEW
 // ══════════════════════════════════════
 function renderOverview(){
+  renderIdentityCard();
   const tasks=ld(K.tasks).filter(t=>t.status!=='done').slice(0,5);
   const tEl=document.getElementById('ov-tasks');
   if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
