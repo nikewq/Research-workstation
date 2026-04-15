@@ -1,0 +1,105 @@
+{
+  "_comment": "这是 PhD Workstation 的数据结构示例，导出数据时会生成此格式",
+  "version": "1.0",
+  "exportedAt": "2026-04-15T00:00:00.000Z",
+
+  "phd_cfg": {
+    "name": "张三",
+    "field": "计算机视觉",
+    "univ": "示例大学",
+    "startDate": "2023-09-01",
+    "areas": ["机器学习", "图像处理", "OOD泛化"],
+    "projects": [
+      { "id": "p1", "name": "项目A", "color": "#7c3aed" },
+      { "id": "p2", "name": "项目B", "color": "#059669" }
+    ],
+    "setupDone": true
+  },
+
+  "phd_tasks": [
+    {
+      "id": "t1",
+      "title": "复现 baseline 实验",
+      "proj": "p1",
+      "prio": "high",
+      "due": "2026-04-20",
+      "status": "todo",
+      "created": "2026-04-15",
+      "done": null,
+      "pomos": 0
+    }
+  ],
+
+  "phd_habits": {
+    "2026-04-15": {
+      "h1": true,
+      "h2": false,
+      "h3": true
+    }
+  },
+
+  "phd_habit_defs": [
+    { "id": "h1", "name": "读文献", "emoji": "📄" },
+    { "id": "h2", "name": "写代码/实验", "emoji": "💻" },
+    { "id": "h3", "name": "论文写作", "emoji": "✍️" },
+    { "id": "h4", "name": "运动", "emoji": "🏃" },
+    { "id": "h5", "name": "早睡 (12点前)", "emoji": "😴" }
+  ],
+
+  "phd_checkins": [
+    { "id": "c1", "date": "2026-04-15", "ci": "09:15", "co": "18:30" }
+  ],
+
+  "phd_subs": [
+    {
+      "id": "s1",
+      "title": "示例论文标题",
+      "venue": "NeurIPS 2026",
+      "status": "submitted",
+      "submitDate": "2026-05-15",
+      "decisionDate": "2026-09-01",
+      "notes": "OpenReview: https://openreview.net/..."
+    }
+  ],
+
+  "phd_refs": [
+    {
+      "id": "r1",
+      "date": "2026-04-15",
+      "mood": "😊",
+      "wins": "完成了实验代码，跑通了baseline",
+      "struggles": "Loss没有下降，还在调超参",
+      "tomorrow": "1. 调学习率 2. 读两篇相关论文 3. 写实验记录",
+      "gratitude": "和导师沟通很顺畅",
+      "ts": "2026/4/15 22:30:00"
+    }
+  ],
+
+  "phd_pomos": [
+    {
+      "id": "po1",
+      "date": "2026-04-15",
+      "taskId": "t1",
+      "taskTitle": "复现 baseline 实验 [项目A]",
+      "dur": 25,
+      "ts": "10:30"
+    }
+  ],
+
+  "phd_tools": [
+    {
+      "id": "tl1",
+      "label": "新建Git分支",
+      "cmd": "git checkout -b feature/xxx",
+      "icon": "🌿",
+      "desc": "快速创建功能分支"
+    },
+    {
+      "id": "tl2",
+      "label": "启动Jupyter",
+      "cmd": "jupyter notebook --no-browser",
+      "icon": "📓",
+      "desc": "本地启动Jupyter"
+    }
+  ]
+}

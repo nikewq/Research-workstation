@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhD Workstation</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --text2:#8b949e;
+  --primary:#7c3aed; --primary-soft:rgba(124,58,237,.15); --primary-bg:rgba(124,58,237,.08);
+  --green:#059669; --green-soft:rgba(5,150,105,.15);
+  --orange:#f59e0b; --orange-soft:rgba(245,158,11,.15);
+  --red:#ef4444; --red-soft:rgba(239,68,68,.15);
+  --blue:#3b82f6; --blue-soft:rgba(59,130,246,.15);
+  --radius:8px; --radius-lg:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;font-size:14px;min-height:100vh;display:flex}
+
+/* Sidebar */
+#sidebar{width:200px;min-width:200px;background:var(--surface);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.logo{padding:0 16px 16px;border-bottom:1px solid var(--border)}
+.logo h1{font-size:15px;font-weight:700;color:var(--primary)}
+.logo .subtitle{font-size:11px;color:var(--text2);margin-top:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:var(--text2);transition:all .15s;font-size:13px;border-left:2px solid transparent}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--primary-bg);color:var(--primary);border-left-color:var(--primary);font-weight:600}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-group{padding:12px 16px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
+.sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+.phd-counter{font-size:11px;color:var(--text2);text-align:center}
+.phd-counter span{font-size:22px;font-weight:700;color:var(--primary);display:block}
+
+/* Main */
+#main{margin-left:200px;flex:1;padding:24px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+.page-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.page-subtitle{color:var(--text2);font-size:13px;margin-bottom:20px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.card-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.mb-16{margin-bottom:16px}.mt-16{margin-top:16px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;font-family:inherit}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:var(--red-soft);color:var(--red);border:1px solid transparent}.btn-danger:hover{border-color:var(--red)}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Tags – dynamic colors handled via inline style */
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+
+/* Status */
+.status{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.status-todo{background:rgba(139,148,158,.15);color:var(--text2)}
+.status-doing{background:var(--blue-soft);color:var(--blue)}
+.status-done{background:var(--green-soft);color:var(--green)}
+.status-submitted{background:var(--orange-soft);color:var(--orange)}
+.status-accepted{background:var(--green-soft);color:var(--green)}
+.status-rejected{background:var(--red-soft);color:var(--red)}
+.status-revision{background:var(--primary-soft);color:var(--primary)}
+.status-withdrawn{background:rgba(139,148,158,.15);color:var(--text2)}
+
+/* Forms */
+input,textarea,select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px 12px;font-size:13px;width:100%;outline:none;font-family:inherit;transition:border-color .15s}
+input:focus,textarea:focus,select:focus{border-color:var(--primary)}
+textarea{resize:vertical;min-height:80px}
+label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
+.form-row{display:grid;gap:10px;margin-bottom:12px}
+.form-row.c2{grid-template-columns:1fr 1fr}
+.form-row.c3{grid-template-columns:1fr 1fr 1fr}
+
+/* Stat cards */
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px}
+.stat-value{font-size:28px;font-weight:700;margin-bottom:2px}
+.stat-purple .stat-value{color:var(--primary)}
+.stat-green .stat-value{color:var(--green)}
+.stat-orange .stat-value{color:var(--orange)}
+.stat-blue .stat-value{color:var(--blue)}
+.stat-label{font-size:12px;color:var(--text2)}
+
+/* Check-in */
+.checkin-bar{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:16px}
+.clock{font-size:24px;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;min-width:80px}
+
+/* Tasks */
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:8px;border:1px solid transparent;transition:border-color .15s}
+.task-item:hover{border-color:var(--border)}
+.task-checkbox{width:16px;height:16px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;cursor:pointer;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.task-checkbox.checked{background:var(--primary);border-color:var(--primary);color:#fff;font-size:10px}
+.task-body{flex:1}
+.task-title{font-size:13px;font-weight:500;margin-bottom:4px}
+.task-title.crossed{text-decoration:line-through;color:var(--text2)}
+.task-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-due{font-size:11px;color:var(--text2)}
+.task-due.overdue{color:var(--red)}
+.task-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.task-item:hover .task-actions{opacity:1}
+.task-actions button{background:none;border:none;color:var(--text2);cursor:pointer;padding:2px 4px;font-size:13px}
+.priority-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
+.p-high{background:var(--red)}.p-med{background:var(--orange)}.p-low{background:var(--text2)}
+
+/* Pomodoro */
+.pomo-time{font-size:72px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-2px;text-align:center;padding:24px 0}
+.pomo-time.work{color:var(--primary)}.pomo-time.brk{color:var(--green)}
+.pomo-dots{display:flex;justify-content:center;gap:8px;margin:8px 0}
+.pomo-dot{width:10px;height:10px;border-radius:50%;background:var(--border)}
+.pomo-dot.done{background:var(--primary)}
+.pomo-hist-item{display:flex;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:6px;font-size:12px}
+
+/* Habits */
+.habit-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:8px}
+.habit-check{width:22px;height:22px;border:2px solid var(--border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:12px}
+.habit-check.done{background:var(--green);border-color:var(--green);color:#fff}
+.habit-streak{font-size:12px;color:var(--orange);font-weight:600}
+.habit-week-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.habit-day{width:20px;height:20px;border-radius:4px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text2)}
+.habit-day.done{background:var(--green);color:#fff}
+.habit-day.today{border:1px solid var(--green)}
+
+/* Submissions */
+.sub-item{background:var(--surface2);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--border)}
+.sub-item.status-submitted{border-left-color:var(--orange)}
+.sub-item.status-accepted{border-left-color:var(--green)}
+.sub-item.status-revision{border-left-color:var(--primary)}
+.sub-item.status-rejected{border-left-color:var(--red)}
+.sub-title{font-size:14px;font-weight:600}
+.sub-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text2)}
+
+/* Tools */
+.tool-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:all .15s;position:relative}
+.tool-card:hover{border-color:var(--primary);background:var(--primary-bg)}
+.tool-cmd{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:4px;font-family:"SF Mono","Fira Code",monospace;word-break:break-all}
+.tool-desc{font-size:11px;color:var(--text2);line-height:1.5}
+.tool-hint{font-size:10px;color:var(--text2);margin-top:8px;opacity:0;transition:opacity .15s}
+.tool-card:hover .tool-hint{opacity:1}
+.tool-copied{color:var(--green)!important;opacity:1!important}
+.tool-del{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--text2);font-size:12px;opacity:0;transition:opacity .15s;padding:2px}
+.tool-card:hover .tool-del{opacity:1}
+
+/* Reflection */
+.mood-picker{display:flex;gap:8px;margin-bottom:8px}
+.mood-btn{font-size:22px;cursor:pointer;padding:6px 10px;border-radius:var(--radius);border:2px solid transparent;transition:all .15s}
+.mood-btn:hover,.mood-btn.active{border-color:var(--primary);background:var(--primary-soft)}
+.ref-entry{background:var(--surface2);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
+.ref-date{font-size:12px;color:var(--text2);margin-bottom:8px}
+.ref-content{font-size:13px;line-height:1.6;white-space:pre-wrap}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;min-width:400px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+/* Setup Wizard */
+#setup-overlay{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.setup-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:520px;max-width:95vw}
+.setup-step{display:none}.setup-step.active{display:block}
+.setup-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.setup-subtitle{color:var(--text2);font-size:13px;margin-bottom:24px}
+.setup-progress{display:flex;gap:6px;margin-bottom:24px}
+.setup-prog-dot{flex:1;height:3px;border-radius:2px;background:var(--border)}
+.setup-prog-dot.done{background:var(--primary)}
+.project-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.color-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;border:1px solid var(--border)}
+.habit-option{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.habit-option.selected{border-color:var(--primary);background:var(--primary-bg)}
+
+/* Settings section */
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px}
+.settings-section h3{font-size:14px;font-weight:600;margin-bottom:12px}
+.project-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:8px}
+.color-swatch{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px;z-index:9999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+
+/* Misc */
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-state .icon{font-size:36px;margin-bottom:12px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.scrollable{overflow-y:auto}
+.scrollable::-webkit-scrollbar{width:4px}
+.scrollable::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.text-muted{color:var(--text2)}.text-sm{font-size:12px}
+.flex{display:flex}.items-center{align-items:center}.gap-8{gap:8px}.gap-12{gap:12px}.flex-1{flex:1}
+.chart-wrap{position:relative;height:200px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     SETUP WIZARD
+══════════════════════════════════════ -->
+<div id="setup-overlay" style="display:none">
+  <div class="setup-box">
+    <div class="setup-progress" id="setup-progress"></div>
+
+    <!-- Step 1: Identity -->
+    <div class="setup-step active" id="step-1">
+      <div class="setup-title">👋 欢迎使用 PhD Workstation</div>
+      <div class="setup-subtitle">一次设置，为你量身定制博士工作台</div>
+      <div class="form-row">
+        <div><label>你的名字</label><input id="s-name" placeholder="如：张三"></div>
+      </div>
+      <div class="form-row c2">
+        <div><label>学校/机构 (可选)</label><input id="s-univ" placeholder="如：清华大学"></div>
+        <div><label>研究领域 (简短)</label><input id="s-field" placeholder="如：计算机视觉"></div>
+      </div>
+      <div class="form-row">
+        <div><label>博士入学日期</label><input id="s-start" type="date"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="skipSetup()">跳过</button>
+        <button class="btn btn-primary" onclick="nextStep(2)">下一步 →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Research Areas -->
+    <div class="setup-step" id="step-2">
+      <div class="setup-title">🔬 研究方向</div>
+      <div class="setup-subtitle">添加你的研究标签，用于任务分类</div>
+      <div id="areas-list"></div>
+      <div class="flex gap-8" style="margin-top:8px">
+        <input id="area-input" placeholder="研究方向标签，回车添加" style="flex:1" onkeydown="if(event.key==='Enter')addAreaTag()">
+        <button class="btn btn-ghost" onclick="addAreaTag()">添加</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text2)">示例：机器学习、NLP、强化学习、计算机视觉、生物信息学…</div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="nextStep(1)">← 上一步</button>
+        <button class="btn btn-primary" onclick="nextStep(3)">下一步 →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Projects -->
+    <div class="setup-step" id="step-3">
+      <div class="setup-title">📁 主要项目</div>
+      <div class="setup-subtitle">添加你的科研项目（最多6个）</div>
+      <div id="projects-setup-list"></div>
+      <div class="flex gap-8 mt-8" style="margin-top:8px" id="add-project-row">
+        <input id="proj-name-input" placeholder="项目名称" style="flex:1" onkeydown="if(event.key==='Enter')addProjectSetup()">
+        <input id="proj-color-input" type="color" value="#7c3aed" style="width:44px;padding:4px;cursor:pointer">
+        <button class="btn btn-ghost" onclick="addProjectSetup()">添加</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="nextStep(2)">← 上一步</button>
+        <button class="btn btn-primary" onclick="nextStep(4)">下一步 →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Habits -->
+    <div class="setup-step" id="step-4">
+      <div class="setup-title">🔥 每日习惯</div>
+      <div class="setup-subtitle">选择或自定义你要追踪的习惯</div>
+      <div id="habit-defaults-list"></div>
+      <div class="flex gap-8" style="margin-top:12px">
+        <input id="custom-habit-input" placeholder="自定义习惯" style="flex:1" onkeydown="if(event.key==='Enter')addCustomHabitSetup()">
+        <input id="custom-habit-emoji" placeholder="🎯" style="width:56px;text-align:center">
+        <button class="btn btn-ghost" onclick="addCustomHabitSetup()">添加</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="nextStep(3)">← 上一步</button>
+        <button class="btn btn-primary" onclick="nextStep(5)">下一步 →</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Tools -->
+    <div class="setup-step" id="step-5">
+      <div class="setup-title">⚡ 常用工具 / 快捷命令</div>
+      <div class="setup-subtitle">添加你常用的命令、工具或链接（点击即复制）</div>
+      <div id="tools-setup-list"></div>
+      <div class="form-row c2" style="margin-top:8px">
+        <div><label>工具名称</label><input id="tool-label-input" placeholder="如：/autoresearch"></div>
+        <div><label>命令/链接</label><input id="tool-cmd-input" placeholder="如：/autoresearch 或 https://..."></div>
+      </div>
+      <div class="form-row">
+        <div><label>描述 (可选)</label><input id="tool-desc-input" placeholder="简短说明"></div>
+      </div>
+      <button class="btn btn-ghost" style="width:100%" onclick="addToolSetup()">➕ 添加工具</button>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="nextStep(4)">← 上一步</button>
+        <button class="btn btn-primary" onclick="finishSetup()">🚀 开始使用</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════ -->
+<aside id="sidebar">
+  <div class="logo">
+    <h1>🎓 PhD Workstation</h1>
+    <div class="subtitle" id="sidebar-field">博士工作台</div>
+  </div>
+  <div class="nav-group">主要</div>
+  <div class="nav-item active" data-page="overview"><span class="nav-icon">📊</span>今日概览</div>
+  <div class="nav-item" data-page="tasks"><span class="nav-icon">✅</span>任务管理</div>
+  <div class="nav-item" data-page="focus"><span class="nav-icon">🍅</span>专注计时</div>
+  <div class="nav-item" data-page="habits"><span class="nav-icon">🔥</span>习惯打卡</div>
+  <div class="nav-group">科研</div>
+  <div class="nav-item" data-page="submissions"><span class="nav-icon">📄</span>投稿管理</div>
+  <div class="nav-item" data-page="tools"><span class="nav-icon">⚡</span>工具面板</div>
+  <div class="nav-item" data-page="reflection"><span class="nav-icon">🌙</span>反思日记</div>
+  <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
+  <div class="nav-group">设置</div>
+  <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
+  <div class="nav-item" id="exportBtn"><span class="nav-icon">💾</span>导出数据</div>
+  <div class="nav-item" id="importBtn"><span class="nav-icon">📥</span>导入数据</div>
+  <input type="file" id="importFile" accept=".json" style="display:none">
+  <div class="sidebar-bottom">
+    <div class="phd-counter"><span id="phd-day">—</span>博士第 N 天</div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── Overview ── -->
+<div class="page active" id="page-overview">
+  <div class="page-title" id="ov-hello">今日概览</div>
+  <div class="page-subtitle" id="ov-date"></div>
+  <div class="checkin-bar">
+    <div class="clock" id="clock">00:00:00</div>
+    <div style="flex:1">
+      <div style="font-size:12px;color:var(--text2)">今日状态</div>
+      <div style="font-size:14px;font-weight:600" id="ci-status">未签到</div>
+    </div>
+    <button class="btn btn-primary" id="ci-btn" onclick="handleCheckin()">🟢 上班签到</button>
+    <button class="btn btn-ghost" id="co-btn" onclick="handleCheckout()" style="display:none">🔴 下班签出</button>
+    <div style="width:1px;background:var(--border);height:30px"></div>
+    <div style="font-size:12px;color:var(--text2);text-align:center;min-width:80px">
+      <div id="ov-worktime">工时 —</div>
+      <div id="ov-citime" style="margin-top:2px">—</div>
+    </div>
+  </div>
+  <div class="grid-4 mb-16">
+    <div class="stat-card stat-purple"><div class="stat-value" id="s-tasks">0</div><div class="stat-label">今日完成任务</div></div>
+    <div class="stat-card stat-green"><div class="stat-value" id="s-pomos">0</div><div class="stat-label">番茄钟数</div></div>
+    <div class="stat-card stat-orange"><div class="stat-value" id="s-habits">0/0</div><div class="stat-label">习惯完成</div></div>
+    <div class="stat-card stat-blue"><div class="stat-value" id="s-streak">0</div><div class="stat-label">连续打卡天</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-header"><div class="card-title" style="margin-bottom:0">待做任务</div><button class="btn btn-ghost btn-sm" onclick="switchPage('tasks')">全部</button></div>
+      <div id="ov-tasks"></div>
+    </div>
+    <div class="card">
+      <div class="section-header"><div class="card-title" style="margin-bottom:0">投稿追踪</div><button class="btn btn-ghost btn-sm" onclick="switchPage('submissions')">全部</button></div>
+      <div id="ov-subs"></div>
+    </div>
+  </div>
+  <div class="card mt-16">
+    <div class="section-header"><div class="card-title" style="margin-bottom:0">今日习惯</div><button class="btn btn-ghost btn-sm" onclick="switchPage('habits')">打卡</button></div>
+    <div id="ov-habits"></div>
+  </div>
+</div>
+
+<!-- ── Tasks ── -->
+<div class="page" id="page-tasks">
+  <div class="page-title">任务管理</div>
+  <div class="page-subtitle" id="tasks-subtitle">管理你的科研任务</div>
+  <div class="card mb-16">
+    <div class="card-title">新建任务</div>
+    <div class="form-row c2">
+      <div><label>任务名称</label><input id="task-input" placeholder="任务..." onkeydown="if(event.key==='Enter')addTask()"></div>
+      <div><label>截止日期</label><input type="date" id="task-due"></div>
+    </div>
+    <div class="form-row c3">
+      <div><label>项目</label><select id="task-proj"></select></div>
+      <div><label>优先级</label>
+        <select id="task-prio">
+          <option value="high">🔴 高</option>
+          <option value="med" selected>🟡 中</option>
+          <option value="low">⚪ 低</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end"><button class="btn btn-primary" style="width:100%" onclick="addTask()">➕ 添加</button></div>
+    </div>
+  </div>
+  <div class="flex gap-8 mb-16">
+    <button class="btn btn-ghost btn-sm task-filter active" onclick="filterTasks('all',this)">全部</button>
+    <button class="btn btn-ghost btn-sm task-filter" onclick="filterTasks('todo',this)">待做</button>
+    <div id="proj-filters" class="flex gap-8"></div>
+    <div style="flex:1"></div>
+    <span class="text-muted text-sm" id="task-count"></span>
+  </div>
+  <div id="task-list" class="scrollable" style="max-height:600px"></div>
+</div>
+
+<!-- ── Focus ── -->
+<div class="page" id="page-focus">
+  <div class="page-title">专注计时</div>
+  <div class="page-subtitle">番茄工作法</div>
+  <div class="grid-2">
+    <div class="card">
+      <div><label>当前任务</label><select id="pomo-task-sel" style="margin-bottom:12px"><option value="">自由专注...</option></select></div>
+      <div class="pomo-time work" id="pomo-display">25:00</div>
+      <div style="text-align:center;color:var(--text2);font-size:13px;margin-top:4px" id="pomo-label">准备开始</div>
+      <div class="pomo-dots" id="pomo-dots"></div>
+      <div class="flex gap-8" style="justify-content:center;margin-top:12px">
+        <button class="btn btn-primary" id="pomo-btn" onclick="togglePomo()">▶ 开始</button>
+        <button class="btn btn-ghost" onclick="resetPomo()">↺ 重置</button>
+      </div>
+      <div class="form-row c2" style="margin-top:16px">
+        <div><label>专注 (分钟)</label><input type="number" id="pomo-work" value="25" min="1" max="90"></div>
+        <div><label>休息 (分钟)</label><input type="number" id="pomo-break" value="5" min="1" max="30"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">今日记录</div>
+      <div id="pomo-log" class="scrollable" style="max-height:350px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Habits ── -->
+<div class="page" id="page-habits">
+  <div class="page-title">习惯打卡</div>
+  <div class="page-subtitle">每日坚持，积累复利</div>
+  <div class="grid-2">
+    <div>
+      <div class="card mb-16">
+        <div class="card-title">添加习惯</div>
+        <div class="flex gap-8">
+          <input id="habit-input" placeholder="习惯名称..." style="flex:1" onkeydown="if(event.key==='Enter')addHabit()">
+          <input id="habit-emoji" placeholder="🔥" style="width:56px;text-align:center">
+          <button class="btn btn-primary" onclick="addHabit()">添加</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title">今日打卡</div><div id="habit-list"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">本周情况</div>
+      <div id="habit-week"></div>
+      <hr class="divider">
+      <div class="card-title">连续打卡</div>
+      <div id="habit-streaks"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Submissions ── -->
+<div class="page" id="page-submissions">
+  <div class="page-title">投稿管理</div>
+  <div class="page-subtitle">论文投稿状态追踪</div>
+  <div class="card mb-16">
+    <div class="card-title">添加投稿</div>
+    <div class="form-row c2">
+      <div><label>论文标题</label><input id="sub-title" placeholder="论文标题..."></div>
+      <div><label>会议/期刊</label><input id="sub-venue" placeholder="如：NeurIPS 2026"></div>
+    </div>
+    <div class="form-row c3">
+      <div><label>状态</label>
+        <select id="sub-status">
+          <option value="submitted">审核中</option>
+          <option value="revision">修改中</option>
+          <option value="accepted">录用</option>
+          <option value="rejected">拒稿</option>
+          <option value="withdrawn">撤稿</option>
+        </select>
+      </div>
+      <div><label>投稿日期</label><input type="date" id="sub-date"></div>
+      <div><label>结果日期(预计)</label><input type="date" id="sub-decision"></div>
+    </div>
+    <div class="form-row"><div><label>备注</label><textarea id="sub-notes" placeholder="OpenReview链接、分数等..." rows="2"></textarea></div></div>
+    <button class="btn btn-primary" onclick="addSubmission()">➕ 添加</button>
+  </div>
+  <div class="grid-4 mb-16">
+    <div class="stat-card stat-orange"><div class="stat-value" id="ss-total">0</div><div class="stat-label">总投稿</div></div>
+    <div class="stat-card stat-blue"><div class="stat-value" id="ss-sub">0</div><div class="stat-label">审核中</div></div>
+    <div class="stat-card stat-green"><div class="stat-value" id="ss-acc">0</div><div class="stat-label">录用</div></div>
+    <div class="stat-card stat-purple"><div class="stat-value" id="ss-rev">0</div><div class="stat-label">修改中</div></div>
+  </div>
+  <div id="sub-list"></div>
+</div>
+
+<!-- ── Tools ── -->
+<div class="page" id="page-tools">
+  <div class="page-title">工具面板</div>
+  <div class="page-subtitle">点击卡片复制命令，或打开链接</div>
+  <div class="card mb-16" style="background:var(--primary-bg);border-color:var(--primary)">
+    <div style="font-size:13px">💡 添加你常用的命令行工具、Claude技能、脚本或网址。点击即复制/打开。</div>
+  </div>
+  <div class="card mb-16">
+    <div class="card-title">添加工具</div>
+    <div class="form-row c3">
+      <div><label>名称</label><input id="tool-label" placeholder="工具名称"></div>
+      <div><label>命令/链接</label><input id="tool-cmd" placeholder="/skill 或 https://..."></div>
+      <div><label>图标 (emoji)</label><input id="tool-icon" placeholder="⚡" style="text-align:center"></div>
+    </div>
+    <div class="form-row">
+      <div><label>描述</label><input id="tool-desc" placeholder="简短说明..."></div>
+    </div>
+    <button class="btn btn-primary" onclick="addTool()">➕ 添加</button>
+  </div>
+  <div class="grid-3" id="tool-grid"></div>
+</div>
+
+<!-- ── Reflection ── -->
+<div class="page" id="page-reflection">
+  <div class="page-title">反思日记</div>
+  <div class="page-subtitle">每晚记录，感知成长</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">今日记录</div>
+      <div style="margin-bottom:12px">
+        <label>今日心情</label>
+        <div class="mood-picker" id="mood-picker">
+          <span class="mood-btn" data-mood="😊" onclick="selMood('😊',this)">😊</span>
+          <span class="mood-btn" data-mood="😐" onclick="selMood('😐',this)">😐</span>
+          <span class="mood-btn" data-mood="😩" onclick="selMood('😩',this)">😩</span>
+          <span class="mood-btn" data-mood="😤" onclick="selMood('😤',this)">😤</span>
+          <span class="mood-btn" data-mood="🤩" onclick="selMood('🤩',this)">🤩</span>
+          <span class="mood-btn" data-mood="😰" onclick="selMood('😰',this)">😰</span>
+        </div>
+      </div>
+      <div class="form-row"><div><label>🏆 今日亮点</label><textarea id="r-wins" placeholder="今天做成了什么？" rows="3"></textarea></div></div>
+      <div class="form-row"><div><label>😮‍💨 卡点/困难</label><textarea id="r-struggles" placeholder="哪里卡住了？" rows="2"></textarea></div></div>
+      <div class="form-row"><div><label>🎯 明日计划</label><textarea id="r-tomorrow" placeholder="明天最重要的3件事..." rows="2"></textarea></div></div>
+      <div class="form-row"><div><label>💙 一句话感恩</label><input id="r-gratitude" placeholder="今天感激的一件事..."></div></div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveReflection()">💾 保存</button>
+    </div>
+    <div class="card">
+      <div class="card-title">历史记录</div>
+      <div id="ref-history" class="scrollable" style="max-height:550px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Stats ── -->
+<div class="page" id="page-stats">
+  <div class="page-title">统计图表</div>
+  <div class="page-subtitle">数据驱动科研节奏</div>
+  <div class="grid-2 mb-16">
+    <div class="card"><div class="card-title">近7天完成任务</div><div class="chart-wrap"><canvas id="ch-tasks"></canvas></div></div>
+    <div class="card"><div class="card-title">近7天番茄钟</div><div class="chart-wrap"><canvas id="ch-pomos"></canvas></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-title">任务项目分布</div><div class="chart-wrap"><canvas id="ch-projs"></canvas></div></div>
+    <div class="card"><div class="card-title">工作时长趋势 (h)</div><div class="chart-wrap"><canvas id="ch-hours"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ── Settings ── -->
+<div class="page" id="page-settings">
+  <div class="page-title">个人设置</div>
+  <div class="page-subtitle">修改你的基本信息和配置</div>
+  <div class="settings-section">
+    <h3>👤 基本信息</h3>
+    <div class="form-row c2">
+      <div><label>姓名</label><input id="set-name" placeholder="你的名字"></div>
+      <div><label>研究领域</label><input id="set-field" placeholder="如：计算机视觉"></div>
+    </div>
+    <div class="form-row c2">
+      <div><label>学校/机构</label><input id="set-univ" placeholder="学校名称"></div>
+      <div><label>博士入学日期</label><input type="date" id="set-start"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveBasicSettings()">保存基本信息</button>
+  </div>
+  <div class="settings-section">
+    <h3>📁 项目管理</h3>
+    <div id="proj-settings-list"></div>
+    <div class="flex gap-8 mt-8">
+      <input id="new-proj-name" placeholder="新项目名称" style="flex:1" onkeydown="if(event.key==='Enter')addProject()">
+      <input id="new-proj-color" type="color" value="#7c3aed" style="width:44px;padding:4px;cursor:pointer">
+      <button class="btn btn-ghost" onclick="addProject()">添加</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>🔬 研究方向标签</h3>
+    <div id="area-tags-list" class="flex gap-8" style="flex-wrap:wrap;margin-bottom:12px"></div>
+    <div class="flex gap-8">
+      <input id="new-area-tag" placeholder="新标签" style="flex:1" onkeydown="if(event.key==='Enter')addAreaFromSettings()">
+      <button class="btn btn-ghost" onclick="addAreaFromSettings()">添加</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>⚠️ 危险区域</h3>
+    <button class="btn btn-danger" onclick="resetAll()">🗑 清除所有数据（重新设置）</button>
+  </div>
+</div>
+
+</main>
+
+<!-- ── Edit Task Modal ── -->
+<div class="modal-overlay" id="editTaskModal">
+  <div class="modal">
+    <div class="modal-title">编辑任务</div>
+    <input type="hidden" id="et-id">
+    <div class="form-row"><div><label>任务名称</label><input id="et-title"></div></div>
+    <div class="form-row c2">
+      <div><label>项目</label><select id="et-proj"></select></div>
+      <div><label>优先级</label>
+        <select id="et-prio">
+          <option value="high">🔴 高</option>
+          <option value="med">🟡 中</option>
+          <option value="low">⚪ 低</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><div><label>截止日期</label><input type="date" id="et-due"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editTaskModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveEditTask()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Submission Modal ── -->
+<div class="modal-overlay" id="editSubModal">
+  <div class="modal">
+    <div class="modal-title">编辑投稿</div>
+    <input type="hidden" id="es-id">
+    <div class="form-row"><div><label>论文标题</label><input id="es-title"></div></div>
+    <div class="form-row c2">
+      <div><label>会议/期刊</label><input id="es-venue"></div>
+      <div><label>状态</label>
+        <select id="es-status">
+          <option value="submitted">审核中</option>
+          <option value="revision">修改中</option>
+          <option value="accepted">录用</option>
+          <option value="rejected">拒稿</option>
+          <option value="withdrawn">撤稿</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row c2">
+      <div><label>投稿日期</label><input type="date" id="es-date"></div>
+      <div><label>结果日期</label><input type="date" id="es-decision"></div>
+    </div>
+    <div class="form-row"><div><label>备注</label><textarea id="es-notes" rows="3"></textarea></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editSubModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveEditSub()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+//  STORAGE KEYS & HELPERS
+// ══════════════════════════════════════
+const K = {
+  cfg:    'phd_cfg',
+  tasks:  'phd_tasks',
+  habits: 'phd_habits',
+  habitDefs: 'phd_habit_defs',
+  checkins: 'phd_checkins',
+  subs:   'phd_subs',
+  refs:   'phd_refs',
+  pomos:  'phd_pomos',
+  tools:  'phd_tools',
+};
+
+const ld = k => { try { return JSON.parse(localStorage.getItem(k)) || (k===K.habits?{}:[]); } catch { return k===K.habits?{}:[]; } };
+const sv = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const today = () => new Date().toISOString().slice(0,10);
+
+function getCfg() {
+  return {
+    name: '', field: '', univ: '', startDate: '',
+    projects: [], areas: [], setupDone: false,
+    ...JSON.parse(localStorage.getItem(K.cfg) || '{}')
+  };
+}
+function saveCfg(c) { localStorage.setItem(K.cfg, JSON.stringify(c)); }
+
+// ══════════════════════════════════════
+//  SETUP WIZARD
+// ══════════════════════════════════════
+const DEFAULT_HABITS = [
+  {id:'dh1', name:'读文献', emoji:'📄'},
+  {id:'dh2', name:'写代码/实验', emoji:'💻'},
+  {id:'dh3', name:'论文写作', emoji:'✍️'},
+  {id:'dh4', name:'运动', emoji:'🏃'},
+  {id:'dh5', name:'早睡 (12点前)', emoji:'😴'},
+];
+const EXAMPLE_TOOLS = [
+  {id:'et1', label:'新建Git分支', cmd:'git checkout -b feature/xxx', icon:'🌿', desc:'快速创建功能分支'},
+  {id:'et2', label:'Conda新环境', cmd:'conda create -n myenv python=3.10', icon:'🐍', desc:'创建新的Python环境'},
+];
+
+let setupHabits = new Set(['dh1','dh2','dh3','dh4','dh5']);
+let setupProjects = [];
+let setupTools = [...EXAMPLE_TOOLS];
+let currentStep = 1;
+
+function initSetupWizard() {
+  const cfg = getCfg();
+  if (cfg.setupDone) { initApp(); return; }
+  document.getElementById('setup-overlay').style.display = 'flex';
+  // Default start date = today
+  const d = new Date();
+  document.getElementById('s-start').value = `${d.getFullYear()}-09-01`;
+  renderSetupProgress(1);
+  renderHabitDefaults();
+  renderProjectsSetup();
+  renderToolsSetup();
+}
+
+function renderSetupProgress(step) {
+  const el = document.getElementById('setup-progress');
+  el.innerHTML = Array.from({length:5},(_,i)=>`<div class="setup-prog-dot ${i<step?'done':''}"></div>`).join('');
+}
+
+function nextStep(n) {
+  document.getElementById(`step-${currentStep}`).classList.remove('active');
+  currentStep = n;
+  document.getElementById(`step-${n}`).classList.add('active');
+  renderSetupProgress(n);
+}
+
+function renderHabitDefaults() {
+  const el = document.getElementById('habit-defaults-list');
+  el.innerHTML = DEFAULT_HABITS.map(h => `
+    <div class="habit-option ${setupHabits.has(h.id)?'selected':''}" onclick="toggleSetupHabit('${h.id}',this)">
+      <span style="font-size:18px">${h.emoji}</span>
+      <span style="font-size:13px">${h.name}</span>
+    </div>`).join('');
+}
+function toggleSetupHabit(id, el) {
+  if (setupHabits.has(id)) setupHabits.delete(id); else setupHabits.add(id);
+  el.classList.toggle('selected');
+}
+function addCustomHabitSetup() {
+  const name = document.getElementById('custom-habit-input').value.trim();
+  if (!name) return;
+  const emoji = document.getElementById('custom-habit-emoji').value.trim() || '✅';
+  const defs = DEFAULT_HABITS;
+  const id = uid();
+  defs.push({id, name, emoji});
+  setupHabits.add(id);
+  document.getElementById('custom-habit-input').value = '';
+  document.getElementById('custom-habit-emoji').value = '';
+  renderHabitDefaults();
+}
+
+function renderProjectsSetup() {
+  const el = document.getElementById('projects-setup-list');
+  el.innerHTML = setupProjects.map((p,i) => `
+    <div class="project-row">
+      <div class="color-dot" style="background:${p.color}"></div>
+      <input value="${p.name}" style="flex:1" onchange="setupProjects[${i}].name=this.value">
+      <input type="color" value="${p.color}" style="width:36px;padding:3px;cursor:pointer" onchange="setupProjects[${i}].color=this.value;renderProjectsSetup()">
+      <button class="btn btn-ghost btn-sm" onclick="setupProjects.splice(${i},1);renderProjectsSetup()">×</button>
+    </div>`).join('');
+}
+function addProjectSetup() {
+  const name = document.getElementById('proj-name-input').value.trim();
+  if (!name || setupProjects.length >= 6) return;
+  setupProjects.push({id: uid(), name, color: document.getElementById('proj-color-input').value});
+  document.getElementById('proj-name-input').value = '';
+  renderProjectsSetup();
+}
+
+let setupAreasTemp = [];
+function addAreaTag() {
+  const val = document.getElementById('area-input').value.trim();
+  if (!val) return;
+  setupAreasTemp.push(val);
+  document.getElementById('area-input').value = '';
+  renderAreasList();
+}
+function renderAreasList() {
+  const el = document.getElementById('areas-list');
+  el.innerHTML = `<div class="flex gap-8" style="flex-wrap:wrap;margin-bottom:8px">` +
+    setupAreasTemp.map((a,i) => `<span class="tag" style="background:var(--primary-soft);color:var(--primary);cursor:pointer" onclick="setupAreasTemp.splice(${i},1);renderAreasList()">
+      ${a} ×</span>`).join('') + '</div>';
+}
+
+function renderToolsSetup() {
+  const el = document.getElementById('tools-setup-list');
+  el.innerHTML = setupTools.map((t,i) => `
+    <div class="flex items-center gap-8" style="padding:8px;background:var(--surface2);border-radius:6px;margin-bottom:6px">
+      <span>${t.icon}</span><span style="flex:1;font-size:13px">${t.label}</span>
+      <span style="font-size:11px;color:var(--text2);font-family:monospace">${t.cmd}</span>
+      <button class="btn btn-ghost btn-sm" onclick="setupTools.splice(${i},1);renderToolsSetup()">×</button>
+    </div>`).join('');
+}
+function addToolSetup() {
+  const label = document.getElementById('tool-label-input').value.trim();
+  const cmd = document.getElementById('tool-cmd-input').value.trim();
+  if (!label || !cmd) return;
+  setupTools.push({id: uid(), label, cmd, icon: document.getElementById('tool-desc-input').value||'⚡', desc: document.getElementById('tool-desc-input').value});
+  document.getElementById('tool-label-input').value = '';
+  document.getElementById('tool-cmd-input').value = '';
+  document.getElementById('tool-desc-input').value = '';
+  renderToolsSetup();
+}
+
+function finishSetup() {
+  const cfg = getCfg();
+  cfg.name = document.getElementById('s-name').value.trim() || '同学';
+  cfg.univ = document.getElementById('s-univ').value.trim();
+  cfg.field = document.getElementById('s-field').value.trim();
+  cfg.startDate = document.getElementById('s-start').value;
+  cfg.projects = setupProjects.length ? setupProjects : [{id:uid(),name:'项目A',color:'#7c3aed'}];
+  cfg.areas = setupAreasTemp;
+  cfg.setupDone = true;
+  saveCfg(cfg);
+  // Save habits
+  const habitDefs = DEFAULT_HABITS.filter(h => setupHabits.has(h.id));
+  sv(K.habitDefs, habitDefs);
+  // Save tools
+  sv(K.tools, setupTools);
+  document.getElementById('setup-overlay').style.display = 'none';
+  initApp();
+  toast(`🎉 欢迎，${cfg.name}！工作台已就绪！`);
+}
+function skipSetup() {
+  const cfg = getCfg();
+  cfg.name = '同学'; cfg.setupDone = true;
+  cfg.projects = [{id:uid(),name:'项目A',color:'#7c3aed'},{id:uid(),name:'项目B',color:'#059669'}];
+  saveCfg(cfg);
+  sv(K.habitDefs, DEFAULT_HABITS);
+  sv(K.tools, EXAMPLE_TOOLS);
+  document.getElementById('setup-overlay').style.display = 'none';
+  initApp();
+}
+
+// ══════════════════════════════════════
+//  APP INIT
+// ══════════════════════════════════════
+function initApp() {
+  const cfg = getCfg();
+  document.getElementById('sidebar-field').textContent = cfg.field || '博士工作台';
+  updateTodayDate();
+  updatePhdDay();
+  renderCheckin();
+  renderOverview();
+  renderTasks();
+  renderHabits();
+  renderSubmissions();
+  renderTools();
+  renderRefHistory();
+  populateProjectSelects();
+  updatePomoTaskSel();
+  updateStats();
+  populateSettingsForm();
+  setInterval(updateClock, 1000);
+  setInterval(() => { updateStats(); updatePhdDay(); renderCheckin(); }, 60000);
+  updateClock();
+  document.getElementById('sub-date').value = today();
+  updatePomoDisplay();
+}
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const nav = document.querySelector(`.nav-item[data-page="${name}"]`);
+  if (nav) nav.classList.add('active');
+  if (name==='stats') renderCharts();
+  if (name==='overview') renderOverview();
+  if (name==='focus') renderPomoLog();
+  if (name==='habits') renderHabits();
+  if (name==='tasks') renderTasks();
+  if (name==='submissions') renderSubmissions();
+  if (name==='reflection') renderRefHistory();
+  if (name==='settings') populateSettingsForm();
+  if (name==='tools') renderTools();
+}
+document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
+
+// ══════════════════════════════════════
+//  CLOCK & COUNTERS
+// ══════════════════════════════════════
+function updateClock() {
+  const n=new Date(), el=document.getElementById('clock');
+  if(el) el.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+}
+function pad(n){return String(n).padStart(2,'0')}
+function updatePhdDay() {
+  const cfg=getCfg();
+  if(!cfg.startDate){document.getElementById('phd-day').textContent='?';return;}
+  const d=Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1;
+  document.getElementById('phd-day').textContent=d>0?d:'?';
+}
+function updateTodayDate() {
+  const el=document.getElementById('ov-date');
+  if(el) el.textContent=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const hello=document.getElementById('ov-hello');
+  if(hello){const cfg=getCfg();hello.textContent=`${cfg.name||'同学'} 的今日概览`;}
+}
+
+// ══════════════════════════════════════
+//  CHECK-IN
+// ══════════════════════════════════════
+function getTodayCI(){return ld(K.checkins).find(c=>c.date===today())||null;}
+function handleCheckin(){
+  const list=ld(K.checkins);
+  if(!list.find(c=>c.date===today()))
+    list.push({id:uid(),date:today(),ci:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),co:null});
+  sv(K.checkins,list); renderCheckin(); toast('✅ 签到成功！早安！');
+}
+function handleCheckout(){
+  const list=ld(K.checkins),idx=list.findIndex(c=>c.date===today());
+  if(idx>=0) list[idx].co=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  sv(K.checkins,list); renderCheckin(); toast('🌙 下班签出！辛苦了！');
+}
+function renderCheckin(){
+  const c=getTodayCI();
+  const st=document.getElementById('ci-status'), cb=document.getElementById('ci-btn'), ob=document.getElementById('co-btn');
+  const wt=document.getElementById('ov-worktime'), ct=document.getElementById('ov-citime');
+  if(!c){if(st)st.textContent='未签到';if(cb)cb.style.display='';if(ob)ob.style.display='none';if(wt)wt.textContent='工时 —';if(ct)ct.textContent='—';}
+  else if(c.ci&&!c.co){if(st)st.textContent=`已签到 ${c.ci}`;if(cb)cb.style.display='none';if(ob)ob.style.display='';if(wt)wt.textContent='进行中';if(ct)ct.textContent=`签入 ${c.ci}`;}
+  else if(c.co){if(st)st.textContent=`已签出 ${c.co}`;if(cb)cb.style.display='none';if(ob)ob.style.display='none';
+    if(ct)ct.textContent=`${c.ci}→${c.co}`;
+    if(wt){const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number),m=(oh*60+om)-(ih*60+im);
+      wt.textContent=m>0?`工时 ${Math.floor(m/60)}h${m%60}m`:'工时 —';}}
+}
+
+// ══════════════════════════════════════
+//  PROJECTS HELPER
+// ══════════════════════════════════════
+function getProjects(){return getCfg().projects||[];}
+function projColor(id){const p=getProjects().find(p=>p.id===id);return p?p.color:'#8b949e';}
+function projName(id){const p=getProjects().find(p=>p.id===id);return p?p.name:id;}
+function projTagHtml(id){const c=projColor(id);return `<span class="tag" style="background:${c}22;color:${c}">${projName(id)}</span>`;}
+
+function populateProjectSelects(){
+  const projs=getProjects();
+  const opts=projs.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const ids=['task-proj','et-proj'];
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  // Filters
+  const fEl=document.getElementById('proj-filters');
+  if(fEl) fEl.innerHTML=projs.map(p=>`<button class="btn btn-ghost btn-sm task-filter" onclick="filterTasks('${p.id}',this)">${p.name}</button>`).join('');
+}
+
+// ══════════════════════════════════════
+//  TASKS
+// ══════════════════════════════════════
+let tFilter='all';
+function addTask(){
+  const t=document.getElementById('task-input').value.trim();
+  if(!t)return;
+  const tasks=ld(K.tasks);
+  tasks.push({id:uid(),title:t,proj:document.getElementById('task-proj').value,
+    prio:document.getElementById('task-prio').value,due:document.getElementById('task-due').value,
+    status:'todo',created:today(),done:null,pomos:0});
+  sv(K.tasks,tasks);
+  document.getElementById('task-input').value='';
+  renderTasks();renderOverview();toast('✅ 任务已添加');
+}
+function toggleTask(id){
+  const tasks=ld(K.tasks),t=tasks.find(t=>t.id===id);if(!t)return;
+  t.status=t.status==='done'?'todo':'done';t.done=t.status==='done'?today():null;
+  sv(K.tasks,tasks);renderTasks();renderOverview();updateStats();
+}
+function delTask(id){let tasks=ld(K.tasks).filter(t=>t.id!==id);sv(K.tasks,tasks);renderTasks();renderOverview();}
+function openEditTask(id){
+  const t=ld(K.tasks).find(t=>t.id===id);if(!t)return;
+  document.getElementById('et-id').value=id;
+  document.getElementById('et-title').value=t.title;
+  document.getElementById('et-proj').value=t.proj;
+  document.getElementById('et-prio').value=t.prio;
+  document.getElementById('et-due').value=t.due||'';
+  openModal('editTaskModal');
+}
+function saveEditTask(){
+  const id=document.getElementById('et-id').value,tasks=ld(K.tasks),t=tasks.find(t=>t.id===id);if(!t)return;
+  t.title=document.getElementById('et-title').value;t.proj=document.getElementById('et-proj').value;
+  t.prio=document.getElementById('et-prio').value;t.due=document.getElementById('et-due').value;
+  sv(K.tasks,tasks);closeModal('editTaskModal');renderTasks();renderOverview();
+}
+function filterTasks(f,btn){
+  tFilter=f;
+  document.querySelectorAll('.task-filter').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');renderTasks();
+}
+function renderTasks(){
+  const all=ld(K.tasks);
+  let list=tFilter==='all'?all:tFilter==='todo'?all.filter(t=>t.status!=='done'):all.filter(t=>t.proj===tFilter);
+  const el=document.getElementById('task-list');if(!el)return;
+  const cnt=document.getElementById('task-count');if(cnt)cnt.textContent=`${list.length} 个任务`;
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>暂无任务</p></div>';return;}
+  const pOrd={high:0,med:1,low:2};
+  list.sort((a,b)=>{if(a.status==='done'&&b.status!=='done')return 1;if(a.status!=='done'&&b.status==='done')return -1;return(pOrd[a.prio]||1)-(pOrd[b.prio]||1);});
+  el.innerHTML=list.map(t=>{
+    const ov=t.due&&t.due<today()&&t.status!=='done';
+    const pdot={high:'p-high',med:'p-med',low:'p-low'}[t.prio]||'p-low';
+    return `<div class="task-item ${t.status==='done'?'opacity-50':''}">
+      <div class="priority-dot ${pdot}"></div>
+      <div class="task-checkbox ${t.status==='done'?'checked':''}" onclick="toggleTask('${t.id}')">${t.status==='done'?'✓':''}</div>
+      <div class="task-body">
+        <div class="task-title ${t.status==='done'?'crossed':''}">${t.title}</div>
+        <div class="task-meta">${projTagHtml(t.proj)}${t.due?`<span class="task-due ${ov?'overdue':''}">📅 ${t.due}${ov?' ⚠️':''}</span>`:''}</div>
+      </div>
+      <div class="task-actions">
+        <button onclick="openEditTask('${t.id}')">✏️</button>
+        <button onclick="delTask('${t.id}')" style="color:var(--red)">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+  const sub=document.getElementById('tasks-subtitle');
+  if(sub){const cfg=getCfg();sub.textContent=cfg.areas?.join(' · ')||'管理你的科研任务';}
+}
+
+// ══════════════════════════════════════
+//  POMODORO
+// ══════════════════════════════════════
+let pomo={running:false,isBreak:false,secs:25*60,iv:null,round:0,taskId:'',taskTitle:''};
+function updatePomoDisplay(){
+  const m=Math.floor(pomo.secs/60),s=pomo.secs%60;
+  const el=document.getElementById('pomo-display'),lbl=document.getElementById('pomo-label');
+  if(el){el.textContent=`${pad(m)}:${pad(s)}`;el.className=`pomo-time ${pomo.isBreak?'brk':'work'}`;}
+  if(lbl)lbl.textContent=pomo.isBreak?'🌿 休息中...':(pomo.running?'🔥 专注中...':'准备开始');
+  const dots=document.getElementById('pomo-dots');
+  if(dots)dots.innerHTML=Array.from({length:4},(_,i)=>`<div class="pomo-dot ${i<pomo.round?'done':''}"></div>`).join('');
+  document.title=pomo.running?`${pad(m)}:${pad(s)} 🍅 PhD Workstation`:'PhD Workstation';
+}
+function togglePomo(){
+  if(pomo.running){clearInterval(pomo.iv);pomo.running=false;document.getElementById('pomo-btn').textContent='▶ 继续';}
+  else{
+    pomo.running=true;document.getElementById('pomo-btn').textContent='⏸ 暂停';
+    const sel=document.getElementById('pomo-task-sel');
+    if(sel){pomo.taskId=sel.value;pomo.taskTitle=sel.options[sel.selectedIndex]?.text||'';}
+    pomo.iv=setInterval(()=>{
+      if(pomo.secs>0){pomo.secs--;updatePomoDisplay();}
+      else{
+        if(!pomo.isBreak){
+          const list=ld(K.pomos);
+          list.push({id:uid(),date:today(),taskId:pomo.taskId,taskTitle:pomo.taskTitle,
+            dur:parseInt(document.getElementById('pomo-work')?.value||25),ts:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
+          sv(K.pomos,list);pomo.round=(pomo.round+1)%4;
+          toast('🍅 专注完成！');renderPomoLog();updateStats();
+          if(pomo.taskId){const tasks=ld(K.tasks),t=tasks.find(t=>t.id===pomo.taskId);if(t){t.pomos=(t.pomos||0)+1;sv(K.tasks,tasks);}}
+        }else{toast('✅ 休息结束！继续加油！');}
+        pomo.isBreak=!pomo.isBreak;
+        pomo.secs=(pomo.isBreak?parseInt(document.getElementById('pomo-break')?.value||5):parseInt(document.getElementById('pomo-work')?.value||25))*60;
+        updatePomoDisplay();
+        if(!pomo.isBreak){clearInterval(pomo.iv);pomo.running=false;document.getElementById('pomo-btn').textContent='▶ 开始';}
+      }
+    },1000);
+  }
+  updatePomoDisplay();
+}
+function resetPomo(){clearInterval(pomo.iv);pomo={running:false,isBreak:false,secs:parseInt(document.getElementById('pomo-work')?.value||25)*60,iv:null,round:pomo.round,taskId:'',taskTitle:''};document.getElementById('pomo-btn').textContent='▶ 开始';updatePomoDisplay();}
+function renderPomoLog(){
+  const el=document.getElementById('pomo-log');if(!el)return;
+  const list=ld(K.pomos).filter(p=>p.date===today()).reverse();
+  el.innerHTML=list.length?list.map(p=>`<div class="pomo-hist-item"><span>🍅 ${p.taskTitle||'自由专注'}</span><span class="text-muted">${p.ts} · ${p.dur}min</span></div>`).join('')
+    :'<div class="empty-state"><div class="icon">🍅</div><p>今日暂无记录</p></div>';
+}
+function updatePomoTaskSel(){
+  const sel=document.getElementById('pomo-task-sel');if(!sel)return;
+  const tasks=ld(K.tasks).filter(t=>t.status!=='done');
+  sel.innerHTML='<option value="">自由专注...</option>'+tasks.map(t=>`<option value="${t.id}">${t.title} [${projName(t.proj)}]</option>`).join('');
+}
+
+// ══════════════════════════════════════
+//  HABITS
+// ══════════════════════════════════════
+function getHabitDefs(){const s=localStorage.getItem(K.habitDefs);return s?JSON.parse(s):DEFAULT_HABITS;}
+function saveHabitDefs(d){localStorage.setItem(K.habitDefs,JSON.stringify(d));}
+function addHabit(){
+  const name=document.getElementById('habit-input').value.trim();if(!name)return;
+  const emoji=document.getElementById('habit-emoji').value.trim()||'✅';
+  const defs=getHabitDefs();defs.push({id:uid(),name,emoji});saveHabitDefs(defs);
+  document.getElementById('habit-input').value='';document.getElementById('habit-emoji').value='';
+  renderHabits();toast('✅ 习惯已添加');
+}
+function toggleHabit(id){
+  const h=ld(K.habits),td=today();if(!h[td])h[td]={};h[td][id]=!h[td][id];
+  sv(K.habits,h);renderHabits();renderOverview();updateStats();
+}
+function delHabitDef(id){saveHabitDefs(getHabitDefs().filter(d=>d.id!==id));renderHabits();}
+function getStreak(id){
+  const h=ld(K.habits);let s=0,d=new Date();
+  while(s<365){const ds=d.toISOString().slice(0,10);if(h[ds]&&h[ds][id]){s++;d.setDate(d.getDate()-1);}else break;}
+  return s;
+}
+function renderHabits(){
+  const defs=getHabitDefs(),h=ld(K.habits),td=today(),tData=h[td]||{};
+  const el=document.getElementById('habit-list');
+  if(el)el.innerHTML=defs.length?defs.map(d=>{const done=!!tData[d.id],str=getStreak(d.id);return `<div class="habit-row">
+    <div class="habit-check ${done?'done':''}" onclick="toggleHabit('${d.id}')">${done?'✓':''}</div>
+    <span style="font-size:18px">${d.emoji}</span><span style="flex:1;font-size:13px">${d.name}</span>
+    ${str>0?`<span class="habit-streak">🔥${str}天</span>`:''}
+    <button onclick="delHabitDef('${d.id}')" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px">×</button>
+  </div>`}).join(''):'<div class="empty-state"><div class="icon">🔥</div><p>添加你的每日习惯</p></div>';
+  renderHabitWeek();renderHabitStreaks();
+}
+function renderHabitWeek(){
+  const el=document.getElementById('habit-week');if(!el)return;
+  const defs=getHabitDefs(),h=ld(K.habits);
+  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const dl=['日','一','二','三','四','五','六'];
+  el.innerHTML=defs.map(d=>`<div class="habit-week-row">
+    <span style="font-size:15px">${d.emoji}</span>
+    <span style="flex:1;font-size:12px;min-width:80px">${d.name}</span>
+    ${days.map(day=>{const done=h[day]&&h[day][d.id],isTd=day===today();
+      return `<div class="habit-day ${done?'done':''} ${isTd?'today':''}">${dl[new Date(day+'T12:00').getDay()]}</div>`;}).join('')}
+  </div>`).join('')||'<div class="text-muted text-sm">暂无习惯</div>';
+}
+function renderHabitStreaks(){
+  const el=document.getElementById('habit-streaks');if(!el)return;
+  const items=getHabitDefs().map(h=>({...h,streak:getStreak(h.id)})).sort((a,b)=>b.streak-a.streak);
+  el.innerHTML=items.map(h=>`<div class="flex items-center gap-8" style="padding:6px 0;border-bottom:1px solid var(--border)">
+    <span>${h.emoji}</span><span class="flex-1 text-sm">${h.name}</span>
+    <span style="font-size:13px;font-weight:700;color:${h.streak>6?'var(--orange)':'var(--text2)'}">${h.streak>0?`🔥 ${h.streak}天`:'—'}</span>
+  </div>`).join('')||'<div class="text-muted text-sm">暂无数据</div>';
+}
+
+// ══════════════════════════════════════
+//  SUBMISSIONS
+// ══════════════════════════════════════
+const SUB_LBL={submitted:'审核中',revision:'修改中',accepted:'✅ 录用',rejected:'❌ 拒稿',withdrawn:'撤稿'};
+function addSubmission(){
+  const title=document.getElementById('sub-title').value.trim();
+  if(!title){toast('请填写论文标题','error');return;}
+  const list=ld(K.subs);
+  list.unshift({id:uid(),title,venue:document.getElementById('sub-venue').value,
+    status:document.getElementById('sub-status').value,
+    submitDate:document.getElementById('sub-date').value,
+    decisionDate:document.getElementById('sub-decision').value,
+    notes:document.getElementById('sub-notes').value});
+  sv(K.subs,list);
+  document.getElementById('sub-title').value='';document.getElementById('sub-notes').value='';
+  renderSubmissions();renderOverview();toast('📄 投稿记录已添加');
+}
+function delSub(id){if(!confirm('确认删除？'))return;sv(K.subs,ld(K.subs).filter(s=>s.id!==id));renderSubmissions();renderOverview();}
+function openEditSub(id){
+  const s=ld(K.subs).find(s=>s.id===id);if(!s)return;
+  document.getElementById('es-id').value=id;
+  document.getElementById('es-title').value=s.title;
+  document.getElementById('es-venue').value=s.venue;
+  document.getElementById('es-status').value=s.status;
+  document.getElementById('es-date').value=s.submitDate||'';
+  document.getElementById('es-decision').value=s.decisionDate||'';
+  document.getElementById('es-notes').value=s.notes||'';
+  openModal('editSubModal');
+}
+function saveEditSub(){
+  const id=document.getElementById('es-id').value,list=ld(K.subs),s=list.find(s=>s.id===id);if(!s)return;
+  s.title=document.getElementById('es-title').value;s.venue=document.getElementById('es-venue').value;
+  s.status=document.getElementById('es-status').value;s.submitDate=document.getElementById('es-date').value;
+  s.decisionDate=document.getElementById('es-decision').value;s.notes=document.getElementById('es-notes').value;
+  sv(K.subs,list);closeModal('editSubModal');renderSubmissions();renderOverview();
+}
+function renderSubmissions(){
+  const list=ld(K.subs),el=document.getElementById('sub-list');
+  document.getElementById('ss-total').textContent=list.length;
+  document.getElementById('ss-sub').textContent=list.filter(s=>s.status==='submitted').length;
+  document.getElementById('ss-acc').textContent=list.filter(s=>s.status==='accepted').length;
+  document.getElementById('ss-rev').textContent=list.filter(s=>s.status==='revision').length;
+  if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">📄</div><p>暂无投稿记录</p></div>';return;}
+  el.innerHTML=list.map(s=>`<div class="sub-item status-${s.status}">
+    <div class="flex items-center gap-8">
+      <div style="flex:1"><div class="sub-title">${s.title}</div>
+        <div class="sub-meta"><span>🏛 ${s.venue}</span>
+          ${s.submitDate?`<span>📅 ${s.submitDate}</span>`:''}
+          ${s.decisionDate?`<span>⏳ ${s.decisionDate}</span>`:''}
+        </div>
+      </div>
+      <div class="flex gap-8 items-center">
+        <span class="status status-${s.status}">${SUB_LBL[s.status]||s.status}</span>
+        <button class="btn btn-ghost btn-sm" onclick="openEditSub('${s.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="delSub('${s.id}')">🗑</button>
+      </div>
+    </div>
+    ${s.notes?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${s.notes}</div>`:''}
+  </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  TOOLS
+// ══════════════════════════════════════
+function addTool(){
+  const label=document.getElementById('tool-label').value.trim(),cmd=document.getElementById('tool-cmd').value.trim();
+  if(!label||!cmd)return;
+  const list=ld(K.tools);
+  list.push({id:uid(),label,cmd,icon:document.getElementById('tool-icon').value.trim()||'⚡',desc:document.getElementById('tool-desc').value.trim()});
+  sv(K.tools,list);
+  document.getElementById('tool-label').value='';document.getElementById('tool-cmd').value='';
+  document.getElementById('tool-icon').value='';document.getElementById('tool-desc').value='';
+  renderTools();toast('⚡ 工具已添加');
+}
+function delTool(id){sv(K.tools,ld(K.tools).filter(t=>t.id!==id));renderTools();}
+function copyTool(id,el){
+  const t=ld(K.tools).find(t=>t.id===id);if(!t)return;
+  if(t.cmd.startsWith('http')){window.open(t.cmd,'_blank');return;}
+  navigator.clipboard.writeText(t.cmd).then(()=>{
+    const hint=el.querySelector('.tool-hint');
+    if(hint){hint.textContent='✅ 已复制！';hint.classList.add('tool-copied');}
+    toast(`✅ 已复制: ${t.cmd}`);
+    setTimeout(()=>{if(hint){hint.textContent='👆 点击复制';hint.classList.remove('tool-copied');}},2000);
+  });
+}
+function renderTools(){
+  const el=document.getElementById('tool-grid');if(!el)return;
+  const list=ld(K.tools);
+  if(!list.length){el.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚡</div><p>添加你的常用工具</p></div>';return;}
+  el.innerHTML=list.map(t=>`<div class="tool-card" onclick="copyTool('${t.id}',this)">
+    <button class="tool-del" onclick="event.stopPropagation();delTool('${t.id}')">×</button>
+    <div style="font-size:20px;margin-bottom:6px">${t.icon}</div>
+    <div class="tool-cmd">${t.label}</div>
+    ${t.desc?`<div class="tool-desc">${t.desc}</div>`:''}
+    <div style="font-size:10px;color:var(--text2);margin-top:4px;font-family:monospace;word-break:break-all">${t.cmd}</div>
+    <div class="tool-hint">👆 点击复制</div>
+  </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  REFLECTION
+// ══════════════════════════════════════
+let selMoodVal='';
+function selMood(m,el){selMoodVal=m;document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
+function saveReflection(){
+  const wins=document.getElementById('r-wins').value.trim(),str=document.getElementById('r-struggles').value.trim(),
+    tmr=document.getElementById('r-tomorrow').value.trim(),grt=document.getElementById('r-gratitude').value.trim();
+  if(!wins&&!str&&!tmr){toast('请至少填写一项','error');return;}
+  const list=ld(K.refs),idx=list.findIndex(r=>r.date===today());
+  const entry={id:uid(),date:today(),mood:selMoodVal,wins,struggles:str,tomorrow:tmr,gratitude:grt,ts:new Date().toLocaleString('zh-CN')};
+  if(idx>=0)list[idx]=entry;else list.unshift(entry);
+  sv(K.refs,list);
+  ['r-wins','r-struggles','r-tomorrow'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('r-gratitude').value='';
+  selMoodVal='';document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));
+  renderRefHistory();toast('🌙 反思已保存！');
+}
+function renderRefHistory(){
+  const el=document.getElementById('ref-history');if(!el)return;
+  const list=ld(K.refs);
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">🌙</div><p>暂无记录</p></div>';return;}
+  el.innerHTML=list.slice(0,30).map(r=>`<div class="ref-entry">
+    <div class="ref-date">${r.mood||'📝'} ${r.date} · ${r.ts||''}</div>
+    ${r.wins?`<div class="ref-content"><strong>🏆 亮点：</strong>${r.wins}</div>`:''}
+    ${r.struggles?`<div class="ref-content" style="margin-top:6px"><strong>😮‍💨 卡点：</strong>${r.struggles}</div>`:''}
+    ${r.tomorrow?`<div class="ref-content" style="margin-top:6px"><strong>🎯 明日：</strong>${r.tomorrow}</div>`:''}
+    ${r.gratitude?`<div class="ref-content" style="margin-top:6px;color:var(--text2)">💙 ${r.gratitude}</div>`:''}
+  </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  OVERVIEW
+// ══════════════════════════════════════
+function renderOverview(){
+  const tasks=ld(K.tasks).filter(t=>t.status!=='done').slice(0,5);
+  const tEl=document.getElementById('ov-tasks');
+  if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
+    <div class="task-checkbox" onclick="toggleTask('${t.id}')"></div>
+    <div class="task-body">
+      <div class="task-title">${t.title}</div>
+      <div class="task-meta">${projTagHtml(t.proj)}${t.due&&t.due<today()?`<span class="task-due overdue">📅 ${t.due} ⚠️</span>`:t.due?`<span class="task-due">📅 ${t.due}</span>`:''}</div>
+    </div>
+  </div>`).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">✅</div><p>今日任务全部完成！</p></div>';
+
+  const subs=ld(K.subs).slice(0,4),sEl=document.getElementById('ov-subs');
+  if(sEl)sEl.innerHTML=subs.length?subs.map(s=>`<div style="padding:8px;background:var(--surface2);border-radius:6px;margin-bottom:8px">
+    <div style="font-size:13px;font-weight:500">${s.title}</div>
+    <div class="flex gap-8 items-center" style="margin-top:4px"><span class="text-sm text-muted">${s.venue}</span><span class="status status-${s.status}">${SUB_LBL[s.status]}</span></div>
+  </div>`).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">📄</div><p>暂无投稿记录</p></div>';
+
+  const defs=getHabitDefs(),h=ld(K.habits),td=today(),tData=h[td]||{};
+  const hEl=document.getElementById('ov-habits');
+  if(hEl)hEl.innerHTML=defs.length?`<div class="flex gap-8" style="flex-wrap:wrap">`+defs.map(d=>{
+    const done=!!tData[d.id];
+    return `<div class="flex items-center gap-8" style="padding:6px 12px;border-radius:999px;background:${done?'var(--green-soft)':'var(--surface2)'};cursor:pointer" onclick="toggleHabit('${d.id}')">
+      <span>${d.emoji}</span><span style="font-size:12px;color:${done?'var(--green)':'var(--text2)'}">${d.name}</span>${done?'<span style="font-size:12px">✅</span>':''}</div>`;
+  }).join('')+'</div>':'<div class="empty-state" style="padding:20px"><div class="icon">🔥</div><p>还没设置习惯</p></div>';
+}
+
+// ══════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════
+function updateStats(){
+  const done=ld(K.tasks).filter(t=>t.status==='done'&&t.done===today()).length;
+  const pomos=ld(K.pomos).filter(p=>p.date===today()).length;
+  const defs=getHabitDefs(),h=ld(K.habits),td=today(),tData=h[td]||{};
+  const habDone=defs.filter(d=>tData[d.id]).length;
+  document.getElementById('s-tasks').textContent=done;
+  document.getElementById('s-pomos').textContent=pomos;
+  document.getElementById('s-habits').textContent=`${habDone}/${defs.length}`;
+  // Streak
+  const cks=ld(K.checkins);let streak=0,d=new Date();
+  while(streak<365){const ds=d.toISOString().slice(0,10);if(cks.find(c=>c.date===ds)){streak++;d.setDate(d.getDate()-1);}else break;}
+  document.getElementById('s-streak').textContent=streak;
+}
+
+let chartsInited=false;
+function renderCharts(){
+  if(chartsInited)return;chartsInited=true;
+  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const labels=days.map(d=>['日','一','二','三','四','五','六'][new Date(d+'T12:00').getDay()]);
+  const cOpts={responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'}},
+            y:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'},beginAtZero:true}}};
+  const tasks=ld(K.tasks),pomos=ld(K.pomos),cks=ld(K.checkins);
+  new Chart(document.getElementById('ch-tasks'),{type:'bar',data:{labels,datasets:[{label:'任务',data:days.map(d=>tasks.filter(t=>t.done===d).length),backgroundColor:'rgba(124,58,237,.5)',borderColor:'#7c3aed',borderWidth:1,borderRadius:4}]},options:cOpts});
+  new Chart(document.getElementById('ch-pomos'),{type:'bar',data:{labels,datasets:[{label:'番茄钟',data:days.map(d=>pomos.filter(p=>p.date===d).length),backgroundColor:'rgba(239,68,68,.4)',borderColor:'#ef4444',borderWidth:1,borderRadius:4}]},options:cOpts});
+  // Projects pie
+  const projs=getProjects(),pcnts={};tasks.filter(t=>t.status==='done').forEach(t=>{pcnts[t.proj]=(pcnts[t.proj]||0)+1;});
+  const pLabels=projs.map(p=>p.name),pData=projs.map(p=>pcnts[p.id]||0),pColors=projs.map(p=>p.color);
+  new Chart(document.getElementById('ch-projs'),{type:'doughnut',data:{labels:pLabels.length?pLabels:['暂无'],datasets:[{data:pLabels.length?pData:[1],backgroundColor:pColors.length?pColors:['#7c3aed'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}}}});
+  const wh=days.map(d=>{const c=cks.find(ch=>ch.date===d);if(!c||!c.ci||!c.co)return 0;
+    const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number),m=(oh*60+om)-(ih*60+im);return m>0?Math.round(m/60*10)/10:0;});
+  new Chart(document.getElementById('ch-hours'),{type:'line',data:{labels,datasets:[{data:wh,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',fill:true,tension:.4,pointRadius:4}]},options:cOpts});
+}
+
+// ══════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════
+function populateSettingsForm(){
+  const cfg=getCfg();
+  document.getElementById('set-name').value=cfg.name||'';
+  document.getElementById('set-field').value=cfg.field||'';
+  document.getElementById('set-univ').value=cfg.univ||'';
+  document.getElementById('set-start').value=cfg.startDate||'';
+  renderProjSettings();renderAreaTagsSettings();
+}
+function saveBasicSettings(){
+  const cfg=getCfg();
+  cfg.name=document.getElementById('set-name').value.trim();
+  cfg.field=document.getElementById('set-field').value.trim();
+  cfg.univ=document.getElementById('set-univ').value.trim();
+  cfg.startDate=document.getElementById('set-start').value;
+  saveCfg(cfg);
+  document.getElementById('sidebar-field').textContent=cfg.field||'博士工作台';
+  updateTodayDate();updatePhdDay();toast('✅ 设置已保存');
+}
+function renderProjSettings(){
+  const el=document.getElementById('proj-settings-list');if(!el)return;
+  const projs=getProjects();
+  el.innerHTML=projs.map((p,i)=>`<div class="project-item">
+    <div class="color-swatch" style="background:${p.color}"></div>
+    <input value="${p.name}" style="flex:1" onchange="updateProjName('${p.id}',this.value)">
+    <input type="color" value="${p.color}" style="width:36px;padding:3px;cursor:pointer" onchange="updateProjColor('${p.id}',this.value)">
+    <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">×</button>
+  </div>`).join('')||'<div class="text-muted text-sm">暂无项目</div>';
+}
+function updateProjName(id,name){const cfg=getCfg(),p=cfg.projects?.find(p=>p.id===id);if(p){p.name=name;saveCfg(cfg);populateProjectSelects();}}
+function updateProjColor(id,color){const cfg=getCfg(),p=cfg.projects?.find(p=>p.id===id);if(p){p.color=color;saveCfg(cfg);renderProjSettings();renderTasks();renderOverview();}}
+function addProject(){
+  const name=document.getElementById('new-proj-name').value.trim();if(!name)return;
+  const cfg=getCfg();if(!cfg.projects)cfg.projects=[];
+  if(cfg.projects.length>=6){toast('最多6个项目','error');return;}
+  cfg.projects.push({id:uid(),name,color:document.getElementById('new-proj-color').value});
+  saveCfg(cfg);document.getElementById('new-proj-name').value='';
+  renderProjSettings();populateProjectSelects();toast('✅ 项目已添加');
+}
+function deleteProject(id){
+  if(!confirm('删除项目？（已关联的任务不会删除）'))return;
+  const cfg=getCfg();cfg.projects=cfg.projects?.filter(p=>p.id!==id)||[];
+  saveCfg(cfg);renderProjSettings();populateProjectSelects();
+}
+function renderAreaTagsSettings(){
+  const el=document.getElementById('area-tags-list');if(!el)return;
+  const cfg=getCfg();const areas=cfg.areas||[];
+  el.innerHTML=areas.map((a,i)=>`<span class="tag" style="background:var(--primary-soft);color:var(--primary);cursor:pointer;font-size:12px" onclick="removeArea(${i})">${a} ×</span>`).join('')||'<span class="text-muted text-sm">暂无标签</span>';
+}
+function removeArea(i){const cfg=getCfg();cfg.areas?.splice(i,1);saveCfg(cfg);renderAreaTagsSettings();}
+function addAreaFromSettings(){
+  const val=document.getElementById('new-area-tag').value.trim();if(!val)return;
+  const cfg=getCfg();if(!cfg.areas)cfg.areas=[];cfg.areas.push(val);saveCfg(cfg);
+  document.getElementById('new-area-tag').value='';renderAreaTagsSettings();
+}
+function resetAll(){
+  if(!confirm('确认清除所有数据？此操作不可恢复！'))return;
+  Object.values(K).forEach(k=>localStorage.removeItem(k));
+  localStorage.removeItem('phd_habit_defs');
+  location.reload();
+}
+
+// ══════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('show');}));
+
+// ══════════════════════════════════════
+//  IMPORT / EXPORT
+// ══════════════════════════════════════
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const data={version:'1.0',exportedAt:new Date().toISOString()};
+  Object.entries(K).forEach(([k,v])=>{data[k]=ld(v);});
+  data.habit_defs=getHabitDefs();
+  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`phd-workstation-backup-${today()}.json`;a.click();
+  URL.revokeObjectURL(a.href);toast('💾 数据已导出！');
+});
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{
+    const d=JSON.parse(ev.target.result);
+    if(d.habit_defs)saveHabitDefs(d.habit_defs);
+    Object.entries(K).forEach(([k,v])=>{if(d[k]!==undefined)sv(v,d[k]);});
+    toast('📥 导入成功！');setTimeout(()=>location.reload(),1000);
+  }catch{toast('导入失败：格式错误','error');}};
+  r.readAsText(f);e.target.value='';
+});
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+let toastT;
+function toast(msg,type='success'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=`toast show ${type}`;
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ══════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════
+initSetupWizard();
+</script>
+</body>
+</html>
