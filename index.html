@@ -1019,7 +1019,7 @@ function switchPage(name) {
   const nav = document.querySelector(`.nav-item[data-page="${name}"]`);
   if (nav) nav.classList.add('active');
   if (name==='stats') renderCharts();
-  if (name==='overview') renderOverview();
+  if (name==='overview') { renderOverview(); renderCheckin(); }
   if (name==='focus') renderPomoLog();
   if (name==='habits') renderHabits();
   if (name==='tasks') renderTasks();
@@ -1111,16 +1111,37 @@ function updateTodayDate() {
 //  CHECK-IN
 // ══════════════════════════════════════
 function getTodayCI(){return ld(K.checkins).find(c=>c.date===today())||null;}
+function _checkinQuip(h){
+  if(h<6)  return ['🌙 深夜奋斗者，向你致敬（建议去睡觉）','🦉 夜猫子实验室开张了','🌃 凌晨签到，DDL加速你成长'];
+  if(h<9)  return ['🌅 早鸟获得积分！今天必有好事','☀️ 早安！今天也要加油','🐓 鸡叫了，你来了'];
+  if(h<11) return ['✅ 签到成功！早安！','🚀 上午冲刺，效率最高！','💡 脑子最清醒的时段，用好它'];
+  if(h<13) return ['🌞 中午才来？大器晚成！','😴 昨晚肝到几点？','☕ 午前签到，咖啡续命中'];
+  if(h<15) return ['🍱 吃完午饭才来上班？生活质量满分','😤 下午签到，上午在家思考人生吧','🌤 午后阳光，你终于出现了'];
+  if(h<18) return ['🌆 下午三点开始，冲劲十足（maybe）','🤔 今天的前半天属于……薛定谔的科研','🐢 慢工出细活，您来了'];
+  if(h<21) return ['🌇 晚上签到，进入深夜模式','🔬 傍晚的实验室，只有你最拼','🌙 晚班研究员，辛苦了'];
+  return ['🌃 夜深了还没下班？','⭐ 星星见证你的努力','🦇 连蝙蝠都睡了，你还在卷'];
+}
+function _checkoutQuip(h){
+  if(h<12) return ['上午就撤？今日份摸鱼完成 🎣','效率之神：来了就走，潇洒自如 😎','早退选手，明天见 👋'];
+  if(h<15) return ['午后签出，下午自由 🏖','中午就结束战斗，今日份科研已完成（？）☑️','午间撤离，佩服你的时间管理 🗓'];
+  if(h<18) return ['下午签出，标准朝九晚三 👏','五点前跑路，生活与科研平衡大师 🧘','正常人的作息，向你学习 🌿'];
+  if(h<21) return ['🌙 下班签出！辛苦了！','晚上才走，今天拼了！💪','卷够了吗？好好休息 🛋'];
+  return ['🌃 深夜下班，注意休息！','熬夜伤身，明天的你感谢今晚早走的你 💤','夜深了，回去睡吧，明天继续 🌌'];
+}
+function _pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
 function handleCheckin(){
   const list=ld(K.checkins);
   if(!list.find(c=>c.date===today()))
     list.push({id:uid(),date:today(),ci:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),co:null});
-  sv(K.checkins,list); renderCheckin(); toast('✅ 签到成功！早安！');
+  sv(K.checkins,list); renderCheckin();
+  toast(_pick(_checkinQuip(new Date().getHours())));
 }
 function handleCheckout(){
   const list=ld(K.checkins),idx=list.findIndex(c=>c.date===today());
   if(idx>=0) list[idx].co=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-  sv(K.checkins,list); renderCheckin(); toast('🌙 下班签出！辛苦了！');
+  sv(K.checkins,list); renderCheckin();
+  toast(_pick(_checkoutQuip(new Date().getHours())));
 }
 function renderCheckin(){
   const c=getTodayCI();
