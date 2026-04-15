@@ -434,28 +434,29 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <div class="card-title" style="margin-bottom:0">🌿 同行者</div>
       <span style="font-size:11px;color:var(--text2)">匿名 · 互相见证</span>
     </div>
+    <!-- 身份 + 发帖表单（在消息列表上方）-->
+    <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-bottom:6px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <button class="wall-type-btn active" data-type="share" onclick="selectWallType(this)">🎉 分享</button>
+      <button class="wall-type-btn" data-type="help" onclick="selectWallType(this)">🆘 求助</button>
+      <button class="wall-type-btn" data-type="vent" onclick="selectWallType(this)">💬 吐槽</button>
+    </div>
+    <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
+        style="width:110px;flex-shrink:0">
+      <input id="wall-msg" maxlength="500" placeholder="说点什么（500字内）"
+        style="flex:1;min-width:120px">
+      <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
+    </div>
+    <div id="wall-tip" style="font-size:11px;color:var(--text2);margin-bottom:10px;display:none"></div>
     <!-- 分类 tab 筛选 -->
-    <div id="wall-tabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+    <div id="wall-tabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px">
       <button class="wall-tab active" data-tag="all" onclick="switchWallTab(this)">全部</button>
       <button class="wall-tab" data-tag="share" onclick="switchWallTab(this)">🎉 分享</button>
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
     <div id="wall-list" style="min-height:40px"></div>
-    <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-top:10px;margin-bottom:6px"></div>
-    <!-- 发帖类型选择 + 表单 -->
-    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-      <button class="wall-type-btn active" data-type="share" onclick="selectWallType(this)">🎉 分享</button>
-      <button class="wall-type-btn" data-type="help" onclick="selectWallType(this)">🆘 求助</button>
-      <button class="wall-type-btn" data-type="vent" onclick="selectWallType(this)">💬 吐槽</button>
-    </div>
-    <!-- 今日状态快选 -->
-    <div id="wall-mood-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-    <div id="wall-form" style="display:flex;gap:8px;align-items:center">
-      <input id="wall-msg" maxlength="500" placeholder="说点什么…" style="flex:1">
-      <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
-    </div>
-    <div id="wall-tip" style="font-size:11px;color:var(--text2);margin-top:6px;display:none"></div>
   </div>
 </div>
 
