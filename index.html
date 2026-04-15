@@ -1603,11 +1603,20 @@ async function submitWall(){
       setTimeout(()=>{tip.style.display='none'},2000)
       loadWall()
     } else {
-      tip.textContent='发布失败，请稍后再试'
+      let errMsg='发布失败'
+      try{
+        const errBody=await r.json()
+        const detail=errBody.message||errBody.hint||errBody.code||''
+        if(r.status===401||r.status===403) errMsg='权限错误（检查 Supabase RLS 策略）'
+        else if(r.status===404) errMsg='表不存在（需先在 Supabase 建表）'
+        else if(detail) errMsg='错误：'+detail
+        else errMsg='发布失败 ('+r.status+')'
+      }catch(_){}
+      tip.textContent=errMsg
       tip.style.display='block'
     }
   }catch(e){
-    tip.textContent='网络错误'
+    tip.textContent='网络错误：'+e.message
     tip.style.display='block'
   }
 }
