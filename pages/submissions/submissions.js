@@ -12,8 +12,14 @@ Page({
     form: { title:'', venue:'', statusIdx:0, submitDate:'', notes:'' },
   },
 
-  onLoad() { this.render() },
-  onShow() { this.render() },
+  onLoad() {
+    try { this.render() }
+    catch(e) { wx.showModal({ title:'[subs onLoad crash]', content: String(e).slice(0,300), showCancel:false }) }
+  },
+  onShow() {
+    try { this.render() }
+    catch(e) { wx.showModal({ title:'[subs onShow crash]', content: String(e).slice(0,300), showCancel:false }) }
+  },
 
   render() {
     const raw = ld(K.subs, [])

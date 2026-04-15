@@ -4,8 +4,10 @@ const { phdDay } = require('../../utils/util')
 Page({
   data: { name:'', field:'', univ:'', phdDay:'?' },
   onShow() {
-    const cfg = getCfg()
-    this.setData({ name: cfg.name||'同学', field: cfg.field||'', univ: cfg.univ||'', phdDay: phdDay(cfg.startDate) })
+    try {
+      const cfg = getCfg()
+      this.setData({ name: cfg.name||'同学', field: cfg.field||'', univ: cfg.univ||'', phdDay: phdDay(cfg.startDate) })
+    } catch(e) { wx.showModal({ title:'[mine onShow crash]', content: String(e).slice(0,300), showCancel:false }) }
   },
   go(e) { wx.navigateTo({ url: e.currentTarget.dataset.url }) },
 

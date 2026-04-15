@@ -17,8 +17,14 @@ Page({
     taskCount: '',
   },
 
-  onLoad() { this.loadProjects(); this.renderTasks() },
-  onShow() { this.loadProjects(); this.renderTasks() },
+  onLoad() {
+    try { this.loadProjects(); this.renderTasks() }
+    catch(e) { wx.showModal({ title:'[tasks onLoad crash]', content: String(e).slice(0,300), showCancel:false }) }
+  },
+  onShow() {
+    try { this.loadProjects(); this.renderTasks() }
+    catch(e) { wx.showModal({ title:'[tasks onShow crash]', content: String(e).slice(0,300), showCancel:false }) }
+  },
 
   loadProjects() {
     const cfg = getCfg()

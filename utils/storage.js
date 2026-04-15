@@ -64,6 +64,17 @@ function getCfg() {
         cfg[k] = stored[k]
       }
     })
+    // 过滤 projects/areas 数组中可能存在的 null 元素
+    if (Array.isArray(cfg.projects)) {
+      cfg.projects = cfg.projects.filter(function(p) { return p !== null && p !== undefined && typeof p === 'object' })
+    } else {
+      cfg.projects = []
+    }
+    if (Array.isArray(cfg.areas)) {
+      cfg.areas = cfg.areas.filter(function(a) { return a !== null && a !== undefined })
+    } else {
+      cfg.areas = []
+    }
     return cfg
   } catch (e) {
     return Object.assign({}, CFG_DEFAULTS)
@@ -75,9 +86,11 @@ function saveCfg(c) {
 }
 
 function getHabitDefs() {
-  const v = ld(K.habitDefs, null)
-  if (!v || !Array.isArray(v) || v.length === 0) return DEFAULT_HABITS.slice()
-  return v
+  const v = ld(K.habitDefs, [])
+  if (!Array.isArray(v) || v.length === 0) return DEFAULT_HABITS.slice()
+  // 过滤 null 元素，防止 {...null} 在 V8 老版本崩溃
+  const filtered = v.filter(function(d) { return d !== null && d !== undefined && typeof d === 'object' })
+  return filtered.length === 0 ? DEFAULT_HABITS.slice() : filtered
 }
 
 function saveHabitDefs(d) {

@@ -11,8 +11,14 @@ Page({
   },
   _iv: null, _taskId: '', _taskTitle: '',
 
-  onLoad() { this.loadTasks(); this.loadPomos() },
-  onShow() { this.loadTasks(); this.loadPomos() },
+  onLoad() {
+    try { this.loadTasks(); this.loadPomos() }
+    catch(e) { wx.showModal({ title:'[focus onLoad crash]', content: String(e).slice(0,300), showCancel:false }) }
+  },
+  onShow() {
+    try { this.loadTasks(); this.loadPomos() }
+    catch(e) { wx.showModal({ title:'[focus onShow crash]', content: String(e).slice(0,300), showCancel:false }) }
+  },
   onHide() { this._pause() },
   onUnload() { this._pause() },
 
