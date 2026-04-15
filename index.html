@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhD Workstation</title>
+<title>科研工作台</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -228,7 +228,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
     <!-- Step 1: Identity -->
     <div class="setup-step active" id="step-1">
-      <div class="setup-title">👋 欢迎使用研习台</div>
+      <div class="setup-title">👋 欢迎使用科研工作台</div>
       <div class="setup-subtitle">选择你的身份，开始专属学习之旅</div>
       <!-- 角色选择 -->
       <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -338,8 +338,8 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 ══════════════════════════════════════ -->
 <aside id="sidebar">
   <div class="logo">
-    <h1>🎓 PhD Workstation</h1>
-    <div class="subtitle" id="sidebar-field">博士工作台</div>
+    <h1 id="sidebar-title"><span id="sidebar-role-emoji">🎓</span> <span id="sidebar-role-label">科研工作台</span></h1>
+    <div class="subtitle" id="sidebar-field">博士科研工作台</div>
   </div>
   <div class="nav-group">主要</div>
   <div class="nav-item active" data-page="overview"><span class="nav-icon">📊</span>今日概览</div>
@@ -945,7 +945,7 @@ function skipSetup() {
 // ══════════════════════════════════════
 function initApp() {
   const cfg = getCfg();
-  document.getElementById('sidebar-field').textContent = cfg.field || '博士工作台';
+  document.getElementById('sidebar-field').textContent = cfg.field || (ROLE_CONFIG[cfg.role||'phd'].name.replace('生','')+'科研工作台');
   updateTodayDate();
   updatePhdDay();
   renderCheckin();
@@ -1012,16 +1012,27 @@ function selectSetupRole(role){
 }
 function updatePhdDay(){
   const cfg=getCfg();
-  if(!cfg.startDate){document.getElementById('phd-day').textContent='?';return;}
-  const d=Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1;
-  document.getElementById('phd-day').textContent=d>0?d:'?';
+  if(!cfg.startDate){document.getElementById('phd-day').textContent='?';}
+  else{
+    const d=Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1;
+    document.getElementById('phd-day').textContent=d>0?d:'?';
+  }
   const role=ROLE_CONFIG[cfg.role||'phd'];
+  // 侧边栏计数器标签
   const lbl=document.getElementById('roleLabel');
   const ei=document.getElementById('role-emoji');
   const ni=document.getElementById('role-name');
   if(lbl) lbl.textContent=role.label;
   if(ei) ei.textContent=role.emoji;
   if(ni) ni.textContent=role.name;
+  // 侧边栏标题：[role]科研工作台
+  const titleEmoji=document.getElementById('sidebar-role-emoji');
+  const titleLabel=document.getElementById('sidebar-role-label');
+  if(titleEmoji) titleEmoji.textContent=role.emoji;
+  if(titleLabel) titleLabel.textContent=role.name.replace('生','')+'科研工作台';
+  // subtitle 显示研究领域，否则显示角色工作台
+  const sf=document.getElementById('sidebar-field');
+  if(sf) sf.textContent=cfg.field||(role.name.replace('生','')+'科研工作台');
 }
 let _pendingRole=null;
 function openRoleModal(){
