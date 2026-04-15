@@ -39,4 +39,14 @@
     <view class="btn btn-ghost btn-full" bindtap="importData">📥 导入数据</view>
     <view class="text-xs text-muted mt-16" style="text-align:center">数据存储在本地，不上传服务器</view>
   </view>
+
+  <!-- Share -->
+  <view class="card">
+    <view class="card-title">推荐给朋友</view>
+    <view class="share-tip">每个人打开后独立设置自己的工作台，数据互不干扰</view>
+    <button class="btn btn-primary btn-full mb-16 share-btn" open-type="share">
+      💬 分享给微信好友
+    </button>
+    <view class="btn btn-ghost btn-full" bindtap="copyWebLink">🔗 复制网页版链接</view>
+  </view>
 </view>

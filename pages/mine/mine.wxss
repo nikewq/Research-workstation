@@ -11,3 +11,5 @@
 .menu-icon { font-size: 36rpx; }
 .menu-label { flex: 1; font-size: 30rpx; }
 .menu-arrow { color: #8b949e; font-size: 36rpx; }
+.share-tip { font-size: 24rpx; color: #8b949e; margin-bottom: 24rpx; line-height: 1.5; }
+.share-btn { border: none; line-height: normal; }

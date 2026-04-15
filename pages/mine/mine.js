@@ -42,4 +42,19 @@ Page({
       }
     })
   },
+
+  copyWebLink() {
+    wx.setClipboardData({
+      data: 'https://nikewq.github.io/Research-workstation/',
+      success: () => wx.showToast({ title: '链接已复制', icon: 'success' })
+    })
+  },
+
+  // 分享给微信好友时的卡片内容（无任何个人信息）
+  onShareAppMessage() {
+    return {
+      title: 'PhD Workstation — 博士科研自律工作台',
+      path: '/pages/overview/overview',
+    }
+  },
 })
