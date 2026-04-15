@@ -372,6 +372,23 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="section-header"><div class="card-title" style="margin-bottom:0">今日习惯</div><button class="btn btn-ghost btn-sm" onclick="switchPage('habits')">打卡</button></div>
     <div id="ov-habits"></div>
   </div>
+
+  <!-- 打卡树洞 -->
+  <div class="card mt-16" id="wall-card">
+    <div class="section-header">
+      <div class="card-title" style="margin-bottom:0">🌿 同行者</div>
+      <span style="font-size:11px;color:var(--text2)">匿名 · 互相见证</span>
+    </div>
+    <div id="wall-list" style="min-height:40px"></div>
+    <div id="wall-form" style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
+        style="width:110px;flex-shrink:0">
+      <input id="wall-msg" maxlength="20" placeholder="留一句话（20字内）"
+        style="flex:1;min-width:120px">
+      <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
+    </div>
+    <div id="wall-tip" style="font-size:11px;color:var(--text2);margin-top:6px;display:none"></div>
+  </div>
 </div>
 
 <!-- ── Tasks ── -->
@@ -1439,5 +1456,83 @@ function toast(msg,type='success'){
 initSetupWizard();
 </script>
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<script>
+// ── 打卡树洞 ────────────────────────────────────────
+const _SB_URL = 'https://fbaznbvlymfqtycqlmjz.supabase.co'
+const _SB_KEY = 'sb_publishable_BvP_LZ0d_-HMcykIaoUCNw_xKkxKwzz'
+
+function relTime(ts){
+  const s=Math.floor((Date.now()-new Date(ts))/1000)
+  if(s<60) return '刚刚'
+  if(s<3600) return Math.floor(s/60)+'分钟前'
+  if(s<86400) return Math.floor(s/3600)+'小时前'
+  if(s<86400*7) return Math.floor(s/86400)+'天前'
+  const d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日'
+}
+
+async function loadWall(){
+  try{
+    const r=await fetch(`${_SB_URL}/rest/v1/wall?select=day,msg,created_at&order=created_at.desc&limit=8`,{
+      headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}
+    })
+    if(!r.ok) return
+    const data=await r.json()
+    const el=document.getElementById('wall-list')
+    if(!data.length){
+      el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px 0">还没有留言，成为第一个吧 👆</div>'
+      return
+    }
+    el.innerHTML=data.map(d=>`
+      <div style="display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--primary);white-space:nowrap;flex-shrink:0">第${d.day}天</span>
+        <span style="font-size:13px;color:var(--text);flex:1">${escHtml(d.msg)}</span>
+        <span style="font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0">${relTime(d.created_at)}</span>
+      </div>`).join('')
+  }catch(e){}
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+async function submitWall(){
+  const day=parseInt(document.getElementById('wall-day').value)||0
+  const msg=document.getElementById('wall-msg').value.trim()
+  const tip=document.getElementById('wall-tip')
+  if(!msg){tip.textContent='请写点什么';tip.style.display='block';return}
+  if(msg.length>20){tip.textContent='最多20个字';tip.style.display='block';return}
+  tip.style.display='none'
+  try{
+    const r=await fetch(`${_SB_URL}/rest/v1/wall`,{
+      method:'POST',
+      headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({day,msg})
+    })
+    if(r.ok){
+      document.getElementById('wall-day').value=''
+      document.getElementById('wall-msg').value=''
+      tip.textContent='✅ 已发布'
+      tip.style.display='block'
+      setTimeout(()=>{tip.style.display='none'},2000)
+      loadWall()
+    } else {
+      tip.textContent='发布失败，请稍后再试'
+      tip.style.display='block'
+    }
+  }catch(e){
+    tip.textContent='网络错误'
+    tip.style.display='block'
+  }
+}
+
+// 概览页显示时加载
+const _origSwitch=window.switchPage
+window.switchPage=function(p){
+  _origSwitch&&_origSwitch(p)
+  if(p==='overview') loadWall()
+}
+// 初次加载
+document.addEventListener('DOMContentLoaded',()=>setTimeout(loadWall,800))
+</script>
 </body>
 </html>
