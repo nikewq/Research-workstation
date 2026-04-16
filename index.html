@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhD Workstation</title>
+<title>科研工作台</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -33,6 +33,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .phd-counter{font-size:11px;color:var(--text2);text-align:center}
 .phd-counter span{font-size:22px;font-weight:700;color:var(--primary);display:block}
 .companion-counter{font-size:11px;color:var(--text2);text-align:center;margin-top:6px;opacity:.7}
+.role-badge{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid var(--primary);cursor:pointer;transition:.15s;font-size:12px;color:var(--primary)}
+.role-badge:hover{background:var(--primary);color:#fff}
+.role-option{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:10px;flex-direction:row}
+.role-option:hover,.role-option.selected{border-color:var(--primary);background:rgba(var(--primary-rgb,99,102,241),.08)}
+.role-option-emoji{font-size:26px}
+.role-option-info{flex:1}
+.role-option-title{font-size:14px;font-weight:600;margin-bottom:2px}
+.role-option-desc{font-size:11px;color:var(--text2)}
+.role-check{font-size:16px;color:var(--primary);opacity:0;transition:.15s}
+.role-option.selected .role-check{opacity:1}
+.wall-mood{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s;white-space:nowrap}
+.wall-mood:hover{border-color:var(--primary);color:var(--text)}
+.wall-mood.active{background:var(--primary-soft);color:var(--primary);border-color:var(--primary);font-weight:600}
 .wall-tab{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
 .wall-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .wall-type-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.15s}
@@ -40,6 +53,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .wall-tag-share{background:#e8f7ee;color:#2a9d5c;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
 .wall-tag-help{background:#fff0e6;color:#e07b39;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
 .wall-tag-vent{background:#f0eeff;color:#6c5ce7;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
+.ai-reply{background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(99,102,241,.05));border-left:2px solid #10b981;border-radius:0 6px 6px 0;padding:8px 10px;margin-top:7px;font-size:12px;line-height:1.65;color:var(--text)}
+.ai-reply-hd{font-size:10px;color:#10b981;font-weight:700;letter-spacing:.3px;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.ai-reply-hd span{opacity:.7;font-weight:400}
+@keyframes ai-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.ai-loading .ai-reply-hd::after{content:'';display:inline-block;width:5px;height:5px;background:#10b981;border-radius:50%;margin-left:4px;animation:ai-pulse 1.2s ease-in-out infinite}
 
 /* Main */
 #main{margin-left:200px;flex:1;padding:24px;min-height:100vh}
@@ -218,8 +236,26 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
     <!-- Step 1: Identity -->
     <div class="setup-step active" id="step-1">
-      <div class="setup-title">👋 欢迎使用 PhD Workstation</div>
-      <div class="setup-subtitle">一次设置，为你量身定制博士工作台</div>
+      <div class="setup-title">👋 欢迎使用科研工作台</div>
+      <div class="setup-subtitle">选择你的身份，开始专属学习之旅</div>
+      <!-- 角色选择 -->
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <div class="role-option" data-role="undergrad" onclick="selectSetupRole('undergrad')" style="flex:1;padding:10px 8px;flex-direction:column;align-items:center;text-align:center;gap:4px">
+          <div class="role-option-emoji">📚</div>
+          <div class="role-option-title" style="font-size:13px">本科生</div>
+          <div class="role-check" style="font-size:13px">✓</div>
+        </div>
+        <div class="role-option" data-role="master" onclick="selectSetupRole('master')" style="flex:1;padding:10px 8px;flex-direction:column;align-items:center;text-align:center;gap:4px">
+          <div class="role-option-emoji">🔬</div>
+          <div class="role-option-title" style="font-size:13px">硕士生</div>
+          <div class="role-check" style="font-size:13px">✓</div>
+        </div>
+        <div class="role-option selected" data-role="phd" onclick="selectSetupRole('phd')" style="flex:1;padding:10px 8px;flex-direction:column;align-items:center;text-align:center;gap:4px">
+          <div class="role-option-emoji">🎓</div>
+          <div class="role-option-title" style="font-size:13px">博士生</div>
+          <div class="role-check" style="font-size:13px">✓</div>
+        </div>
+      </div>
       <div class="form-row">
         <div><label>你的名字</label><input id="s-name" placeholder="如：张三"></div>
       </div>
@@ -228,7 +264,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
         <div><label>研究领域 (简短)</label><input id="s-field" placeholder="如：计算机视觉"></div>
       </div>
       <div class="form-row">
-        <div><label>博士入学日期</label><input id="s-start" type="date"></div>
+        <div><label id="start-date-label">入学日期</label><input id="s-start" type="date"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="skipSetup()">跳过</button>
@@ -310,8 +346,8 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 ══════════════════════════════════════ -->
 <aside id="sidebar">
   <div class="logo">
-    <h1>🎓 PhD Workstation</h1>
-    <div class="subtitle" id="sidebar-field">博士工作台</div>
+    <h1 id="sidebar-title"><span id="sidebar-role-emoji">🎓</span> <span id="sidebar-role-label">科研工作台</span></h1>
+    <div class="subtitle" id="sidebar-field">博士科研工作台</div>
   </div>
   <div class="nav-group">主要</div>
   <div class="nav-item active" data-page="overview"><span class="nav-icon">📊</span>今日概览</div>
@@ -325,11 +361,15 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
   <div class="nav-group">设置</div>
   <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
+  <div class="nav-item" onclick="openSyncModal()"><span class="nav-icon">☁️</span>云同步</div>
   <div class="nav-item" id="exportBtn"><span class="nav-icon">💾</span>导出数据</div>
   <div class="nav-item" id="importBtn"><span class="nav-icon">📥</span>导入数据</div>
   <input type="file" id="importFile" accept=".json" style="display:none">
   <div class="sidebar-bottom">
-    <div class="phd-counter"><span id="phd-day">—</span>博士第 N 天</div>
+    <div class="phd-counter"><span id="phd-day">—</span><span id="roleLabel">博士第 N 天</span></div>
+    <div class="role-badge" id="role-badge" onclick="openRoleModal()" title="点击切换角色">
+      <span id="role-emoji">🎓</span><span id="role-name">设置角色</span>
+    </div>
     <div class="companion-counter" id="busuanzi_container_site_uv" style="display:none">
       🌐 同行者 <span id="busuanzi_value_site_uv">…</span> 人
     </div>
@@ -365,6 +405,19 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="stat-card stat-orange"><div class="stat-value" id="s-habits">0/0</div><div class="stat-label">习惯完成</div></div>
     <div class="stat-card stat-blue"><div class="stat-value" id="s-streak">0</div><div class="stat-label">连续打卡天</div></div>
   </div>
+  <!-- 研究者身份卡 -->
+  <div class="card" id="identity-card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;padding:14px 18px;cursor:pointer;border-left:3px solid #8b949e" onclick="rerollIdentityDesc()" title="点击换一句话">
+    <div id="identity-avatar" style="font-size:36px;flex-shrink:0;line-height:1">🌱</div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span id="identity-name" style="font-size:15px;font-weight:700">初始化中</span>
+        <span id="identity-rank" style="font-size:11px;padding:2px 7px;border-radius:999px;font-weight:600;background:rgba(255,255,255,0.08)">—</span>
+      </div>
+      <div id="identity-desc" style="font-size:12px;color:var(--text2);line-height:1.5"></div>
+      <div id="identity-tip" style="font-size:11px;margin-top:5px;opacity:0.55;font-style:italic"></div>
+    </div>
+  </div>
+
   <div class="grid-2">
     <div class="card">
       <div class="section-header"><div class="card-title" style="margin-bottom:0">待做任务</div><button class="btn btn-ghost btn-sm" onclick="switchPage('tasks')">全部</button></div>
@@ -386,29 +439,31 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <div class="card-title" style="margin-bottom:0">🌿 同行者</div>
       <span style="font-size:11px;color:var(--text2)">匿名 · 互相见证</span>
     </div>
+    <!-- 身份 + 发帖表单（在消息列表上方）-->
+    <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-bottom:6px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <button class="wall-type-btn active" data-type="share" onclick="selectWallType(this)">🎉 分享</button>
+      <button class="wall-type-btn" data-type="help" onclick="selectWallType(this)">🆘 求助</button>
+      <button class="wall-type-btn" data-type="vent" onclick="selectWallType(this)">💬 吐槽</button>
+    </div>
+    <!-- 今日心情快选 -->
+    <div id="wall-mood-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
+        style="width:110px;flex-shrink:0">
+      <input id="wall-msg" maxlength="500" placeholder="说点什么（500字内）"
+        style="flex:1;min-width:120px">
+      <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
+    </div>
+    <div id="wall-tip" style="font-size:11px;color:var(--text2);margin-bottom:10px;display:none"></div>
     <!-- 分类 tab 筛选 -->
-    <div id="wall-tabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+    <div id="wall-tabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px">
       <button class="wall-tab active" data-tag="all" onclick="switchWallTab(this)">全部</button>
       <button class="wall-tab" data-tag="share" onclick="switchWallTab(this)">🎉 分享</button>
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
     <div id="wall-list" style="min-height:40px"></div>
-    <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-top:10px;margin-bottom:6px"></div>
-    <!-- 发帖类型选择 + 表单 -->
-    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-      <button class="wall-type-btn active" data-type="share" onclick="selectWallType(this)">🎉 分享</button>
-      <button class="wall-type-btn" data-type="help" onclick="selectWallType(this)">🆘 求助</button>
-      <button class="wall-type-btn" data-type="vent" onclick="selectWallType(this)">💬 吐槽</button>
-    </div>
-    <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
-        style="width:110px;flex-shrink:0">
-      <input id="wall-msg" maxlength="30" placeholder="说点什么（30字内）"
-        style="flex:1;min-width:120px">
-      <button class="btn btn-primary btn-sm" onclick="submitWall()" style="flex-shrink:0">发布</button>
-    </div>
-    <div id="wall-tip" style="font-size:11px;color:var(--text2);margin-top:6px;display:none"></div>
   </div>
 </div>
 
@@ -610,7 +665,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     </div>
     <div class="form-row c2">
       <div><label>学校/机构</label><input id="set-univ" placeholder="学校名称"></div>
-      <div><label>博士入学日期</label><input type="date" id="set-start"></div>
+      <div><label id="set-start-label">博士入学日期</label><input type="date" id="set-start"></div>
     </div>
     <button class="btn btn-primary" onclick="saveBasicSettings()">保存基本信息</button>
   </div>
@@ -640,6 +695,73 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 </main>
 
 <!-- ── Edit Task Modal ── -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">☁️ 云同步</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">用同步码在不同设备间恢复你的个人设置和配置</p>
+
+    <!-- 我的同步码 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">我的同步码</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="sync-code-display" style="font-size:22px;font-weight:700;letter-spacing:3px;color:var(--primary);flex:1;font-family:monospace">——</div>
+        <button class="btn btn-ghost btn-sm" onclick="copySyncCode()">复制</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px">换设备时输入此码即可恢复所有设置</div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="saveProfileCloud()">
+      ☁️ 立即同步到云端
+    </button>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin-bottom:16px">
+
+    <!-- 导入同步码 -->
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">在新设备上恢复</div>
+    <div style="display:flex;gap:8px">
+      <input id="sync-code-input" placeholder="输入同步码，如 MAPLE42" maxlength="12"
+        style="flex:1;text-transform:uppercase;letter-spacing:2px;font-family:monospace"
+        oninput="this.value=this.value.toUpperCase()">
+      <button class="btn btn-ghost" onclick="loadProfileCloud()">导入</button>
+    </div>
+    <div id="sync-tip" style="font-size:12px;margin-top:8px;display:none"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('syncModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="roleModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">🎓 选择你的身份</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px">选择后计数器将匹配你的角色</p>
+    <div class="role-option" data-role="undergrad" onclick="selectRole('undergrad')">
+      <div class="role-option-emoji">📚</div>
+      <div class="role-option-info"><div class="role-option-title">本科生</div><div class="role-option-desc">本科第 N 天 · 好好学习，天天向上</div></div>
+      <div class="role-check">✓</div>
+    </div>
+    <div class="role-option" data-role="master" onclick="selectRole('master')">
+      <div class="role-option-emoji">🔬</div>
+      <div class="role-option-info"><div class="role-option-title">硕士生</div><div class="role-option-desc">硕士第 N 天 · 研究探索，砥砺前行</div></div>
+      <div class="role-check">✓</div>
+    </div>
+    <div class="role-option" data-role="phd" onclick="selectRole('phd')">
+      <div class="role-option-emoji">🎓</div>
+      <div class="role-option-info"><div class="role-option-title">博士生</div><div class="role-option-desc">博士第 N 天 · 科研苦旅，坚持到底</div></div>
+      <div class="role-check">✓</div>
+    </div>
+    <div style="margin-top:4px">
+      <label style="font-size:12px;color:var(--text2);margin-bottom:6px;display:block">入学 / 开始日期</label>
+      <input type="date" id="role-start-date" style="width:100%">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('roleModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveRole()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="editTaskModal">
   <div class="modal">
     <div class="modal-title">编辑任务</div>
@@ -714,7 +836,8 @@ const K = {
 const ld = k => { try { return JSON.parse(localStorage.getItem(k)) || (k===K.habits?{}:[]); } catch { return k===K.habits?{}:[]; } };
 const sv = (k,v) => localStorage.setItem(k, JSON.stringify(v));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-const today = () => new Date().toISOString().slice(0,10);
+const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const today = () => localDate(new Date());
 
 function getCfg() {
   return {
@@ -854,6 +977,7 @@ function finishSetup() {
   cfg.univ = document.getElementById('s-univ').value.trim();
   cfg.field = document.getElementById('s-field').value.trim();
   cfg.startDate = document.getElementById('s-start').value;
+  cfg.role = _setupRole || 'phd';
   cfg.projects = setupProjects.length ? setupProjects : [{id:uid(),name:'项目A',color:'#7c3aed'}];
   cfg.areas = setupAreasTemp;
   cfg.setupDone = true;
@@ -866,10 +990,13 @@ function finishSetup() {
   document.getElementById('setup-overlay').style.display = 'none';
   initApp();
   toast(`🎉 欢迎，${cfg.name}！工作台已就绪！`);
+  // 自动生成同步码并上传
+  _getOrCreateSyncCode();
+  setTimeout(saveProfileCloud, 800);
 }
 function skipSetup() {
   const cfg = getCfg();
-  cfg.name = '同学'; cfg.setupDone = true;
+  cfg.name = '同学'; cfg.setupDone = true; cfg.role = _setupRole || 'phd';
   cfg.projects = [{id:uid(),name:'项目A',color:'#7c3aed'},{id:uid(),name:'项目B',color:'#059669'}];
   saveCfg(cfg);
   sv(K.habitDefs, DEFAULT_HABITS);
@@ -883,11 +1010,12 @@ function skipSetup() {
 // ══════════════════════════════════════
 function initApp() {
   const cfg = getCfg();
-  document.getElementById('sidebar-field').textContent = cfg.field || '博士工作台';
+  document.getElementById('sidebar-field').textContent = cfg.field || (ROLE_CONFIG[cfg.role||'phd'].name.replace('生','')+'科研工作台');
   updateTodayDate();
   updatePhdDay();
   renderCheckin();
   renderOverview();
+  renderIdentityCard();
   renderTasks();
   renderHabits();
   renderSubmissions();
@@ -914,7 +1042,7 @@ function switchPage(name) {
   const nav = document.querySelector(`.nav-item[data-page="${name}"]`);
   if (nav) nav.classList.add('active');
   if (name==='stats') renderCharts();
-  if (name==='overview') renderOverview();
+  if (name==='overview') { renderOverview(); renderCheckin(); }
   if (name==='focus') renderPomoLog();
   if (name==='habits') renderHabits();
   if (name==='tasks') renderTasks();
@@ -933,11 +1061,67 @@ function updateClock() {
   if(el) el.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
 }
 function pad(n){return String(n).padStart(2,'0')}
-function updatePhdDay() {
+const ROLE_CONFIG={
+  undergrad:{emoji:'📚',name:'本科生',label:'本科第 N 天'},
+  master:   {emoji:'🔬',name:'硕士生',label:'硕士第 N 天'},
+  phd:      {emoji:'🎓',name:'博士生',label:'博士第 N 天'},
+}
+const ROLE_DATE_LABEL={undergrad:'本科入学日期',master:'硕士入学日期',phd:'博士入学日期'}
+let _setupRole = 'phd';
+function selectSetupRole(role){
+  _setupRole = role;
+  // 向导中的卡片（3列小卡）
+  document.querySelectorAll('#step-1 .role-option').forEach(el=>el.classList.toggle('selected',el.dataset.role===role));
+  // 动态更新日期标签
+  const lbl=document.getElementById('start-date-label');
+  if(lbl) lbl.textContent=ROLE_DATE_LABEL[role]||'入学日期';
+}
+function updatePhdDay(){
   const cfg=getCfg();
-  if(!cfg.startDate){document.getElementById('phd-day').textContent='?';return;}
-  const d=Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1;
-  document.getElementById('phd-day').textContent=d>0?d:'?';
+  if(!cfg.startDate){document.getElementById('phd-day').textContent='?';}
+  else{
+    const d=Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1;
+    document.getElementById('phd-day').textContent=d>0?d:'?';
+  }
+  const role=ROLE_CONFIG[cfg.role||'phd'];
+  // 侧边栏计数器标签
+  const lbl=document.getElementById('roleLabel');
+  const ei=document.getElementById('role-emoji');
+  const ni=document.getElementById('role-name');
+  if(lbl) lbl.textContent=role.label;
+  if(ei) ei.textContent=role.emoji;
+  if(ni) ni.textContent=role.name;
+  // 侧边栏标题：[role]科研工作台
+  const titleEmoji=document.getElementById('sidebar-role-emoji');
+  const titleLabel=document.getElementById('sidebar-role-label');
+  if(titleEmoji) titleEmoji.textContent=role.emoji;
+  if(titleLabel) titleLabel.textContent=role.name.replace('生','')+'科研工作台';
+  // subtitle 显示研究领域，否则显示角色工作台
+  const sf=document.getElementById('sidebar-field');
+  if(sf) sf.textContent=cfg.field||(role.name.replace('生','')+'科研工作台');
+}
+let _pendingRole=null;
+function openRoleModal(){
+  const cfg=getCfg();
+  _pendingRole=cfg.role||'phd';
+  document.querySelectorAll('.role-option').forEach(el=>el.classList.toggle('selected',el.dataset.role===_pendingRole));
+  const di=document.getElementById('role-start-date');
+  if(di) di.value=cfg.startDate||'';
+  openModal('roleModal');
+}
+function selectRole(role){
+  _pendingRole=role;
+  document.querySelectorAll('.role-option').forEach(el=>el.classList.toggle('selected',el.dataset.role===role));
+}
+function saveRole(){
+  const cfg=getCfg();
+  cfg.role=_pendingRole||'phd';
+  const dv=document.getElementById('role-start-date').value;
+  if(dv) cfg.startDate=dv;
+  saveCfg(cfg);
+  updatePhdDay();
+  closeModal('roleModal');
+  toast('✅ 身份已更新');
 }
 function updateTodayDate() {
   const el=document.getElementById('ov-date');
@@ -949,17 +1133,171 @@ function updateTodayDate() {
 // ══════════════════════════════════════
 //  CHECK-IN
 // ══════════════════════════════════════
+// ══════════════════════════════════════
+//  幽默签到语录
+// ══════════════════════════════════════
+function _pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function _checkinQuip(h){
+  if(h<6)  return['🌙 凌晨签到？GPU都在睡，你还在醒着','🦉 你和黎明之间只隔一个epoch','🌃 凌晨奋斗者，今天稳进前十'];
+  if(h<9)  return['🌅 早鸟签到！朝霞都在给你鼓掌','☀️ 早安！你已经赢在起跑线了','🐓 鸡都没你早，今日无敌'];
+  if(h<11) return['✅ 上午签到，状态优秀！','🚀 上午冲刺开始！全力以赴！','💡 脑子最清醒的时段，好好把握'];
+  if(h<13) return['🌞 中午才来？"大器晚成型"选手','😴 昨晚几点睡的……算了，来了就好','☕ 午前签到，今天还有救！'];
+  if(h<16) return['🍱 吃完午饭才来，考核记负分（开玩笑）','😤 下午签到…成绩从零开始算','🌤 午后阳光，你终于出现了'];
+  if(h<19) return['🌆 傍晚签到，今晚得补回来','🔬 傍晚的实验室，你是今天最拼的','🐢 慢工出细活，只要来了就好'];
+  if(h<22) return['🌇 晚上签到，晚但没缺席','🌙 夜班研究员，辛苦了！','⭐ 今天前半天算薛定谔的科研'];
+  return['🌃 深夜签到…你还好吗？','🦇 连蝙蝠都睡了，你还在卷','⭐ 星星见证努力，但请记得睡觉'];
+}
+function _checkoutQuip(h){
+  if(h<12) return['😲 才几点你就撤了？！','🤨 这就跑了？数据都没跑完呢','🐔 半天工作制，效率选手'];
+  if(h<15) return['🌞 午后收工，效率高的秘密！','☕ 下午好好休息，明天继续','🍃 适当休息也是科研的一部分'];
+  if(h<18) return['✅ 正常下班！向人类看齐！','🎉 标准工时，太难得了！','🌟 准时签出，生活工作兼顾大神'];
+  if(h<20) return['🌆 加班了一点，辛苦！','👏 傍晚收工，今天值了','🍜 去吃饭！你赢得了这一餐'];
+  if(h<22) return['🌙 晚上才结束，今天付出了很多','🔥 晚班结束，GPU该降温了','💪 夜里收工，今天的努力算数'];
+  return['🌃 深夜签出…去睡觉！命令！','🦉 熬夜伤身，明天早点来','🛌 超额完成了，快去睡觉'];
+}
+
+// ══════════════════════════════════════
+//  研究者身份系统
+// ══════════════════════════════════════
+const RESEARCHER_IDS={
+  ascetic:    {rank:'S',emoji:'🏯',name:'修行者',   color:'#a855f7',
+    descs:['连续60天不间断，这已经不是科研了，这是修炼。',
+           '你的实验室是道场，代码是经文，数据是禅定的对象。',
+           '连续60天？导师对你无话可说了，只剩五体投地。']},
+  awakened:   {rank:'S',emoji:'⚡',name:'觉醒者',   color:'#f59e0b',
+    descs:['早起的鸟儿有论文，你解锁了晨间秘术。',
+           '当别人还在睡梦中，你已经跑完了一个epoch。',
+           '30天的清晨见证了你的觉醒，连导师都不敢比你早。']},
+  grinder:    {rank:'A',emoji:'🔥',name:'卷王',     color:'#ef4444',
+    descs:['GPU都在为你发热，注意休息……真的。',
+           '日均工时超9小时，身体在抗议，但代码在进步。',
+           '卷王，但可持续的卷才是真的卷。保重！']},
+  nightowl:   {rank:'A',emoji:'🌙',name:'深夜修士', color:'#6366f1',
+    descs:['深夜的实验室，只有风扇声和你的键盘声。',
+           '星星见证你的坚持，但床也在想你。',
+           '你和黎明之间只隔一个epoch的训练。']},
+  clearheaded:{rank:'A',emoji:'🌅',name:'清醒者',   color:'#10b981',
+    descs:['清晨签到，大脑最清醒的时段运转——这是高效的秘密。',
+           '你是早起的修行者，朝霞是专属签到奖励。',
+           '当世界还没醒，你已经有了今天的第一个idea。']},
+  steady:     {rank:'B',emoji:'💪',name:'稳健者',   color:'#3b82f6',
+    descs:['两周连续打卡，习惯正在悄悄生根。',
+           '不是最卷的，但是最稳的——稳健是一种实力。',
+           '14天，够让大脑把科研当成本能了。继续！']},
+  meditator:  {rank:'B',emoji:'🧘',name:'冥想者',   color:'#8b5cf6',
+    descs:['科研不只是埋头冲刺，偶尔沉淀才能走得更远。',
+           '你的节奏是 deliberate practice，不是无效内卷。',
+           '冥想者的路更长，但弯路更少。']},
+  pilgrim:    {rank:'B',emoji:'🚶',name:'行路人',   color:'#64748b',
+    descs:['每天都在前进，哪怕只有一小步，也是一步。',
+           '科研是场马拉松，你还在路上，这就够了。',
+           '保持节奏，终点会悄悄靠近。']},
+  newbie:     {rank:'C',emoji:'🌱',name:'新手村民', color:'#22c55e',
+    descs:['欢迎来到科研的修罗场！前三天最难，撑住！',
+           '每个修行者都从村民开始，你的传说刚刚开篇。',
+           '新手保护期内，先把第一个习惯坚持下来！']},
+  sleeper:    {rank:'C',emoji:'😴',name:'沉睡者',   color:'#94a3b8',
+    descs:['今天还没签到？实验在等你，数据在等你，deadline 也在等你。',
+           '沉睡者，你的 GPU 已经凉了，快来加热！',
+           '早起的鸟有虫吃，晚起的……也有虫，只是虫死了。']},
+  slacker:    {rank:'C',emoji:'🌊',name:'摆烂选手', color:'#fb923c',
+    descs:['摆烂是一时的，deadline 是永恒的。',
+           '佛系也要有底线，今天签个到先？',
+           '科研逃不掉的，不如早点和解。']},
+  hibernating:{rank:'D',emoji:'🦥',name:'冬眠中',   color:'#a3a3a3',
+    descs:['三天没出现……你还好吗？',
+           '实验室的植物都比你勤快（每天光合作用）。',
+           '偶尔消失是人之常情，别让实验也跟着蒸发了。']},
+};
+const _NEXT_RANK={
+  hibernating:'先签一次到，重回 C 级',
+  slacker:    '连续签到 3 天，晋升「行路人」',
+  sleeper:    '今天签到，立刻升级',
+  newbie:     '累计签到 5 天，解锁「行路人」',
+  pilgrim:    '连续 7 天签到，解锁「冥想者」',
+  meditator:  '连续 14 天签到，解锁「稳健者」',
+  steady:     '连续 30 天 + 早起 40%，解锁「清醒者」',
+  clearheaded:'继续保持，冲击「觉醒者」需连续 30 天',
+  nightowl:   '试着早点签到，解锁「清醒者」',
+  grinder:    '注意休息——可持续的卷才是长久之道',
+  awakened:   '再坚持 30 天 + 日均工时 ≥ 6h，解锁传说「修行者」',
+  ascetic:    '✨ 已达最高境界，传说中的修行者，继续！',
+};
+function _calcIdentity(){
+  const cks=ld(K.checkins),h=ld(K.habits),defs=getHabitDefs(),total=cks.length;
+  const last14=[];for(let i=0;i<14;i++){const d=new Date();d.setDate(d.getDate()-i);last14.push(localDate(d));}
+  let streak=0;{const d=new Date();while(streak<365){const ds=localDate(d);if(cks.find(c=>c.date===ds)){streak++;d.setDate(d.getDate()-1);}else break;}}
+  const rec=cks.filter(c=>last14.includes(c.date)),act=rec.length;
+  const ciH=rec.filter(c=>c.ci).map(c=>parseInt(c.ci.split(':')[0]));
+  const avgCI=ciH.length?ciH.reduce((a,b)=>a+b)/ciH.length:12;
+  const wm=rec.filter(c=>c.ci&&c.co).map(c=>{const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number);return(oh*60+om)-(ih*60+im);}).filter(m=>m>0);
+  const avgW=wm.length?wm.reduce((a,b)=>a+b)/wm.length/60:0;
+  const nightN=rec.filter(c=>c.co&&parseInt(c.co.split(':')[0])>=22).length;
+  const nightR=act>0?nightN/act:0;
+  const earlyN=rec.filter(c=>c.ci&&parseInt(c.ci.split(':')[0])<9).length;
+  const earlyR=act>0?earlyN/act:0;
+  let hr=0;if(defs.length>0){let t=0,dn=0;last14.forEach(date=>{const hd=h[date]||{};defs.forEach(def=>{t++;if(hd[def.id])dn++;});});hr=t>0?dn/t:0;}
+  const tdCI=!!cks.find(c=>c.date===today());
+  const sorted=[...cks].sort((a,b)=>b.date.localeCompare(a.date));
+  const daysSince=sorted[0]?Math.floor((new Date(today())-new Date(sorted[0].date))/86400000):999;
+  if(daysSince>=3)        return'hibernating';
+  if(total<3)             return'newbie';
+  if(!tdCI&&act<=3)       return'slacker';
+  if(!tdCI)               return'sleeper';
+  if(streak>=60&&avgW>=6&&hr>=0.6) return'ascetic';
+  if(streak>=30&&earlyR>=0.5)      return'awakened';
+  if(avgW>=9||(earlyN>=4&&avgCI<7)) return'grinder';
+  if(nightR>=0.5&&streak>=7)       return'nightowl';
+  if(earlyR>=0.4&&avgW>=4)         return'clearheaded';
+  if(streak>=14)          return'steady';
+  if(streak>=7)           return'meditator';
+  return'pilgrim';
+}
+let _idKey=null,_idIdx=0;
+function renderIdentityCard(){
+  const card=document.getElementById('identity-card');if(!card)return;
+  const key=_calcIdentity(),id=RESEARCHER_IDS[key];if(!id)return;
+  if(key!==_idKey){_idKey=key;_idIdx=0;}
+  document.getElementById('identity-avatar').textContent=id.emoji;
+  document.getElementById('identity-name').textContent=id.name;
+  const rk=document.getElementById('identity-rank');
+  rk.textContent=id.rank+' 级';rk.style.background=id.color+'33';rk.style.color=id.color;
+  card.style.borderLeft=`3px solid ${id.color}`;
+  document.getElementById('identity-desc').textContent=id.descs[_idIdx%id.descs.length];
+  document.getElementById('identity-tip').textContent='💡 '+(_NEXT_RANK[key]||'');
+}
+function rerollIdentityDesc(){_idIdx++;renderIdentityCard();}
+
 function getTodayCI(){return ld(K.checkins).find(c=>c.date===today())||null;}
+function _checkinQuip(h){
+  if(h<6)  return ['🌙 深夜奋斗者，向你致敬（建议去睡觉）','🦉 夜猫子实验室开张了','🌃 凌晨签到，DDL加速你成长'];
+  if(h<9)  return ['🌅 早鸟获得积分！今天必有好事','☀️ 早安！今天也要加油','🐓 鸡叫了，你来了'];
+  if(h<11) return ['✅ 签到成功！早安！','🚀 上午冲刺，效率最高！','💡 脑子最清醒的时段，用好它'];
+  if(h<13) return ['🌞 中午才来？大器晚成！','😴 昨晚肝到几点？','☕ 午前签到，咖啡续命中'];
+  if(h<15) return ['🍱 吃完午饭才来上班？生活质量满分','😤 下午签到，上午在家思考人生吧','🌤 午后阳光，你终于出现了'];
+  if(h<18) return ['🌆 下午三点开始，冲劲十足（maybe）','🤔 今天的前半天属于……薛定谔的科研','🐢 慢工出细活，您来了'];
+  if(h<21) return ['🌇 晚上签到，进入深夜模式','🔬 傍晚的实验室，只有你最拼','🌙 晚班研究员，辛苦了'];
+  return ['🌃 夜深了还没下班？','⭐ 星星见证你的努力','🦇 连蝙蝠都睡了，你还在卷'];
+}
+function _checkoutQuip(h){
+  if(h<12) return ['上午就撤？今日份摸鱼完成 🎣','效率之神：来了就走，潇洒自如 😎','早退选手，明天见 👋'];
+  if(h<15) return ['午后签出，下午自由 🏖','中午就结束战斗，今日份科研已完成（？）☑️','午间撤离，佩服你的时间管理 🗓'];
+  if(h<18) return ['下午签出，标准朝九晚三 👏','五点前跑路，生活与科研平衡大师 🧘','正常人的作息，向你学习 🌿'];
+  if(h<21) return ['🌙 下班签出！辛苦了！','晚上才走，今天拼了！💪','卷够了吗？好好休息 🛋'];
+  return ['🌃 深夜下班，注意休息！','熬夜伤身，明天的你感谢今晚早走的你 💤','夜深了，回去睡吧，明天继续 🌌'];
+}
+function _pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
 function handleCheckin(){
   const list=ld(K.checkins);
   if(!list.find(c=>c.date===today()))
     list.push({id:uid(),date:today(),ci:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),co:null});
-  sv(K.checkins,list); renderCheckin(); toast('✅ 签到成功！早安！');
+  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); toast(_pick(_checkinQuip(new Date().getHours())));
 }
 function handleCheckout(){
   const list=ld(K.checkins),idx=list.findIndex(c=>c.date===today());
   if(idx>=0) list[idx].co=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-  sv(K.checkins,list); renderCheckin(); toast('🌙 下班签出！辛苦了！');
+  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); toast(_pick(_checkoutQuip(new Date().getHours())));
 }
 function renderCheckin(){
   const c=getTodayCI();
@@ -1131,7 +1469,7 @@ function toggleHabit(id){
 function delHabitDef(id){saveHabitDefs(getHabitDefs().filter(d=>d.id!==id));renderHabits();}
 function getStreak(id){
   const h=ld(K.habits);let s=0,d=new Date();
-  while(s<365){const ds=d.toISOString().slice(0,10);if(h[ds]&&h[ds][id]){s++;d.setDate(d.getDate()-1);}else break;}
+  while(s<365){const ds=localDate(d);if(h[ds]&&h[ds][id]){s++;d.setDate(d.getDate()-1);}else break;}
   return s;
 }
 function renderHabits(){
@@ -1148,7 +1486,7 @@ function renderHabits(){
 function renderHabitWeek(){
   const el=document.getElementById('habit-week');if(!el)return;
   const defs=getHabitDefs(),h=ld(K.habits);
-  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return localDate(d);});
   const dl=['日','一','二','三','四','五','六'];
   el.innerHTML=defs.map(d=>`<div class="habit-week-row">
     <span style="font-size:15px">${d.emoji}</span>
@@ -1301,6 +1639,7 @@ function renderRefHistory(){
 //  OVERVIEW
 // ══════════════════════════════════════
 function renderOverview(){
+  renderIdentityCard();
   const tasks=ld(K.tasks).filter(t=>t.status!=='done').slice(0,5);
   const tEl=document.getElementById('ov-tasks');
   if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
@@ -1339,14 +1678,14 @@ function updateStats(){
   document.getElementById('s-habits').textContent=`${habDone}/${defs.length}`;
   // Streak
   const cks=ld(K.checkins);let streak=0,d=new Date();
-  while(streak<365){const ds=d.toISOString().slice(0,10);if(cks.find(c=>c.date===ds)){streak++;d.setDate(d.getDate()-1);}else break;}
+  while(streak<365){const ds=localDate(d);if(cks.find(c=>c.date===ds)){streak++;d.setDate(d.getDate()-1);}else break;}
   document.getElementById('s-streak').textContent=streak;
 }
 
 let chartsInited=false;
 function renderCharts(){
   if(chartsInited)return;chartsInited=true;
-  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return localDate(d);});
   const labels=days.map(d=>['日','一','二','三','四','五','六'][new Date(d+'T12:00').getDay()]);
   const cOpts={responsive:true,maintainAspectRatio:false,
     plugins:{legend:{display:false}},
@@ -1374,6 +1713,8 @@ function populateSettingsForm(){
   document.getElementById('set-field').value=cfg.field||'';
   document.getElementById('set-univ').value=cfg.univ||'';
   document.getElementById('set-start').value=cfg.startDate||'';
+  const lbl=document.getElementById('set-start-label');
+  if(lbl) lbl.textContent=ROLE_DATE_LABEL[cfg.role||'phd']||'入学日期';
   renderProjSettings();renderAreaTagsSettings();
 }
 function saveBasicSettings(){
@@ -1479,7 +1820,95 @@ initSetupWizard();
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <script>
 // ── 打卡树洞 ────────────────────────────────────────
+// ══════════════════════════════════════
+//  云同步（同步码）
+// ══════════════════════════════════════
 const _SB_URL = 'https://fbaznbvlymfqtycqlmjz.supabase.co'
+const _SB_KEY_SYNC = 'sb_publishable_BvP_LZ0d_-HMcykIaoUCNw_xKkxKwzz'
+
+// 生成同步码：形如 MAPLE42（词+2位数）
+const _SYNC_WORDS = ['MAPLE','KIWI','FERN','SAGE','IRIS','MANGO','OLIVE',
+  'BERRY','DAISY','BASIL','CLOVER','POPPY','WILLOW','LEMON','CEDAR']
+function _genSyncCode(){
+  const w = _SYNC_WORDS[Math.floor(Math.random()*_SYNC_WORDS.length)]
+  const n = String(Math.floor(Math.random()*90)+10)
+  return w + n
+}
+function _getOrCreateSyncCode(){
+  let code = localStorage.getItem('_sync_code')
+  if(!code){ code = _genSyncCode(); localStorage.setItem('_sync_code', code) }
+  return code
+}
+
+function openSyncModal(){
+  document.getElementById('sync-code-display').textContent = _getOrCreateSyncCode()
+  document.getElementById('sync-tip').style.display = 'none'
+  document.getElementById('sync-code-input').value = ''
+  openModal('syncModal')
+}
+
+function copySyncCode(){
+  const code = _getOrCreateSyncCode()
+  navigator.clipboard.writeText(code).then(()=>toast('✅ 同步码已复制'))
+    .catch(()=>{ toast('同步码：' + code) })
+}
+
+async function saveProfileCloud(){
+  const code = _getOrCreateSyncCode()
+  const tip = document.getElementById('sync-tip')
+  const data = {
+    cfg: getCfg(),
+    habitDefs: ld(K.habitDefs, []),
+    tools: ld(K.tools, []),
+  }
+  try{
+    const r = await fetch(`${_SB_URL}/rest/v1/profiles`, {
+      method: 'POST',
+      headers: {
+        'apikey': _SB_KEY_SYNC, 'Authorization': 'Bearer ' + _SB_KEY_SYNC,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify({ code, data, updated_at: new Date().toISOString() })
+    })
+    if(r.ok){
+      toast('✅ 已同步到云端！同步码：' + code)
+      tip.textContent = '✅ 同步成功！'; tip.style.color='var(--green)'; tip.style.display='block'
+    } else {
+      const e = await r.json().catch(()=>({}))
+      tip.textContent = '同步失败：' + (e.message||r.status); tip.style.color='var(--red)'; tip.style.display='block'
+    }
+  } catch(e){
+    tip.textContent = '网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block'
+  }
+}
+
+async function loadProfileCloud(){
+  const code = document.getElementById('sync-code-input').value.trim().toUpperCase()
+  const tip = document.getElementById('sync-tip')
+  if(!code){ tip.textContent='请输入同步码'; tip.style.color='var(--text2)'; tip.style.display='block'; return }
+  try{
+    const r = await fetch(`${_SB_URL}/rest/v1/profiles?code=eq.${encodeURIComponent(code)}&select=data`, {
+      headers: { 'apikey': _SB_KEY_SYNC, 'Authorization': 'Bearer ' + _SB_KEY_SYNC }
+    })
+    if(!r.ok){ tip.textContent='查询失败 ('+r.status+')'; tip.style.color='var(--red)'; tip.style.display='block'; return }
+    const rows = await r.json()
+    if(!rows.length){ tip.textContent='未找到该同步码，请检查是否正确'; tip.style.color='var(--red)'; tip.style.display='block'; return }
+    const d = rows[0].data
+    if(d.cfg) saveCfg({...getCfg(), ...d.cfg})
+    if(d.habitDefs) sv(K.habitDefs, d.habitDefs)
+    if(d.tools) sv(K.tools, d.tools)
+    // 保存该设备的同步码
+    localStorage.setItem('_sync_code', code)
+    closeModal('syncModal')
+    toast('✅ 数据已恢复！正在刷新…')
+    setTimeout(()=>location.reload(), 1200)
+  } catch(e){
+    tip.textContent='网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block'
+  }
+}
+
+
 const _SB_KEY = 'sb_publishable_BvP_LZ0d_-HMcykIaoUCNw_xKkxKwzz'
 
 // 名字池：叠字昵称 / 水果植物 / 可爱动物
@@ -1510,10 +1939,32 @@ function _getWallId(){
 }
 
 // 渲染"你是 XX"身份标签
+
+const _WALL_MOODS=[
+  {e:'🦸',l:'卷王模式'},{e:'😴',l:'今日摸鱼'},{e:'🧘',l:'佛系研究生'},
+  {e:'🔥',l:'在燃！'},{e:'🌊',l:'摆烂选手'},{e:'😭',l:'快崩溃了'},
+  {e:'💪',l:'努力中'},{e:'🎯',l:'专注达人'},{e:'🍵',l:'喝茶等灵感'},
+  {e:'🚀',l:'冲冲冲'},{e:'🤯',l:'脑子爆炸'},{e:'✨',l:'普通一天'},
+]
+let _wallMood=null
+function _renderMoodBar(){
+  const bar=document.getElementById('wall-mood-bar')
+  if(!bar) return
+  bar.innerHTML=_WALL_MOODS.map(m=>`
+    <button class="wall-mood${_wallMood===m.l?' active':''}" onclick="_selectMood('${m.l}','${m.e}',this)">${m.e} ${m.l}</button>
+  `).join('')
+}
+function _selectMood(label,emoji,btn){
+  if(_wallMood===label){ _wallMood=null; document.querySelectorAll('.wall-mood').forEach(b=>b.classList.remove('active')); return; }
+  _wallMood=label
+  document.querySelectorAll('.wall-mood').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+}
 function _renderIdentity(){
   const me=_getWallId()
   const el=document.getElementById('wall-identity')
   if(el) el.innerHTML=`<span style="user-select:none">你是 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b></span>`
+  _renderMoodBar()
 }
 
 // 当前激活的 tab 和 发帖类型
@@ -1549,6 +2000,85 @@ function relTime(ts){
   const d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日'
 }
 
+// ── AI 回复引擎 ──────────────────────────────────
+// Groq key 存储在 Supabase site_config 表（见 README SQL）
+let _aiKeyCache=null
+async function _getAIKey(){
+  if(_aiKeyCache) return _aiKeyCache
+  const cached=sessionStorage.getItem('_gk')
+  if(cached){_aiKeyCache=cached;return cached}
+  try{
+    const r=await fetch(`${_SB_URL}/rest/v1/site_config?key=eq.groq_key&select=value`,{
+      headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}
+    })
+    const d=await r.json()
+    const k=d[0]?.value
+    if(k&&k.startsWith('gsk_')){_aiKeyCache=k;sessionStorage.setItem('_gk',k);return k}
+  }catch(_){}
+  return null
+}
+
+const _DISTRESS=['崩溃','绝望','想放弃','撑不住','不想做了','退学','抑郁','好难受','太累了','怎么办','帮帮我','救命','好痛苦','迷茫','绷不住','熬不住','坚持不下去','想哭','心态崩了','不知道该怎么']
+function _needsAI(tag,msg){
+  if(tag==='help') return true
+  if(tag==='vent'&&_DISTRESS.some(k=>msg.includes(k))) return true
+  return false
+}
+
+const _aiCache={}  // sessionStorage-level cache: id -> reply
+async function _callGroq(id,msg){
+  if(_aiCache[id]) return _aiCache[id]
+  const key=await _getAIKey()
+  if(!key) return null
+  const prompt=`你是一位走过科研低谷、最终走出来的前辈研究者，内心温暖而有智慧。\n一位研究者写道：「${msg}」\n请用50-80字给出回应：温暖真实、包含一个具体可操作的小建议、像老朋友说话（不说教）、可以有一点幽默但不轻浮。直接开始，不要称呼，不要分段，不要说"我理解你"。`
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[{role:'user',content:prompt}],
+        max_tokens:200,temperature:0.85
+      })
+    })
+    if(!r.ok) return null
+    const data=await r.json()
+    const reply=data.choices?.[0]?.message?.content?.trim()||null
+    if(reply) _aiCache[id]=reply
+    return reply
+  }catch(_){return null}
+}
+
+async function _generateAndShow(item){
+  const elId=`ai-${item._domId}`
+  const reply=await _callGroq(item._domId, item.msg)
+  const el=document.getElementById(elId)
+  if(!el) return
+  if(!reply){el.remove();return}
+  el.classList.remove('ai-loading')
+  el.innerHTML=`<div class="ai-reply-hd">💬 来自过来人 <span>· AI 生成</span></div>${escHtml(reply)}`
+}
+
+function _renderWallItem(d,idx){
+  const domId=d.created_at+idx  // unique stable key per render
+  d._domId=domId
+  const needs=_needsAI(d.tag,d.msg)
+  const aiBlock=needs
+    ?`<div class="ai-reply ai-loading" id="ai-${domId}"><div class="ai-reply-hd">💬 过来人正在思考…</div></div>`
+    :''
+  return`<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
+      <span style="font-size:18px;line-height:1">${escHtml(d.avatar||'🌿')}</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text)">${escHtml(d.nickname||'?')}</span>
+      ${_tagBadge(d.tag)}
+      ${d.day?`<span style="font-size:11px;color:var(--primary)">第${d.day}天</span>`:''}
+      <span style="font-size:11px;color:var(--text2);margin-left:auto">${relTime(d.created_at)}</span>
+    </div>
+    <div style="font-size:13px;color:var(--text);line-height:1.55;word-break:break-all">${escHtml(d.msg)}</div>
+    ${aiBlock}
+  </div>`
+}
+
 async function loadWall(){
   try{
     let url=`${_SB_URL}/rest/v1/wall?select=day,msg,nickname,avatar,tag,created_at&order=created_at.desc&limit=15`
@@ -1564,16 +2094,10 @@ async function loadWall(){
       _renderIdentity()
       return
     }
-    el.innerHTML=data.map(d=>`
-      <div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:18px;flex-shrink:0;line-height:1">${escHtml(d.avatar||'🌿')}</span>
-        <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0">${escHtml(d.nickname||'?')}</span>
-        ${_tagBadge(d.tag)}
-        <span style="font-size:11px;color:var(--primary);white-space:nowrap;flex-shrink:0">第${d.day}天</span>
-        <span style="font-size:13px;color:var(--text);flex:1;word-break:break-all">${escHtml(d.msg)}</span>
-        <span style="font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0">${relTime(d.created_at)}</span>
-      </div>`).join('')
+    el.innerHTML=data.map((d,i)=>_renderWallItem(d,i)).join('')
     _renderIdentity()
+    // 触发 AI 回复（异步，不阻塞渲染）
+    data.forEach(d=>{ if(_needsAI(d.tag,d.msg)) _generateAndShow(d) })
   }catch(e){}
 }
 
@@ -1583,21 +2107,22 @@ function escHtml(s){
 
 async function submitWall(){
   const me=_getWallId()
-  const day=parseInt(document.getElementById('wall-day').value)||0
-  const msg=document.getElementById('wall-msg').value.trim()
+  const rawMsg=document.getElementById('wall-msg').value.trim()
   const tip=document.getElementById('wall-tip')
-  if(!msg){tip.textContent='请写点什么';tip.style.display='block';return}
-  if(msg.length>30){tip.textContent='最多30个字';tip.style.display='block';return}
+  if(!rawMsg){tip.textContent='请写点什么';tip.style.display='block';return}
+  if(rawMsg.length>500){tip.textContent='最多500个字';tip.style.display='block';return}
+  const msg=_wallMood?`[${_wallMood}] ${rawMsg}`:rawMsg
   tip.style.display='none'
   try{
     const r=await fetch(`${_SB_URL}/rest/v1/wall`,{
       method:'POST',
       headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({day,msg,nickname:me.n,avatar:me.e,tag:_wallCurrentType})
+      body:JSON.stringify({day:0,msg,nickname:me.n,avatar:me.e,tag:_wallCurrentType})
     })
     if(r.ok){
-      document.getElementById('wall-day').value=''
       document.getElementById('wall-msg').value=''
+      _wallMood=null
+      _renderMoodBar()
       tip.textContent='✅ 已发布'
       tip.style.display='block'
       setTimeout(()=>{tip.style.display='none'},2000)
