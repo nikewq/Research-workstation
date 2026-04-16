@@ -1290,25 +1290,35 @@ function _pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
 function handleCheckin(){
   const list=ld(K.checkins);
-  if(!list.find(c=>c.date===today()))
-    list.push({id:uid(),date:today(),ci:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),co:null});
-  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); toast(_pick(_checkinQuip(new Date().getHours())));
+  const idx=list.findIndex(c=>c.date===today());
+  const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  if(idx>=0){list[idx].ci=now;list[idx].co=null;}  // 重新签到（含签出后继续工作）
+  else list.push({id:uid(),date:today(),ci:now,co:null});
+  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); updateStats(); toast(_pick(_checkinQuip(new Date().getHours())));
 }
 function handleCheckout(){
   const list=ld(K.checkins),idx=list.findIndex(c=>c.date===today());
   if(idx>=0) list[idx].co=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); toast(_pick(_checkoutQuip(new Date().getHours())));
+  sv(K.checkins,list); renderCheckin(); renderIdentityCard(); updateStats(); renderOverview(); toast(_pick(_checkoutQuip(new Date().getHours())));
 }
 function renderCheckin(){
   const c=getTodayCI();
   const st=document.getElementById('ci-status'), cb=document.getElementById('ci-btn'), ob=document.getElementById('co-btn');
   const wt=document.getElementById('ov-worktime'), ct=document.getElementById('ov-citime');
-  if(!c){if(st)st.textContent='未签到';if(cb)cb.style.display='';if(ob)ob.style.display='none';if(wt)wt.textContent='工时 —';if(ct)ct.textContent='—';}
-  else if(c.ci&&!c.co){if(st)st.textContent=`已签到 ${c.ci}`;if(cb)cb.style.display='none';if(ob)ob.style.display='';if(wt)wt.textContent='进行中';if(ct)ct.textContent=`签入 ${c.ci}`;}
-  else if(c.co){if(st)st.textContent=`已签出 ${c.co}`;if(cb)cb.style.display='none';if(ob)ob.style.display='none';
-    if(ct)ct.textContent=`${c.ci}→${c.co}`;
-    if(wt){const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number),m=(oh*60+om)-(ih*60+im);
-      wt.textContent=m>0?`工时 ${Math.floor(m/60)}h${m%60}m`:'工时 —';}}
+  if(!c){
+    if(st)st.textContent='未签到';if(cb)cb.style.display='';if(ob)ob.style.display='none';
+    if(wt)wt.textContent='工时 —';if(ct)ct.textContent='—';
+  } else if(c.ci&&!c.co){
+    if(st)st.textContent=`已签到 ${c.ci}`;if(cb)cb.style.display='none';if(ob)ob.style.display='';
+    if(wt)wt.textContent='进行中';if(ct)ct.textContent=`签入 ${c.ci}`;
+  } else if(c.co){
+    const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number),m=(oh*60+om)-(ih*60+im);
+    const ws=m>0?`${Math.floor(m/60)}h${m%60}m`:'—';
+    if(st)st.textContent=`✅ 今日已签出 · 工时 ${ws}`;
+    if(cb){cb.style.display='';cb.textContent='🔄 继续工作';}  // 签出后恢复签到按钮
+    if(ob)ob.style.display='none';
+    if(wt)wt.textContent=`工时 ${ws}`;if(ct)ct.textContent=`${c.ci}→${c.co}`;
+  }
 }
 
 // ══════════════════════════════════════
