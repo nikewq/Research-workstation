@@ -1230,7 +1230,7 @@ function _calcIdentity(){
   const rec=cks.filter(c=>last14.includes(c.date)),act=rec.length;
   const ciH=rec.filter(c=>c.ci).map(c=>parseInt(c.ci.split(':')[0]));
   const avgCI=ciH.length?ciH.reduce((a,b)=>a+b)/ciH.length:12;
-  const wm=rec.filter(c=>c.ci&&c.co).map(c=>{const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number);return(oh*60+om)-(ih*60+im);}).filter(m=>m>0);
+  const wm=rec.filter(c=>c.ci).map(c=>c.totalMins!=null?c.totalMins:_ciMins(c)).filter(m=>m>0);
   const avgW=wm.length?wm.reduce((a,b)=>a+b)/wm.length/60:0;
   const nightN=rec.filter(c=>c.co&&parseInt(c.co.split(':')[0])>=22).length;
   const nightR=act>0?nightN/act:0;
@@ -1288,17 +1288,28 @@ function _checkoutQuip(h){
 }
 function _pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
+function _ciMins(c){
+  if(!c||!c.ci||!c.co)return 0;
+  const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number),m=(oh*60+om)-(ih*60+im);
+  return m>0?m:0;
+}
+function _fmtMins(m){return m>0?`${Math.floor(m/60)}h${m%60}m`:'—';}
 function handleCheckin(){
   const list=ld(K.checkins);
   const idx=list.findIndex(c=>c.date===today());
   const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-  if(idx>=0){list[idx].ci=now;list[idx].co=null;}  // 重新签到（含签出后继续工作）
-  else list.push({id:uid(),date:today(),ci:now,co:null});
+  if(idx>=0){list[idx].ci=now;list[idx].co=null;}  // 重新签到，保留 totalMins，重置本段
+  else list.push({id:uid(),date:today(),ci:now,co:null,totalMins:0});
   sv(K.checkins,list); renderCheckin(); renderIdentityCard(); updateStats(); toast(_pick(_checkinQuip(new Date().getHours())));
 }
 function handleCheckout(){
   const list=ld(K.checkins),idx=list.findIndex(c=>c.date===today());
-  if(idx>=0) list[idx].co=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  if(idx>=0){
+    const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+    list[idx].co=now;
+    const seg=_ciMins({ci:list[idx].ci,co:now});
+    list[idx].totalMins=(list[idx].totalMins||0)+seg;  // 累加本段工时
+  }
   sv(K.checkins,list); renderCheckin(); renderIdentityCard(); updateStats(); renderOverview(); toast(_pick(_checkoutQuip(new Date().getHours())));
 }
 function renderCheckin(){
@@ -1306,16 +1317,18 @@ function renderCheckin(){
   const st=document.getElementById('ci-status'), cb=document.getElementById('ci-btn'), ob=document.getElementById('co-btn');
   const wt=document.getElementById('ov-worktime'), ct=document.getElementById('ov-citime');
   if(!c){
-    if(st)st.textContent='未签到';if(cb)cb.style.display='';if(ob)ob.style.display='none';
+    if(st)st.textContent='未签到';if(cb){cb.style.display='';cb.textContent='🟢 上班签到';}if(ob)ob.style.display='none';
     if(wt)wt.textContent='工时 —';if(ct)ct.textContent='—';
   } else if(c.ci&&!c.co){
-    if(st)st.textContent=`已签到 ${c.ci}`;if(cb)cb.style.display='none';if(ob)ob.style.display='';
+    const acc=c.totalMins||0;
+    const accStr=acc>0?` (已累计${_fmtMins(acc)})`:'';
+    if(st)st.textContent=`已签到 ${c.ci}${accStr}`;if(cb)cb.style.display='none';if(ob)ob.style.display='';
     if(wt)wt.textContent='进行中';if(ct)ct.textContent=`签入 ${c.ci}`;
   } else if(c.co){
-    const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number),m=(oh*60+om)-(ih*60+im);
-    const ws=m>0?`${Math.floor(m/60)}h${m%60}m`:'—';
+    const total=c.totalMins||_ciMins(c);  // 兼容旧数据
+    const ws=_fmtMins(total);
     if(st)st.textContent=`✅ 今日已签出 · 工时 ${ws}`;
-    if(cb){cb.style.display='';cb.textContent='🔄 继续工作';}  // 签出后恢复签到按钮
+    if(cb){cb.style.display='';cb.textContent='🔄 继续工作';}
     if(ob)ob.style.display='none';
     if(wt)wt.textContent=`工时 ${ws}`;if(ct)ct.textContent=`${c.ci}→${c.co}`;
   }
@@ -1709,8 +1722,8 @@ function renderCharts(){
   const pLabels=projs.map(p=>p.name),pData=projs.map(p=>pcnts[p.id]||0),pColors=projs.map(p=>p.color);
   new Chart(document.getElementById('ch-projs'),{type:'doughnut',data:{labels:pLabels.length?pLabels:['暂无'],datasets:[{data:pLabels.length?pData:[1],backgroundColor:pColors.length?pColors:['#7c3aed'],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}}}});
-  const wh=days.map(d=>{const c=cks.find(ch=>ch.date===d);if(!c||!c.ci||!c.co)return 0;
-    const[ih,im]=c.ci.split(':').map(Number),[oh,om]=c.co.split(':').map(Number),m=(oh*60+om)-(ih*60+im);return m>0?Math.round(m/60*10)/10:0;});
+  const wh=days.map(d=>{const c=cks.find(ch=>ch.date===d);if(!c||!c.ci)return 0;
+    const m=c.totalMins!=null?c.totalMins:_ciMins(c);return m>0?Math.round(m/60*10)/10:0;});
   new Chart(document.getElementById('ch-hours'),{type:'line',data:{labels,datasets:[{data:wh,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',fill:true,tension:.4,pointRadius:4}]},options:cOpts});
 }
 
