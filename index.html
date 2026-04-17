@@ -1930,12 +1930,14 @@ async function testAIConnection(){
   const oldCfg=localStorage.getItem('_ai_cfg')
   localStorage.setItem('_ai_cfg',JSON.stringify(testCfg))
   try{
-    const reply=await _callAI('用一句话回答：1+1等于多少？',20)
-    if(reply){if(tip){tip.textContent=`✅ 连接成功："${reply.slice(0,30)}"`;tip.style.color='#10b981'}}
-    else{if(tip){tip.textContent='❌ 无响应，请检查 Key 和模型名';tip.style.color='#ef4444'}}
-  }catch(_){if(tip){tip.textContent='❌ 请求失败';tip.style.color='#ef4444'}}
-  // 恢复旧配置（保存按钮才是真正保存）
-  if(oldCfg) localStorage.setItem('_ai_cfg',oldCfg); else localStorage.removeItem('_ai_cfg')
+    const reply=await _callAI('用一句话回答：1+1等于多少？',100)
+    if(reply){if(tip){tip.textContent=`✅ 连接成功："${reply.slice(0,40)}"`;tip.style.color='#10b981'}}
+    else{if(tip){tip.textContent='❌ 无响应，请检查 Key / 模型名 / URL';tip.style.color='#ef4444'}}
+  }catch(e){if(tip){tip.textContent='❌ 请求失败：'+(e?.message||'网络错误');tip.style.color='#ef4444'}}
+  finally{
+    // 恢复旧配置（保存按钮才是真正保存）
+    if(oldCfg) localStorage.setItem('_ai_cfg',oldCfg); else localStorage.removeItem('_ai_cfg')
+  }
 }
 function saveBasicSettings(){
   const cfg=getCfg();
@@ -2225,7 +2227,7 @@ function relTime(ts){
 const _AI_PROVIDERS={
   // ── 完全免费，无需 Key ──────────────────────────────
   pollinations:{name:'Pollinations AI ✨ 免费·无需注册',
-            base:'https://text.pollinations.ai/openai',    defModel:'openai',          needsUrl:false, needsKey:false,
+            base:'https://text.pollinations.ai/openai',    defModel:'openai',          needsUrl:true,  needsKey:false,
             models:['openai','mistral','llama','claude']},
   // ── 注册即免费 ─────────────────────────────────────
   openrouter:{name:'OpenRouter 免费模型',
