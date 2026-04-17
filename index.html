@@ -2970,6 +2970,22 @@ function _sanitizeEntertainUrl(url){
   return ''
 }
 
+// 鲁棒 JSON 数组提取：处理 markdown 包裹、前缀文字、不完整输出
+function _extractJSONArray(raw){
+  if(!raw) return null
+  // 1. 直接解析
+  try{ const v=JSON.parse(raw.trim()); if(Array.isArray(v)) return v }catch(_){}
+  // 2. 去掉 markdown 代码块再解析
+  const stripped=raw.replace(/^```[\w]*\r?\n?/m,'').replace(/\r?\n?```\s*$/m,'').trim()
+  try{ const v=JSON.parse(stripped); if(Array.isArray(v)) return v }catch(_){}
+  // 3. 在响应中定位 [ ... ] 最外层数组（最宽松）
+  const start=raw.indexOf('['), end=raw.lastIndexOf(']')
+  if(start!==-1 && end>start){
+    try{ const v=JSON.parse(raw.slice(start,end+1)); if(Array.isArray(v)) return v }catch(_){}
+  }
+  return null
+}
+
 function switchEntertainTab(cat, btn){
   _entertainCat = cat
   ;['tv','movie','novel','anime'].forEach(c=>{
@@ -3052,30 +3068,23 @@ async function fetchEntertain(cat, force=false){
   fetchBtn.style.display='none'; rfBtn.style.display='none'
   loadEl.style.display='block'; listEl.innerHTML=''; tip.textContent=''
 
-  const cfg=await _getActiveCfg()
-  if(!cfg){
-    loadEl.style.display='none'
-    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">⚠️ AI 未配置，使用默认 Pollinations 即可。</div>'
-    fetchBtn.style.display=''; return
-  }
-
   const today_=today()
-  const prompt=`今天是${today_}，请推荐5部适合研究生解压放松的${meta.label}。\n\n内容要求：${meta.prompt}。\n\n安全合规要求（必须严格遵守）：①只推荐在中国大陆正规平台合法上映/播出/出版的作品；②不含色情、血腥暴力、恐怖、政治敏感等违规内容；③URL只能使用 douban.com、bilibili.com、iqiyi.com、youku.com、v.qq.com、mgtv.com、maoyan.com、fanqienovel.com、qidian.com、weread.qq.com 这些正规平台，其他来源一律填空字符串。\n\n返回严格JSON数组，不要加markdown代码块：\n[{"title":"作品名","type":"${meta.label}","score":"评分（如豆瓣8.9，没有则填空字符串）","reason":"一句话推荐理由，口语化带个人感情","emoji":"最合适的1个emoji","url":"上述白名单平台的合法链接，没有把握则填空字符串"}]`
+  const prompt=`今天是${today_}，请推荐5部适合研究生解压放松的${meta.label}。内容要求：${meta.prompt}。安全合规要求：只推荐中国大陆正规平台合法上映/播出/出版的作品，不含违禁内容，URL仅限 douban.com/bilibili.com/iqiyi.com/youku.com/v.qq.com/mgtv.com/maoyan.com/fanqienovel.com/qidian.com/weread.qq.com，其他来源填空字符串。直接返回JSON数组，不要任何说明文字：[{"title":"","type":"${meta.label}","score":"","reason":"","emoji":"","url":""}]`
 
   try{
-    const raw=await _callAI(prompt, 1500)
-    if(!raw) throw new Error('no reply')
-    const jsonStr=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim()
-    const items=JSON.parse(jsonStr)
-    if(!Array.isArray(items)||items.length===0) throw new Error('empty')
+    const raw=await _callAI(prompt, 1200)
+    if(!raw) throw new Error('AI 未返回内容')
+    const items=_extractJSONArray(raw)
+    if(!items||items.length===0) throw new Error('JSON 解析失败: '+raw.slice(0,100))
     localStorage.setItem(_ENTERTAIN_KEY(cat), JSON.stringify(items))
     loadEl.style.display='none'
     listEl.innerHTML=items.map(_renderEntertainCard).join('')
     tip.textContent=`✅ 已为你精选 ${items.length} 部`
     rfBtn.style.display=''
   }catch(e){
+    console.error('[fetchEntertain]', e)
     loadEl.style.display='none'
-    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">😵 推荐获取失败，请重试</div>'
+    listEl.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:12px">😵 推荐获取失败，请重试<br><span style="font-size:11px;opacity:.6">${escHtml(e.message)}</span></div>`
     fetchBtn.style.display=''
   }
 }
