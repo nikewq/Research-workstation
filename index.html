@@ -987,6 +987,39 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=博士生活经验')">🎓 PhD生活</button>
     </div>
   </div>
+
+  <!-- ── Entertainment Recommendations ── -->
+  <div style="margin-top:18px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      🎬 摸鱼娱乐推荐
+      <span style="font-size:11px;font-weight:400;color:var(--text2)">AI 帮你选，配计时器一起摸</span>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="switchEntertainTab('tv',this)" id="etab-tv">📺 剧集</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('movie',this)" id="etab-movie">🎬 电影</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('novel',this)" id="etab-novel">📚 小说</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('anime',this)" id="etab-anime">✨ 动漫</button>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="fetchEntertain()" id="entertain-fetch-btn">🎯 获取推荐</button>
+      <button class="btn btn-ghost btn-sm" onclick="fetchEntertain(null,true)" id="entertain-refresh-btn" style="display:none">🔄 换一批</button>
+      <span id="entertain-cache-tip" style="font-size:11px;color:var(--text2)"></span>
+    </div>
+
+    <div id="entertain-loading" style="display:none;padding:24px;text-align:center;color:var(--text2)">
+      <div style="font-size:28px;margin-bottom:8px;animation:pulse 1.2s infinite">🍿</div>
+      <div style="font-size:12px">AI 正在为你筛选好货，摸鱼前最后一步……</div>
+    </div>
+
+    <div id="entertain-list" style="margin-bottom:14px"></div>
+
+    <div class="card" style="margin-top:4px">
+      <div class="card-title" style="margin-bottom:8px;font-size:12px">🔗 快速跳转</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="entertain-quick-links"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2806,6 +2839,9 @@ function initIntelPage(){
   }
   listEl.innerHTML=''; tip.textContent='点击按钮获取今日科研圈动态'
   btn.style.display=''; rfBtn.style.display='none'
+  // init entertainment section
+  _updateEntertainQuickLinks(_entertainCat)
+  switchEntertainTab(_entertainCat, document.getElementById('etab-'+_entertainCat))
 }
 const _INTEL_KEY = () => `_intel_${today()}`
 
@@ -2898,6 +2934,137 @@ async function fetchIntel(force=false){
     loadEl.style.display='none'
     listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">😵 情报获取失败，请稍后重试</div>'
     btn.style.display=''
+  }
+}
+
+// ══════════════════════════════════════
+//  娱乐推荐 ENTERTAINMENT ENGINE
+// ══════════════════════════════════════
+let _entertainCat = 'tv'
+
+const _ENTERTAIN_KEY = cat => `_entertain_${cat}_${today()}`
+
+const _entertainMeta = {
+  tv:    {label:'剧集',   emoji:'📺', color:'#e11d48',
+          prompt:'近期热播或口碑极佳的国产/海外剧集（含短剧），豆瓣评分≥7.5，避免过度剧透，写出最让人上头的点',
+          sites:[['豆瓣剧集榜','https://movie.douban.com/chart'],['B站追剧','https://www.bilibili.com/'],['小红书剧评','https://www.xiaohongshu.com/search_result?keyword=剧集推荐']]},
+  movie: {label:'电影',   emoji:'🎬', color:'#7c3aed',
+          prompt:'近期上映或经典值得一刷的电影，豆瓣评分≥8，说明最打动人的一个镜头或情节',
+          sites:[['豆瓣电影榜','https://movie.douban.com/chart'],['猫眼票房','https://www.maoyan.com/'],['小红书影评','https://www.xiaohongshu.com/search_result?keyword=电影推荐']]},
+  novel: {label:'小说',   emoji:'📚', color:'#0ea5e9',
+          prompt:'口碑极佳的网络小说/实体书，完结/连载均可，给出一句让人迫不及待打开的推荐语',
+          sites:[['豆瓣读书','https://book.douban.com/'],['番茄小说','https://fanqienovel.com/'],['小红书书评','https://www.xiaohongshu.com/search_result?keyword=小说推荐']]},
+  anime: {label:'动漫',   emoji:'✨', color:'#f59e0b',
+          prompt:'近期热门或强烈推荐的动漫/番剧，含剧场版，豆瓣/MAL评分≥8，写出最令人上头的设定或名场面',
+          sites:[['B站番剧','https://www.bilibili.com/anime/'],['豆瓣动画','https://movie.douban.com/tag/#/?sort=S&range=8,10&tags=%E5%8A%A8%E7%94%BB'],['小红书番剧','https://www.xiaohongshu.com/search_result?keyword=动漫推荐']]}
+}
+
+function switchEntertainTab(cat, btn){
+  _entertainCat = cat
+  ;['tv','movie','novel','anime'].forEach(c=>{
+    const b=document.getElementById('etab-'+c)
+    if(b) b.className = c===cat ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'
+  })
+  _updateEntertainQuickLinks(cat)
+  const cached=localStorage.getItem(_ENTERTAIN_KEY(cat))
+  const listEl=document.getElementById('entertain-list')
+  const tip=document.getElementById('entertain-cache-tip')
+  const fetchBtn=document.getElementById('entertain-fetch-btn')
+  const rfBtn=document.getElementById('entertain-refresh-btn')
+  if(cached){
+    try{
+      const items=JSON.parse(cached)
+      listEl.innerHTML=items.map(_renderEntertainCard).join('')
+      tip.textContent=`📦 今日已缓存 ${items.length} 条`
+      fetchBtn.style.display='none'; rfBtn.style.display=''
+      return
+    }catch(_){}
+  }
+  listEl.innerHTML=''
+  tip.textContent='点击获取推荐'
+  fetchBtn.style.display=''; rfBtn.style.display='none'
+}
+
+function _updateEntertainQuickLinks(cat){
+  const el=document.getElementById('entertain-quick-links')
+  if(!el) return
+  const meta=_entertainMeta[cat]
+  if(!meta) return
+  el.innerHTML=meta.sites.map(([label,url])=>
+    `<button class="btn btn-ghost btn-sm" onclick="openWithTimer(${JSON.stringify(url)})">${label} ⏱</button>`
+  ).join('')
+}
+
+function _renderEntertainCard(item){
+  const meta=_entertainMeta[_entertainCat]||{emoji:'🎯',color:'#8b949e',label:''}
+  const color=meta.color
+  const scoreHtml=item.score?`<span style="font-size:11px;background:${color}22;color:${color};padding:1px 7px;border-radius:10px;margin-left:4px">${escHtml(item.score)}</span>`:''
+  const tagHtml=`<span style="font-size:11px;font-weight:600;background:${color}22;color:${color};padding:1px 7px;border-radius:10px">${item.emoji||meta.emoji} ${escHtml(item.type||meta.label)}</span>`
+  const linkUrl=item.url||`https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(item.title)}`
+  return `<div class="card" style="margin-bottom:10px;border-left:3px solid ${color}">
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <span style="font-size:22px;flex-shrink:0">${item.emoji||meta.emoji}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap">${tagHtml}${scoreHtml}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;line-height:1.4">${escHtml(item.title)}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:6px">${escHtml(item.reason)}</div>
+        <button onclick="openWithTimer(${JSON.stringify(linkUrl)})" class="btn btn-ghost btn-sm" style="font-size:11px">🔍 去看看 ⏱</button>
+      </div>
+    </div>
+  </div>`
+}
+
+async function fetchEntertain(cat, force=false){
+  if(!cat) cat=_entertainCat
+  _entertainCat=cat
+  const meta=_entertainMeta[cat]
+  const fetchBtn=document.getElementById('entertain-fetch-btn')
+  const rfBtn=document.getElementById('entertain-refresh-btn')
+  const loadEl=document.getElementById('entertain-loading')
+  const listEl=document.getElementById('entertain-list')
+  const tip=document.getElementById('entertain-cache-tip')
+
+  if(!force){
+    const cached=localStorage.getItem(_ENTERTAIN_KEY(cat))
+    if(cached){
+      try{
+        const items=JSON.parse(cached)
+        listEl.innerHTML=items.map(_renderEntertainCard).join('')
+        tip.textContent=`📦 今日已缓存 ${items.length} 条`
+        fetchBtn.style.display='none'; rfBtn.style.display=''
+        return
+      }catch(_){}
+    }
+  }
+
+  fetchBtn.style.display='none'; rfBtn.style.display='none'
+  loadEl.style.display='block'; listEl.innerHTML=''; tip.textContent=''
+
+  const cfg=await _getActiveCfg()
+  if(!cfg){
+    loadEl.style.display='none'
+    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">⚠️ AI 未配置，使用默认 Pollinations 即可。</div>'
+    fetchBtn.style.display=''; return
+  }
+
+  const today_=today()
+  const prompt=`今天是${today_}，作为资深娱乐达人，请推荐5部适合打工人解压的${meta.label}。要求：${meta.prompt}。\n\n返回严格JSON数组，不要加markdown代码块：\n[{"title":"作品名","type":"${meta.label}","score":"评分（如豆瓣8.9，没有则填空字符串）","reason":"一句话推荐理由，口语化带个人感情","emoji":"最合适的1个emoji","url":"豆瓣/官方页面链接，没有则填空字符串"}]`
+
+  try{
+    const raw=await _callAI(prompt, 1500)
+    if(!raw) throw new Error('no reply')
+    const jsonStr=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim()
+    const items=JSON.parse(jsonStr)
+    if(!Array.isArray(items)||items.length===0) throw new Error('empty')
+    localStorage.setItem(_ENTERTAIN_KEY(cat), JSON.stringify(items))
+    loadEl.style.display='none'
+    listEl.innerHTML=items.map(_renderEntertainCard).join('')
+    tip.textContent=`✅ 已为你精选 ${items.length} 部`
+    rfBtn.style.display=''
+  }catch(e){
+    loadEl.style.display='none'
+    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">😵 推荐获取失败，请重试</div>'
+    fetchBtn.style.display=''
   }
 }
 
