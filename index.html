@@ -57,6 +57,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .ai-reply-hd{font-size:10px;color:#10b981;font-weight:700;letter-spacing:.3px;margin-bottom:3px;display:flex;align-items:center;gap:4px}
 .ai-reply-hd span{opacity:.7;font-weight:400}
 @keyframes ai-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.7}}
 .ai-loading .ai-reply-hd::after{content:'';display:inline-block;width:5px;height:5px;background:#10b981;border-radius:50%;margin-left:4px;animation:ai-pulse 1.2s ease-in-out infinite}
 
 /* Main */
@@ -359,6 +360,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="nav-item" data-page="tools"><span class="nav-icon">⚡</span>工具面板</div>
   <div class="nav-item" data-page="reflection"><span class="nav-icon">🌙</span>反思日记</div>
   <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
+  <div class="nav-item" data-page="intel"><span class="nav-icon">📡</span>摸鱼侦察局</div>
   <div class="nav-group">设置</div>
   <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
   <div class="nav-item" onclick="openSyncModal()"><span class="nav-icon">☁️</span>云同步</div>
@@ -815,6 +817,50 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   </div>
 </div>
 
+<!-- ── Intel ── -->
+<div class="page" id="page-intel">
+  <div class="page-title">摸鱼侦察局 <span style="font-size:18px">📡</span></div>
+  <div class="page-subtitle">替你刷小红书，省你俩小时 · 每日科研情报自动汇总</div>
+
+  <div class="card" style="background:linear-gradient(135deg,var(--card) 0%,rgba(124,58,237,0.08) 100%);border:1px solid rgba(124,58,237,0.15);margin-bottom:14px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:30px;line-height:1;flex-shrink:0">🕵️</div>
+      <div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:5px">每日自动扫描科研圈动态</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7">
+          覆盖：<span style="color:var(--primary)">AI辅助科研</span> · <span style="color:var(--primary)">科研自动化</span> · <span style="color:var(--primary)">论文写作</span> · <span style="color:var(--primary)">投稿技巧</span> · <span style="color:var(--primary)">科研新工具</span> · <span style="color:var(--primary)">PhD生活</span><br>
+          结果当日缓存，明天自动刷新。你只需要动一根手指，剩下的交给我。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="fetchIntel()" id="intel-fetch-btn">📡 获取今日情报</button>
+    <button class="btn btn-ghost" onclick="fetchIntel(true)" id="intel-refresh-btn" style="display:none">🔄 强制刷新</button>
+    <span id="intel-cache-tip" style="font-size:11px;color:var(--text2)"></span>
+  </div>
+
+  <div id="intel-loading" style="display:none;padding:32px;text-align:center;color:var(--text2)">
+    <div style="font-size:32px;margin-bottom:10px;animation:pulse 1.2s infinite">📡</div>
+    <div style="font-size:13px">正在扫描科研圈情报，请稍候……</div>
+  </div>
+
+  <div id="intel-list" style="margin-bottom:16px"></div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:10px">🔍 直达搜索</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <a href="https://www.xiaohongshu.com/search_result?keyword=AI辅助科研" target="_blank" class="btn btn-ghost btn-sm">🤖 AI辅助科研</a>
+      <a href="https://www.xiaohongshu.com/search_result?keyword=科研自动化工具" target="_blank" class="btn btn-ghost btn-sm">⚙️ 科研自动化</a>
+      <a href="https://www.xiaohongshu.com/search_result?keyword=SCI论文写作技巧" target="_blank" class="btn btn-ghost btn-sm">✍️ 论文写作</a>
+      <a href="https://www.xiaohongshu.com/search_result?keyword=SCI投稿技巧" target="_blank" class="btn btn-ghost btn-sm">📨 投稿技巧</a>
+      <a href="https://www.xiaohongshu.com/search_result?keyword=科研工具效率" target="_blank" class="btn btn-ghost btn-sm">🛠️ 科研工具</a>
+      <a href="https://www.xiaohongshu.com/search_result?keyword=博士生活经验" target="_blank" class="btn btn-ghost btn-sm">🎓 PhD生活</a>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1050,6 +1096,7 @@ function switchPage(name) {
   if (name==='reflection') renderRefHistory();
   if (name==='settings') populateSettingsForm();
   if (name==='tools') renderTools();
+  if (name==='intel') initIntelPage();
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
 
@@ -2099,6 +2146,133 @@ function _renderWallItem(d,idx){
     <div style="font-size:13px;color:var(--text);line-height:1.55;word-break:break-all">${escHtml(d.msg)}</div>
     ${aiBlock}
   </div>`
+}
+
+// ══════════════════════════════════════
+//  摸鱼侦察局 INTEL ENGINE
+// ══════════════════════════════════════
+function initIntelPage(){
+  const cached=localStorage.getItem(_INTEL_KEY())
+  const listEl=document.getElementById('intel-list')
+  const tip=document.getElementById('intel-cache-tip')
+  const btn=document.getElementById('intel-fetch-btn')
+  const rfBtn=document.getElementById('intel-refresh-btn')
+  if(cached){
+    try{
+      const items=JSON.parse(cached)
+      listEl.innerHTML=items.map(_renderIntelCard).join('')
+      tip.textContent=`📦 已缓存 · 今日 ${items.length} 条情报`
+      btn.style.display='none'; rfBtn.style.display=''
+      return
+    }catch(_){}
+  }
+  listEl.innerHTML=''; tip.textContent='点击按钮获取今日科研圈动态'
+  btn.style.display=''; rfBtn.style.display='none'
+}
+const _INTEL_KEY = () => `_intel_${today()}`
+
+const _INTEL_TAGS = {
+  'AI科研':'🤖','科研工具':'🛠️','论文写作':'✍️','投稿技巧':'📨','科研自动化':'⚙️','PhD生活':'🎓','其他':'📌'
+}
+
+function _tagColor(tag){
+  const m={'AI科研':'#7c3aed','科研工具':'#059669','论文写作':'#0ea5e9','投稿技巧':'#f59e0b','科研自动化':'#ef4444','PhD生活':'#ec4899','其他':'#8b949e'}
+  return m[tag]||'#8b949e'
+}
+
+function _renderIntelCard(item){
+  const c=_tagColor(item.tag), e=_INTEL_TAGS[item.tag]||'📌'
+  const link=item.url?`<a href="${escHtml(item.url)}" target="_blank" class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px">🔗 查看原帖</a>`:''
+  return `<div class="card" style="margin-bottom:10px;border-left:3px solid ${c}">
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <span style="font-size:20px;flex-shrink:0">${e}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:600;background:${c}22;color:${c};padding:1px 7px;border-radius:10px">${item.tag}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;line-height:1.4">${escHtml(item.title)}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6">${escHtml(item.summary)}</div>
+        ${link}
+      </div>
+    </div>
+  </div>`
+}
+
+async function fetchIntel(force=false){
+  const btn=document.getElementById('intel-fetch-btn')
+  const rfBtn=document.getElementById('intel-refresh-btn')
+  const loadEl=document.getElementById('intel-loading')
+  const listEl=document.getElementById('intel-list')
+  const tip=document.getElementById('intel-cache-tip')
+
+  // 检查缓存
+  if(!force){
+    const cached=localStorage.getItem(_INTEL_KEY())
+    if(cached){
+      try{
+        const items=JSON.parse(cached)
+        listEl.innerHTML=items.map(_renderIntelCard).join('')
+        tip.textContent=`📦 已缓存 · 今日 ${items.length} 条情报`
+        rfBtn.style.display=''; btn.style.display='none'
+        return
+      }catch(_){}
+    }
+  }
+
+  btn.style.display='none'; rfBtn.style.display='none'
+  loadEl.style.display='block'; listEl.innerHTML=''; tip.textContent=''
+
+  const key=await _getAIKey()
+  if(!key){
+    loadEl.style.display='none'
+    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">⚠️ 需要先配置 Groq API Key（见 README）</div>'
+    return
+  }
+
+  // 尝试通过 Jina reader 抓取 tophub XHS 热榜
+  let rawContent=''
+  try{
+    const jinaR=await Promise.race([
+      fetch('https://r.jina.ai/https://tophub.today/n/Q1Wro6XO6p',{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),
+      new Promise((_,rej)=>setTimeout(()=>rej('timeout'),8000))
+    ])
+    if(jinaR.ok) rawContent=(await jinaR.text()).slice(0,4000)
+  }catch(_){}
+
+  const today_=today()
+  const sysPrompt=rawContent
+    ?`你是一位资深科研社区运营者。以下是今天（${today_}）小红书热榜内容：\n\n${rawContent}\n\n请从中筛选3-6条与"AI辅助科研、科研自动化、论文写作技巧、投稿技巧、科研新工具、PhD/研究生生活经验"相关的内容。`
+    :`今天是${today_}，请生成6条当下科研圈在小红书上热议的实用内容，涵盖AI辅助科研、科研自动化、论文写作、投稿技巧、科研工具、PhD生活各1条。`
+
+  const outputFmt=`返回严格的JSON数组，不要加markdown代码块，不要任何解释：
+[{"title":"帖子标题","summary":"30字内的精华摘要，用口语化的中文","url":"原帖链接，没有则填 https://www.xiaohongshu.com/search_result?keyword=关键词","tag":"AI科研|科研工具|论文写作|投稿技巧|科研自动化|PhD生活|其他"}]`
+
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[{role:'user',content:sysPrompt+'\n\n'+outputFmt}],
+        temperature:0.4,max_tokens:1200
+      })
+    })
+    const d=await r.json()
+    const raw=(d.choices?.[0]?.message?.content||'').trim()
+    // 提取 JSON（防止模型加了 ```json ... ```）
+    const jsonStr=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'')
+    const items=JSON.parse(jsonStr)
+    if(!Array.isArray(items)||items.length===0) throw new Error('empty')
+    localStorage.setItem(_INTEL_KEY(),JSON.stringify(items))
+    loadEl.style.display='none'
+    listEl.innerHTML=items.map(_renderIntelCard).join('')
+    tip.textContent=`✅ 今日 ${items.length} 条情报已更新`
+    rfBtn.style.display=''
+  }catch(e){
+    loadEl.style.display='none'
+    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">😵 情报获取失败，请稍后重试</div>'
+    btn.style.display=''
+  }
 }
 
 async function loadWall(){
