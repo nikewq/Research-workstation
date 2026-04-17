@@ -2946,17 +2946,28 @@ const _ENTERTAIN_KEY = cat => `_entertain_${cat}_${today()}`
 
 const _entertainMeta = {
   tv:    {label:'剧集',   emoji:'📺', color:'#e11d48',
-          prompt:'近期热播或口碑极佳的国产/海外剧集（含短剧），豆瓣评分≥7.5，避免过度剧透，写出最让人上头的点',
-          sites:[['豆瓣剧集榜','https://movie.douban.com/chart'],['B站追剧','https://www.bilibili.com/'],['小红书剧评','https://www.xiaohongshu.com/search_result?keyword=剧集推荐']]},
+          prompt:'近期在爱奇艺/优酷/腾讯视频/B站正规上线、豆瓣评分≥7.5的国产或海外剧集（含短剧），内容健康向上，不涉及色情/暴力/政治敏感，简述最吸引人的一个看点',
+          sites:[['豆瓣剧集榜','https://movie.douban.com/chart'],['B站番剧','https://www.bilibili.com/'],['爱奇艺热播','https://www.iqiyi.com/']]},
   movie: {label:'电影',   emoji:'🎬', color:'#7c3aed',
-          prompt:'近期上映或经典值得一刷的电影，豆瓣评分≥8，说明最打动人的一个镜头或情节',
-          sites:[['豆瓣电影榜','https://movie.douban.com/chart'],['猫眼票房','https://www.maoyan.com/'],['小红书影评','https://www.xiaohongshu.com/search_result?keyword=电影推荐']]},
+          prompt:'国内院线正规上映或经典口碑电影，豆瓣评分≥8，内容合规无违禁，说明最打动人的一个亮点',
+          sites:[['豆瓣电影榜','https://movie.douban.com/chart'],['猫眼票房','https://www.maoyan.com/'],['腾讯视频','https://v.qq.com/']]},
   novel: {label:'小说',   emoji:'📚', color:'#0ea5e9',
-          prompt:'口碑极佳的网络小说/实体书，完结/连载均可，给出一句让人迫不及待打开的推荐语',
-          sites:[['豆瓣读书','https://book.douban.com/'],['番茄小说','https://fanqienovel.com/'],['小红书书评','https://www.xiaohongshu.com/search_result?keyword=小说推荐']]},
+          prompt:'在国内正规平台（起点/番茄/微信读书等）上架、内容合规的优质小说，完结/连载均可，不含色情/暴力/违禁内容，给出一句让人迫不及待打开的推荐语',
+          sites:[['豆瓣读书','https://book.douban.com/'],['番茄小说','https://fanqienovel.com/'],['微信读书','https://weread.qq.com/']]},
   anime: {label:'动漫',   emoji:'✨', color:'#f59e0b',
-          prompt:'近期热门或强烈推荐的动漫/番剧，含剧场版，豆瓣/MAL评分≥8，写出最令人上头的设定或名场面',
-          sites:[['B站番剧','https://www.bilibili.com/anime/'],['豆瓣动画','https://movie.douban.com/tag/#/?sort=S&range=8,10&tags=%E5%8A%A8%E7%94%BB'],['小红书番剧','https://www.xiaohongshu.com/search_result?keyword=动漫推荐']]}
+          prompt:'在B站/爱奇艺正规引进或国产、豆瓣评分≥8的动漫/番剧，内容合规无违禁，写出最令人上头的设定或名场面',
+          sites:[['B站番剧','https://www.bilibili.com/anime/'],['豆瓣动画','https://movie.douban.com/tag/#/?sort=S&range=8,10&tags=%E5%8A%A8%E7%94%BB'],['爱奇艺动漫','https://www.iqiyi.com/']]}
+}
+
+// URL 安全白名单：只允许主流正规平台
+const _SAFE_ENTERTAIN_DOMAINS = ['douban.com','bilibili.com','iqiyi.com','youku.com','v.qq.com','mgtv.com','maoyan.com','fanqienovel.com','qidian.com','weread.qq.com','weread.weixin.qq.com']
+function _sanitizeEntertainUrl(url){
+  if(!url || !url.startsWith('http')) return ''
+  try{
+    const host=new URL(url).hostname.replace(/^www\./,'')
+    if(_SAFE_ENTERTAIN_DOMAINS.some(d=>host===d||host.endsWith('.'+d))) return url
+  }catch(_){}
+  return ''
 }
 
 function switchEntertainTab(cat, btn){
@@ -3000,7 +3011,8 @@ function _renderEntertainCard(item){
   const color=meta.color
   const scoreHtml=item.score?`<span style="font-size:11px;background:${color}22;color:${color};padding:1px 7px;border-radius:10px;margin-left:4px">${escHtml(item.score)}</span>`:''
   const tagHtml=`<span style="font-size:11px;font-weight:600;background:${color}22;color:${color};padding:1px 7px;border-radius:10px">${item.emoji||meta.emoji} ${escHtml(item.type||meta.label)}</span>`
-  const linkUrl=item.url||`https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(item.title)}`
+  const safeUrl=_sanitizeEntertainUrl(item.url)
+  const linkUrl=safeUrl||`https://movie.douban.com/subject_search?search_text=${encodeURIComponent(item.title)}&cat=1002`
   return `<div class="card" style="margin-bottom:10px;border-left:3px solid ${color}">
     <div style="display:flex;gap:8px;align-items:flex-start">
       <span style="font-size:22px;flex-shrink:0">${item.emoji||meta.emoji}</span>
@@ -3048,7 +3060,7 @@ async function fetchEntertain(cat, force=false){
   }
 
   const today_=today()
-  const prompt=`今天是${today_}，作为资深娱乐达人，请推荐5部适合打工人解压的${meta.label}。要求：${meta.prompt}。\n\n返回严格JSON数组，不要加markdown代码块：\n[{"title":"作品名","type":"${meta.label}","score":"评分（如豆瓣8.9，没有则填空字符串）","reason":"一句话推荐理由，口语化带个人感情","emoji":"最合适的1个emoji","url":"豆瓣/官方页面链接，没有则填空字符串"}]`
+  const prompt=`今天是${today_}，请推荐5部适合研究生解压放松的${meta.label}。\n\n内容要求：${meta.prompt}。\n\n安全合规要求（必须严格遵守）：①只推荐在中国大陆正规平台合法上映/播出/出版的作品；②不含色情、血腥暴力、恐怖、政治敏感等违规内容；③URL只能使用 douban.com、bilibili.com、iqiyi.com、youku.com、v.qq.com、mgtv.com、maoyan.com、fanqienovel.com、qidian.com、weread.qq.com 这些正规平台，其他来源一律填空字符串。\n\n返回严格JSON数组，不要加markdown代码块：\n[{"title":"作品名","type":"${meta.label}","score":"评分（如豆瓣8.9，没有则填空字符串）","reason":"一句话推荐理由，口语化带个人感情","emoji":"最合适的1个emoji","url":"上述白名单平台的合法链接，没有把握则填空字符串"}]`
 
   try{
     const raw=await _callAI(prompt, 1500)
