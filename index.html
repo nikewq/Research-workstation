@@ -186,7 +186,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.show{opacity:1;pointer-events:all}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;min-width:400px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto}
+.modal,.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;min-width:400px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
 .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 
@@ -2327,13 +2327,18 @@ function renderRefHistory(){
   const el=document.getElementById('ref-history');if(!el)return;
   const list=ld(K.refs);
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">🌙</div><p>暂无记录</p></div>';return;}
-  el.innerHTML=list.slice(0,30).map(r=>`<div class="ref-entry">
-    <div class="ref-date">${r.mood||'📝'} ${r.date} · ${r.ts||''}</div>
-    ${r.wins?`<div class="ref-content"><strong>🏆 亮点：</strong>${r.wins}</div>`:''}
-    ${r.struggles?`<div class="ref-content" style="margin-top:6px"><strong>😮‍💨 卡点：</strong>${r.struggles}</div>`:''}
-    ${r.tomorrow?`<div class="ref-content" style="margin-top:6px"><strong>🎯 明日：</strong>${r.tomorrow}</div>`:''}
-    ${r.gratitude?`<div class="ref-content" style="margin-top:6px;color:var(--text2)">💙 ${r.gratitude}</div>`:''}
-  </div>`).join('');
+  el.innerHTML=list.slice(0,60).map(r=>{
+    const bms=r.bookmarks||[];
+    const preview=escHtml((r.wins||'').replace(/\n/g,' ').slice(0,60)||(bms.length?`📌 ${bms.length}条摸鱼收藏`:'无内容'));
+    return `<div class="ref-entry" onclick="openRefEntry('${r.id}')" style="cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--primary-soft)'" onmouseleave="this.style.background=''">
+      <div class="ref-date" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${r.mood||'📝'} ${r.date}${r.ts?' · '+r.ts:''}</span>
+        <span style="font-size:11px;color:var(--primary)">📖 查看/编辑 →</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview}</div>
+      ${bms.length?`<div style="margin-top:4px;font-size:11px;color:var(--primary)">📌 ${bms.length}条收藏</div>`:''}
+    </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════
@@ -3060,16 +3065,17 @@ function _bmAct(idx,encodedItem){
 
 function _bmToReflection(item){
   const list=ld(K.refs)
-  const note=`\n📌 [${item.tag||'情报'}] ${item.title}：${item.summary}`
+  const bm={id:uid(),title:item.title||'',summary:item.summary||'',url:item.url||'',tag:item.tag||'',savedAt:new Date().toLocaleString('zh-CN')}
   const idx=list.findIndex(r=>r.date===today())
   if(idx>=0){
-    list[idx].wins=(list[idx].wins||'')+note
+    if(!list[idx].bookmarks)list[idx].bookmarks=[]
+    list[idx].bookmarks.push(bm)
   }else{
-    list.unshift({id:uid(),date:today(),mood:'📌',wins:'摸鱼侦察收藏：'+note,struggles:'',tomorrow:'',gratitude:'',ts:new Date().toLocaleString('zh-CN')})
+    list.unshift({id:uid(),date:today(),mood:'',wins:'',struggles:'',tomorrow:'',gratitude:'',ts:new Date().toLocaleString('zh-CN'),bookmarks:[bm]})
   }
   sv(K.refs,list)
   renderRefHistory()
-  toast('📝 已存入今日反思！')
+  toast('📌 已收藏到今日反思！')
 }
 
 function _bmCopyMd(item){
@@ -3646,6 +3652,88 @@ function _fireScanAlarm(){
 }
 
 // ═══════════════════════════════════════════
+//  REFLECTION ENTRY MODAL
+// ═══════════════════════════════════════════
+let _remSelMood='';
+function openRefEntry(id){
+  const list=ld(K.refs),r=list.find(r=>r.id===id);if(!r)return;
+  document.getElementById('rem-id').value=id;
+  document.getElementById('rem-date-label').textContent=`${r.mood||'📝'} ${r.date}${r.ts?' · '+r.ts:''}`;
+  // read view
+  let html='';
+  if(r.wins)html+=`<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:4px">🏆 今日亮点</div><div class="ref-content">${escHtml(r.wins)}</div></div>`;
+  if(r.struggles)html+=`<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">😮‍💨 卡点/困难</div><div class="ref-content">${escHtml(r.struggles)}</div></div>`;
+  if(r.tomorrow)html+=`<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">🎯 明日计划</div><div class="ref-content">${escHtml(r.tomorrow)}</div></div>`;
+  if(r.gratitude)html+=`<div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">💙 感恩</div><div style="font-size:13px;color:var(--text2)">${escHtml(r.gratitude)}</div></div>`;
+  if(!html&&!(r.bookmarks||[]).length)html='<div style="color:var(--text2);font-size:13px;text-align:center;padding:20px">暂无文字记录</div>';
+  document.getElementById('rem-read-text').innerHTML=html;
+  const bms=r.bookmarks||[];
+  document.getElementById('rem-read-bms').innerHTML=bms.length?`
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px">📌 摸鱼侦察收藏（${bms.length}条）</div>
+      ${bms.map(bm=>`
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--primary)">
+          <div style="font-weight:600;font-size:13px;margin-bottom:4px">${escHtml(bm.title)}</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px">${escHtml(bm.summary)}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            ${bm.tag?`<span style="font-size:11px;padding:1px 8px;border-radius:10px;background:var(--primary-soft);color:var(--primary)">${escHtml(bm.tag)}</span>`:''}
+            ${bm.url?`<a href="${escHtml(bm.url)}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none">🔗 查看原文 ↗</a>`:''}
+            <span style="font-size:10px;color:var(--text2);margin-left:auto">${bm.savedAt||''}</span>
+          </div>
+        </div>`).join('')}
+    </div>`:'';
+  // edit view
+  _remSelMood=r.mood||'';
+  document.getElementById('rem-e-wins').value=r.wins||'';
+  document.getElementById('rem-e-struggles').value=r.struggles||'';
+  document.getElementById('rem-e-tomorrow').value=r.tomorrow||'';
+  document.getElementById('rem-e-gratitude').value=r.gratitude||'';
+  document.querySelectorAll('.rem-mood-btn').forEach(b=>b.classList.toggle('active',b.dataset.mood===_remSelMood));
+  document.getElementById('rem-edit-bms').innerHTML=bms.length?`
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">📌 收藏（点 ✕ 可删除单条）</div>
+      ${bms.map(bm=>`
+        <div style="display:flex;align-items:flex-start;gap:8px;background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:6px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600">${escHtml(bm.title)}</div>
+            <div style="font-size:11px;color:var(--text2)">${escHtml((bm.summary||'').slice(0,80))}${bm.summary&&bm.summary.length>80?'…':''}</div>
+          </div>
+          <button onclick="delRefBookmark('${id}','${bm.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--text2);font-size:15px;line-height:1;padding:0" title="删除">✕</button>
+        </div>`).join('')}
+    </div>`:'';
+  _remTab('read');
+  openModal('refEntryModal');
+}
+function _remTab(tab){
+  const r=tab==='read';
+  document.getElementById('rem-read-view').style.display=r?'':'none';
+  document.getElementById('rem-edit-view').style.display=r?'none':'';
+  document.getElementById('rem-tab-read').className='btn btn-sm '+(r?'btn-primary':'btn-ghost');
+  document.getElementById('rem-tab-edit').className='btn btn-sm '+(!r?'btn-primary':'btn-ghost');
+}
+function saveRefEntry(){
+  const id=document.getElementById('rem-id').value;
+  const list=ld(K.refs),idx=list.findIndex(r=>r.id===id);if(idx<0)return;
+  list[idx]={...list[idx],mood:_remSelMood,
+    wins:document.getElementById('rem-e-wins').value.trim(),
+    struggles:document.getElementById('rem-e-struggles').value.trim(),
+    tomorrow:document.getElementById('rem-e-tomorrow').value.trim(),
+    gratitude:document.getElementById('rem-e-gratitude').value.trim()};
+  sv(K.refs,list);closeModal('refEntryModal');renderRefHistory();toast('✏️ 修改已保存');
+}
+function delRefEntry(){
+  if(!confirm('删除这条反思记录？'))return;
+  const id=document.getElementById('rem-id').value;
+  sv(K.refs,ld(K.refs).filter(r=>r.id!==id));
+  closeModal('refEntryModal');renderRefHistory();toast('🗑 已删除');
+}
+function delRefBookmark(entryId,bmId){
+  const list=ld(K.refs),idx=list.findIndex(r=>r.id===entryId);if(idx<0)return;
+  list[idx].bookmarks=(list[idx].bookmarks||[]).filter(b=>b.id!==bmId);
+  sv(K.refs,list);openRefEntry(entryId);
+}
+
+// ═══════════════════════════════════════════
 //  GANTT CHART
 // ═══════════════════════════════════════════
 let _ganttActiveId = null;
@@ -3863,6 +3951,47 @@ function delGanttTask(){
 // 初次加载
 document.addEventListener('DOMContentLoaded',()=>setTimeout(loadWall,800))
 </script>
+
+<!-- ── Reflection Entry Modal ── -->
+<div class="modal-overlay" id="refEntryModal" onclick="if(event.target===this)closeModal('refEntryModal')">
+  <div class="modal-box" style="max-width:580px;width:95%;max-height:92vh;overflow-y:auto">
+    <input type="hidden" id="rem-id">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div id="rem-date-label" style="font-weight:700;font-size:15px"></div>
+      <div style="display:flex;gap:6px">
+        <button onclick="_remTab('read')" id="rem-tab-read" class="btn btn-primary btn-sm">📖 阅读</button>
+        <button onclick="_remTab('edit')" id="rem-tab-edit" class="btn btn-ghost btn-sm">✏️ 编辑</button>
+        <button onclick="closeModal('refEntryModal')" class="btn btn-ghost btn-sm" style="padding:4px 8px">✕</button>
+      </div>
+    </div>
+    <div id="rem-read-view">
+      <div id="rem-read-text"></div>
+      <div id="rem-read-bms"></div>
+    </div>
+    <div id="rem-edit-view" style="display:none">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:var(--text2);margin-bottom:6px;display:block">今日心情</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="mood-btn rem-mood-btn" data-mood="😊" onclick="_remSelMood='😊';document.querySelectorAll('.rem-mood-btn').forEach(b=>b.classList.toggle('active',b.dataset.mood===_remSelMood))">😊</span>
+          <span class="mood-btn rem-mood-btn" data-mood="😐" onclick="_remSelMood='😐';document.querySelectorAll('.rem-mood-btn').forEach(b=>b.classList.toggle('active',b.dataset.mood===_remSelMood))">😐</span>
+          <span class="mood-btn rem-mood-btn" data-mood="😩" onclick="_remSelMood='😩';document.querySelectorAll('.rem-mood-btn').forEach(b=>b.classList.toggle('active',b.dataset.mood===_remSelMood))">😩</span>
+          <span class="mood-btn rem-mood-btn" data-mood="😤" onclick="_remSelMood='😤';document.querySelectorAll('.rem-mood-btn').forEach(b=>b.classList.toggle('active',b.dataset.mood===_remSelMood))">😤</span>
+          <span class="mood-btn rem-mood-btn" data-mood="🤩" onclick="_remSelMood='🤩';document.querySelectorAll('.rem-mood-btn').forEach(b=>b.classList.toggle('active',b.dataset.mood===_remSelMood))">🤩</span>
+          <span class="mood-btn rem-mood-btn" data-mood="😰" onclick="_remSelMood='😰';document.querySelectorAll('.rem-mood-btn').forEach(b=>b.classList.toggle('active',b.dataset.mood===_remSelMood))">😰</span>
+        </div>
+      </div>
+      <div class="form-row"><div><label>🏆 今日亮点</label><textarea id="rem-e-wins" rows="3" placeholder="今天做成了什么？"></textarea></div></div>
+      <div class="form-row"><div><label>😮‍💨 卡点/困难</label><textarea id="rem-e-struggles" rows="2" placeholder="哪里卡住了？"></textarea></div></div>
+      <div class="form-row"><div><label>🎯 明日计划</label><textarea id="rem-e-tomorrow" rows="2" placeholder="明天最重要的事..."></textarea></div></div>
+      <div class="form-row"><div><label>💙 一句话感恩</label><input id="rem-e-gratitude" placeholder="今天感激的一件事..."></div></div>
+      <div id="rem-edit-bms"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary" style="flex:1" onclick="saveRefEntry()">💾 保存修改</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="delRefEntry()">🗑 删除</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ── Gantt: Add/Edit Project Modal ── -->
 <div class="modal-overlay" id="addProjectModal" onclick="if(event.target===this)closeModal('addProjectModal')">
