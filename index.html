@@ -798,8 +798,10 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="form-row c2">
       <div>
         <label>模型名称</label>
-        <input id="ai-model-inp" placeholder="选择服务商后自动填充" list="ai-model-list" autocomplete="off">
-        <datalist id="ai-model-list"></datalist>
+        <select id="ai-model-sel" onchange="_onAIModelSelChange()" style="width:100%">
+          <option value="">── 请先选择服务商 ──</option>
+        </select>
+        <input id="ai-model-custom" placeholder="输入自定义模型名" autocomplete="off" style="display:none;margin-top:6px;width:100%">
       </div>
       <div id="ai-base-wrap" style="display:none">
         <label>网络地址 (Base URL)</label>
@@ -2314,29 +2316,53 @@ function _populateAISettings(){
     if(sel) sel.value=c.provider||''
     if(keyInp) keyInp.value=c.key||''
     if(clearBtn) clearBtn.style.display=''
-    onAIProviderChange(false)  // 先填 defModel + datalist
-    if(modelInp) modelInp.value=c.model||''  // 再覆盖为用户保存的模型
+    onAIProviderChange(false)  // 先填 defModel + select options
+    // 再覆盖为用户保存的模型
+    const modelSel=document.getElementById('ai-model-sel')
+    const modelCustom=document.getElementById('ai-model-custom')
+    const savedModel=c.model||''
+    if(modelSel&&savedModel){
+      const exists=Array.from(modelSel.options).some(o=>o.value===savedModel)
+      if(exists){ modelSel.value=savedModel; if(modelCustom) modelCustom.style.display='none' }
+      else{ modelSel.value='__custom__'; if(modelCustom){modelCustom.style.display='';modelCustom.value=savedModel} }
+    }
     if(baseInp) baseInp.value=c.base||''
   }catch(_){}
 }
+function _getSelectedModel(){
+  const sel=document.getElementById('ai-model-sel')
+  const custom=document.getElementById('ai-model-custom')
+  return sel?.value==='__custom__' ? (custom?.value.trim()||'') : (sel?.value||'')
+}
+function _onAIModelSelChange(){
+  const sel=document.getElementById('ai-model-sel')
+  const custom=document.getElementById('ai-model-custom')
+  if(custom) custom.style.display=sel?.value==='__custom__'?'':'none'
+}
 function onAIProviderChange(keepModel=false){
   const sel=document.getElementById('ai-provider-sel')
-  const modelInp=document.getElementById('ai-model-inp')
+  const modelSel=document.getElementById('ai-model-sel')
+  const modelCustom=document.getElementById('ai-model-custom')
   const baseWrap=document.getElementById('ai-base-wrap')
   const baseInp=document.getElementById('ai-base-inp')
   const keyWrap=document.getElementById('ai-key-wrap')
   if(!sel) return
   const pv=sel.value
   const def=_AI_PROVIDERS[pv]
-  if(def){
-    if(modelInp&&!keepModel) modelInp.value=def.defModel||''
-    const dl=document.getElementById('ai-model-list')
-    if(dl) dl.innerHTML=(def.models||[]).map(m=>`<option value="${m}">`).join('')
+  if(def&&modelSel){
+    const models=def.models||[]
+    modelSel.innerHTML=models.map(m=>`<option value="${escHtml(m)}">${escHtml(m)}</option>`).join('')
+      +'<option value="__custom__">── 自定义模型名 ──</option>'
+    if(!keepModel){
+      modelSel.value=def.defModel||(models[0]||'__custom__')
+      if(modelCustom) modelCustom.style.display=modelSel.value==='__custom__'?'':'none'
+    }
     if(baseInp&&!keepModel&&def.base) baseInp.value=def.base
     if(baseWrap) baseWrap.style.display=def.needsUrl?'':'none'
-    // 无需 Key 的服务商（Pollinations / 本地）隐藏 Key 输入框
     if(keyWrap) keyWrap.style.display=def.needsKey===false?'none':''
   } else {
+    if(modelSel){ modelSel.innerHTML='<option value="__custom__">── 手动输入 ──</option>'; modelSel.value='__custom__' }
+    if(modelCustom) modelCustom.style.display=''
     if(baseWrap) baseWrap.style.display='none'
     if(keyWrap) keyWrap.style.display=''
   }
@@ -2344,7 +2370,7 @@ function onAIProviderChange(keepModel=false){
 function saveAISettings(){
   const pv=document.getElementById('ai-provider-sel')?.value
   const key=document.getElementById('ai-key-inp')?.value.trim()
-  const model=document.getElementById('ai-model-inp')?.value.trim()
+  const model=_getSelectedModel()
   const base=document.getElementById('ai-base-inp')?.value.trim()
   const tip=document.getElementById('ai-test-tip')
   if(!pv){localStorage.removeItem('_ai_cfg');_aiKeyCache=null;sessionStorage.removeItem('_gk');if(tip){tip.textContent='已恢复自动模式';tip.style.color='var(--primary)'}; return}
@@ -2362,7 +2388,10 @@ function clearAISettings(){
   _aiKeyCache=null; sessionStorage.removeItem('_gk')
   document.getElementById('ai-provider-sel').value=''
   document.getElementById('ai-key-inp').value=''
-  document.getElementById('ai-model-inp').value=''
+  const _ms=document.getElementById('ai-model-sel')
+  if(_ms){_ms.innerHTML='<option value="">── 请先选择服务商 ──</option>';_ms.value=''}
+  const _mc=document.getElementById('ai-model-custom')
+  if(_mc){_mc.value='';_mc.style.display='none'}
   document.getElementById('ai-base-inp').value=''
   document.getElementById('ai-clear-btn').style.display='none'
   const tip=document.getElementById('ai-test-tip')
@@ -2374,7 +2403,7 @@ async function testAIConnection(){
   // 临时保存当前表单到 cfg，不覆盖 localStorage
   const pv=document.getElementById('ai-provider-sel')?.value
   const key=document.getElementById('ai-key-inp')?.value.trim()
-  const model=document.getElementById('ai-model-inp')?.value.trim()
+  const model=_getSelectedModel()
   const base=document.getElementById('ai-base-inp')?.value.trim()
   const provNeedsKey2=_AI_PROVIDERS[pv]?.needsKey!==false
   if(!pv||(provNeedsKey2&&!key)){if(tip){tip.textContent='请先选择服务商（无需 Key 的可直接测试）';tip.style.color='#ef4444'};return}
