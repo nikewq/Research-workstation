@@ -484,7 +484,13 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="page-title">任务管理</div>
   <div class="page-subtitle" id="tasks-subtitle">管理你的科研任务</div>
   <div class="card mb-16">
-    <div class="card-title">新建任务</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:0">新建任务</div>
+      <button class="btn btn-ghost btn-sm" onclick="aiSuggestTasks()" id="ai-suggest-btn"
+        style="font-size:11px;border-color:rgba(124,58,237,.4);color:var(--primary);white-space:nowrap">
+        🤖 让导师来规划
+      </button>
+    </div>
     <div class="form-row c2">
       <div><label>任务名称</label><input id="task-input" placeholder="任务..." onkeydown="if(event.key==='Enter')addTask()"></div>
       <div><label>截止日期</label><input type="date" id="task-due"></div>
@@ -504,19 +510,37 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <!-- AI 建议区域 -->
   <div id="ai-task-panel" style="display:none;margin-bottom:16px">
     <div class="card" style="border:1.5px solid rgba(124,58,237,.35);background:linear-gradient(135deg,rgba(124,58,237,.05),rgba(5,150,105,.04))">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:20px">🤖</span>
+          <span style="font-size:22px" id="mentor-avatar">🤖</span>
           <div>
-            <div style="font-size:13px;font-weight:700">AI 导师今日任务建议</div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-size:13px;font-weight:700" id="mentor-nick-display">AI 导师</span>
+              <span style="font-size:11px;color:var(--text2)">· 今日任务建议</span>
+              <button onclick="_toggleNickPicker()" title="给导师起昵称"
+                style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text2);padding:0 3px;line-height:1" id="nick-edit-btn">✏️</button>
+            </div>
             <div style="font-size:11px;color:var(--text2)" id="ai-task-meta">基于你的研究方向与历史记录生成</div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ai-task-panel').style.display='none'" style="font-size:11px">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ai-task-panel').style.display='none';_closeNickPicker()" style="font-size:11px">✕</button>
       </div>
+
+      <!-- 昵称选择器（折叠） -->
+      <div id="nick-picker" style="display:none;margin:8px 0 12px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">📛 给你的 AI 导师起个昵称：</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="nick-presets"></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="nick-custom-inp" placeholder="自定义昵称…" maxlength="12"
+            style="flex:1;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px"
+            onkeydown="if(event.key==='Enter')_applyNick(document.getElementById('nick-custom-inp').value)">
+          <button class="btn btn-primary btn-sm" style="font-size:11px" onclick="_applyNick(document.getElementById('nick-custom-inp').value)">确定</button>
+        </div>
+      </div>
+
       <div id="ai-task-loading" style="display:none;text-align:center;padding:20px;color:var(--text2)">
-        <div style="font-size:24px;animation:pulse 1.2s infinite">🧠</div>
-        <div style="font-size:12px;margin-top:6px">导师正在分析你的研究状态……</div>
+        <div style="font-size:24px;animation:pulse 1.2s infinite" id="mentor-loading-icon">🧠</div>
+        <div style="font-size:12px;margin-top:6px" id="mentor-loading-text">导师正在分析你的研究状态……</div>
       </div>
       <div id="ai-task-list" style="display:flex;flex-direction:column;gap:8px"></div>
       <div id="ai-task-footer" style="display:none;margin-top:10px;text-align:center">
@@ -530,7 +554,6 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <button class="btn btn-ghost btn-sm task-filter" onclick="filterTasks('todo',this)">待做</button>
     <div id="proj-filters" class="flex gap-8"></div>
     <div style="flex:1"></div>
-    <button class="btn btn-ghost btn-sm" onclick="aiSuggestTasks()" id="ai-suggest-btn" style="font-size:11px;border-color:rgba(124,58,237,.4);color:var(--primary)">🤖 AI 规划今日任务</button>
     <span class="text-muted text-sm" id="task-count"></span>
   </div>
   <div id="task-list" class="scrollable" style="max-height:600px"></div>
@@ -1185,7 +1208,7 @@ function switchPage(name) {
   if (name==='overview') { renderOverview(); renderCheckin(); }
   if (name==='focus') renderPomoLog();
   if (name==='habits') renderHabits();
-  if (name==='tasks') renderTasks();
+  if (name==='tasks') {renderTasks();_refreshNickDisplay();}
   if (name==='submissions') renderSubmissions();
   if (name==='reflection') renderRefHistory();
   if (name==='settings') populateSettingsForm();
@@ -1565,6 +1588,76 @@ function renderTasks(){
 // ══════════════════════════════════════
 //  AI 任务建议
 // ══════════════════════════════════════
+// ── 导师昵称系统 ──────────────────────
+const _NICK_KEY='_mentor_nick'
+const _NICK_PRESETS=[
+  {nick:'卷王代言人',avatar:'👑',tip:'高度还原现实'},
+  {nick:'论文锻造师',avatar:'🔨',tip:'每字都是铁'},
+  {nick:'凌晨三点的灯',avatar:'🌙',tip:'诗意又扎心'},
+  {nick:'引用量收割机',avatar:'📊',tip:'学术圈硬核'},
+  {nick:'咖啡因总教头',avatar:'☕',tip:'续命神器代言'},
+  {nick:'拒稿终结者',avatar:'💪',tip:'越挫越勇'},
+  {nick:'方向感应仪',avatar:'🧭',tip:'迷路必备'},
+  {nick:'灵魂拷问机',avatar:'🤔',tip:'每问必中要害'},
+]
+
+function _getMentorNick(){
+  try{const s=localStorage.getItem(_NICK_KEY);if(s){const p=JSON.parse(s);return p}}catch(_){}
+  return {nick:'AI 导师',avatar:'🤖'}
+}
+function _setMentorNick(nick,avatar='🤖'){
+  localStorage.setItem(_NICK_KEY,JSON.stringify({nick,avatar}))
+  _refreshNickDisplay()
+}
+function _refreshNickDisplay(){
+  const p=_getMentorNick()
+  const nd=document.getElementById('mentor-nick-display')
+  const av=document.getElementById('mentor-avatar')
+  if(nd) nd.textContent=p.nick
+  if(av) av.textContent=p.avatar
+}
+function _toggleNickPicker(){
+  const el=document.getElementById('nick-picker')
+  if(!el) return
+  if(el.style.display==='none'){
+    _renderNickPresets()
+    el.style.display='block'
+  } else {
+    el.style.display='none'
+  }
+}
+function _closeNickPicker(){
+  const el=document.getElementById('nick-picker')
+  if(el) el.style.display='none'
+}
+function _renderNickPresets(){
+  const el=document.getElementById('nick-presets')
+  if(!el) return
+  const cur=_getMentorNick().nick
+  el.innerHTML=_NICK_PRESETS.map(p=>`
+    <button onclick="_applyNick('${p.nick}','${p.avatar}')"
+      class="btn btn-ghost btn-sm"
+      title="${p.tip}"
+      style="font-size:11px;padding:3px 10px;${cur===p.nick?'border-color:var(--primary);color:var(--primary);font-weight:700':''}">
+      ${p.avatar} ${p.nick}
+    </button>`).join('')
+}
+function _applyNick(nick,avatar){
+  nick=(nick||'').trim()
+  if(!nick){toast('⚠️ 昵称不能为空');return}
+  if(!avatar){
+    // 尝试从预设匹配
+    const match=_NICK_PRESETS.find(p=>p.nick===nick)
+    avatar=match?match.avatar:'🤖'
+  }
+  _setMentorNick(nick,avatar)
+  _closeNickPicker()
+  toast(`✅ 导师昵称已更新为「${nick}」`)
+  // 如果面板正在显示，刷新 loading 文案
+  const lt=document.getElementById('mentor-loading-text')
+  if(lt) lt.textContent=`${nick} 正在分析你的研究状态……`
+}
+
 // ── 反馈存储 ──────────────────────────
 const _FB_KEY='_ai_task_fb'
 let _aiSuggestItems=[]   // 当前这批建议，按索引引用
@@ -1636,7 +1729,13 @@ async function aiSuggestTasks(){
   loading.style.display='block'
   listEl.innerHTML=''
   footer.style.display='none'
+  const mentorP=_getMentorNick()
+  _refreshNickDisplay()
   if(btn){btn.disabled=true;btn.textContent='🧠 生成中…'}
+  const lt=document.getElementById('mentor-loading-text')
+  const li=document.getElementById('mentor-loading-icon')
+  if(lt) lt.textContent=`${mentorP.nick} 正在分析你的研究状态……`
+  if(li) li.textContent=mentorP.avatar
 
   const cfg=getCfg()
   const allTasks=ld(K.tasks)
@@ -1657,7 +1756,7 @@ ${doneLast7.length?doneLast7.map(t=>`· ${t.title}（${t.proj?projName(t.proj):'
 当前待办任务（避免重复推荐）：
 ${pending.length?pending.map(t=>`· ${t.title}（优先级:${t.prio}${t.due?'，截止:'+t.due:''}）`).join('\n'):'（无待办）'}${_getFeedbackContext()}`
 
-  const prompt=`你是一位严格但关爱学生的科研导师。请根据以下信息，为学生推荐今天应该完成的任务（最多5个）。
+  const prompt=`你的名字是「${mentorP.nick}」，你是一位严格但关爱学生的科研导师。请根据以下信息，为学生推荐今天应该完成的任务（最多5个）。
 
 ${ctx}
 
