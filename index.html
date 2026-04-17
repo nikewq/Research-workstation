@@ -371,6 +371,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="nav-item" data-page="habits"><span class="nav-icon">🔥</span>习惯打卡</div>
     <div class="nav-group">科研</div>
     <div class="nav-item" data-page="submissions"><span class="nav-icon">📄</span>投稿管理</div>
+    <div class="nav-item" data-page="gantt"><span class="nav-icon">📅</span>项目甘特图</div>
     <div class="nav-item" data-page="tools"><span class="nav-icon">⚡</span>工具面板</div>
     <div class="nav-item" data-page="reflection"><span class="nav-icon">🌙</span>反思日记</div>
     <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
@@ -657,6 +658,19 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="stat-card stat-purple"><div class="stat-value" id="ss-rev">0</div><div class="stat-label">修改中</div></div>
   </div>
   <div id="sub-list"></div>
+</div>
+
+<!-- ── Gantt ── -->
+<div class="page" id="page-gantt">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+    <div>
+      <div class="page-title">项目甘特图 📅</div>
+      <div class="page-subtitle">规划项目时间线，追踪进度</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openNewGanttProjectModal()" style="margin-top:4px">➕ 新建项目</button>
+  </div>
+  <div id="gantt-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+  <div id="gantt-area"></div>
 </div>
 
 <!-- ── Tools ── -->
@@ -1147,6 +1161,7 @@ const K = {
   refs:   'phd_refs',
   pomos:  'phd_pomos',
   tools:  'phd_tools',
+  gantt:  'phd_gantt',
 };
 
 const ld = k => { try { return JSON.parse(localStorage.getItem(k)) || (k===K.habits?{}:[]); } catch { return k===K.habits?{}:[]; } };
@@ -1368,6 +1383,7 @@ function switchPage(name) {
   if (name==='settings') populateSettingsForm();
   if (name==='tools') renderTools();
   if (name==='intel') initIntelPage();
+  if (name==='gantt') renderGantt();
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
 
@@ -3629,9 +3645,281 @@ function _fireScanAlarm(){
   overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.remove();toast('💪 收心了！加油冲！')}})
 }
 
+// ═══════════════════════════════════════════
+//  GANTT CHART
+// ═══════════════════════════════════════════
+let _ganttActiveId = null;
+
+function renderGantt() {
+  const projects = ld(K.gantt);
+  const tabs = document.getElementById('gantt-tabs');
+  const area = document.getElementById('gantt-area');
+  if (!tabs || !area) return;
+  if (!projects.length) {
+    tabs.innerHTML = '';
+    area.innerHTML = `<div class="card" style="text-align:center;padding:48px 20px;color:var(--text2)">
+      <div style="font-size:42px;margin-bottom:12px">📅</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)">还没有项目</div>
+      <div style="font-size:13px;margin-bottom:20px">创建一个项目，开始规划你的时间线</div>
+      <button class="btn btn-primary btn-sm" onclick="openNewGanttProjectModal()">➕ 新建项目</button>
+    </div>`;
+    return;
+  }
+  if (!_ganttActiveId || !projects.find(p=>p.id===_ganttActiveId)) _ganttActiveId = projects[0].id;
+  const proj = projects.find(p=>p.id===_ganttActiveId);
+  tabs.innerHTML = projects.map(p=>`
+    <div onclick="_ganttSwitch('${p.id}')" style="padding:5px 14px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:600;
+      background:${p.id===_ganttActiveId?p.color:'var(--surface2)'};
+      color:${p.id===_ganttActiveId?'#fff':'var(--text2)'};
+      border:2px solid ${p.id===_ganttActiveId?p.color:'transparent'};transition:all .15s">${escHtml(p.name)}</div>
+  `).join('');
+  _renderGanttProject(proj, area);
+}
+
+function _ganttSwitch(id){_ganttActiveId=id;renderGantt();}
+
+function _renderGanttProject(proj, container) {
+  const tasks = proj.tasks || [];
+  const hdr = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-weight:700;font-size:14px">${escHtml(proj.name)}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="openAddGanttTaskModal('${proj.id}')">➕ 添加任务</button>
+      <button class="btn btn-ghost btn-sm" onclick="openEditGanttProjectModal('${proj.id}')">✏️ 编辑</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="delGanttProject('${proj.id}')">🗑</button>
+    </div></div>`;
+  if (!tasks.length) {
+    container.innerHTML = hdr + `<div class="card" style="text-align:center;padding:30px;color:var(--text2);font-size:13px">
+      还没有任务，点击"添加任务"开始规划</div>`;
+    return;
+  }
+  const allDates = tasks.flatMap(t=>[new Date(t.start),new Date(t.end)]);
+  let minD = new Date(Math.min(...allDates)), maxD = new Date(Math.max(...allDates));
+  minD.setDate(minD.getDate()-3); maxD.setDate(maxD.getDate()+5);
+  const totalDays = Math.ceil((maxD-minD)/86400000);
+  const todayD = new Date(today());
+  const todayPct = ((todayD-minD)/86400000)/totalDays*100;
+  const LABEL_W=185, ROW_H=38;
+
+  // month header
+  const months=[]; let mc=new Date(minD);
+  while(mc<=maxD){
+    const ms=new Date(mc.getFullYear(),mc.getMonth(),1),me=new Date(mc.getFullYear(),mc.getMonth()+1,0);
+    const rs=Math.max(minD,ms),re=Math.min(maxD,me);
+    months.push({label:`${mc.getFullYear()}/${mc.getMonth()+1}`,lp:((rs-minD)/86400000)/totalDays*100,wp:((re-rs)/86400000+1)/totalDays*100});
+    mc=new Date(mc.getFullYear(),mc.getMonth()+1,1);
+  }
+
+  // week lines
+  const wlines=[]; let wc=new Date(minD);
+  while(wc<=maxD){if(wc.getDay()===1){wlines.push(((wc-minD)/86400000)/totalDays*100);}wc.setDate(wc.getDate()+1);}
+
+  const chartH = 32 + tasks.length*ROW_H + 8;
+
+  const labelRows = tasks.map((t,i)=>`
+    <div style="position:absolute;top:${32+i*ROW_H}px;left:0;width:${LABEL_W-10}px;height:${ROW_H}px;
+      display:flex;align-items:center;font-size:12px;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding-right:4px"
+      title="${escHtml(t.name)}">${t.milestone?'◆ ':''}${escHtml(t.name)}</div>`).join('');
+
+  const taskBars = tasks.map((t,i)=>{
+    const sd=new Date(t.start),ed=new Date(t.end);
+    const lp=Math.max(0,((sd-minD)/86400000)/totalDays*100);
+    const wp=Math.max(0.8,((ed-sd)/86400000+1)/totalDays*100);
+    const col=t.color||proj.color; const prog=t.progress||0;
+    const top=32+i*ROW_H;
+    if(t.milestone){
+      return `<div style="position:absolute;top:${top+ROW_H/2-8}px;left:calc(${LABEL_W}px + ${lp}%);
+        width:16px;height:16px;transform:translateX(-50%) rotate(45deg);background:${col};cursor:pointer;
+        border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:2"
+        title="${escHtml(t.name)}" onclick="openEditGanttTaskModal('${proj.id}','${t.id}')"></div>
+       <div style="position:absolute;top:${top+ROW_H/2-7}px;left:calc(${LABEL_W}px + ${lp}% + 12px);
+        font-size:11px;color:var(--text2);line-height:14px;white-space:nowrap">${escHtml(t.name)}</div>`;
+    }
+    return `<div style="position:absolute;top:${top+5}px;left:calc(${LABEL_W}px + ${lp}%);width:calc(${wp}%);height:${ROW_H-10}px;
+      border-radius:4px;background:${col}1a;border:1.5px solid ${col};overflow:hidden;cursor:pointer"
+      title="${escHtml(t.name)} (${t.start} → ${t.end})" onclick="openEditGanttTaskModal('${proj.id}','${t.id}')">
+      <div style="position:absolute;inset:0 auto 0 0;width:${prog}%;background:${col};opacity:.5"></div>
+      <div style="position:relative;padding:0 6px;line-height:${ROW_H-10}px;font-size:11px;font-weight:600;color:${col};
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(t.name)}${prog?' '+prog+'%':''}</div>
+    </div>`;
+  }).join('');
+
+  const todayLine = (todayPct>=0&&todayPct<=100)?`
+    <div style="position:absolute;left:calc(${LABEL_W}px + ${todayPct}%);top:0;bottom:0;width:2px;background:#f87171;opacity:.85;z-index:3;pointer-events:none">
+      <div style="position:absolute;top:2px;left:-14px;background:#f87171;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap">今天</div>
+    </div>`:''
+  ;
+
+  const sepLines = tasks.map((_,i)=>`<div style="position:absolute;top:${32+(i+1)*ROW_H}px;left:${LABEL_W}px;right:0;height:1px;background:var(--border);opacity:.35"></div>`).join('');
+
+  container.innerHTML = hdr + `<div class="card" style="padding:0;overflow-x:auto">
+    <div style="position:relative;height:${chartH}px;min-width:600px">
+      ${months.map(m=>`<div style="position:absolute;left:calc(${LABEL_W}px + ${m.lp}%);width:calc(${m.wp}%);top:0;height:28px;
+        border-left:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);
+        padding-left:6px;line-height:28px;overflow:hidden;white-space:nowrap">${m.label}</div>`).join('')}
+      <div style="position:absolute;top:28px;left:0;right:0;height:1px;background:var(--border)"></div>
+      ${wlines.map(p=>`<div style="position:absolute;left:calc(${LABEL_W}px + ${p}%);top:28px;bottom:0;width:1px;background:var(--border);opacity:.4"></div>`).join('')}
+      ${sepLines}${todayLine}${labelRows}${taskBars}
+    </div>
+  </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--text2);display:flex;gap:16px;flex-wrap:wrap">
+    <span>点击任务条可编辑/删除</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:2px;background:#f87171;display:inline-block;border-radius:1px"></span>今天</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;transform:rotate(45deg);background:var(--primary);display:inline-block"></span>里程碑</span>
+  </div>`;
+}
+
+function openNewGanttProjectModal(){
+  document.getElementById('agp-id').value='';
+  document.getElementById('agp-name').value='';
+  document.getElementById('agp-color').value='#4f8ef7';
+  document.getElementById('agp-modal-title').textContent='新建项目';
+  openModal('addProjectModal');
+}
+function openEditGanttProjectModal(projId){
+  const p=ld(K.gantt).find(p=>p.id===projId); if(!p) return;
+  document.getElementById('agp-id').value=projId;
+  document.getElementById('agp-name').value=p.name;
+  document.getElementById('agp-color').value=p.color||'#4f8ef7';
+  document.getElementById('agp-modal-title').textContent='编辑项目';
+  openModal('addProjectModal');
+}
+function saveGanttProject(){
+  const id=document.getElementById('agp-id').value;
+  const name=document.getElementById('agp-name').value.trim();
+  const color=document.getElementById('agp-color').value||'#4f8ef7';
+  if(!name){toast('请输入项目名称');return;}
+  const projects=ld(K.gantt);
+  if(id){const idx=projects.findIndex(p=>p.id===id);if(idx>=0){projects[idx].name=name;projects[idx].color=color;}}
+  else{const np={id:uid(),name,color,tasks:[]};projects.push(np);_ganttActiveId=np.id;}
+  sv(K.gantt,projects); closeModal('addProjectModal'); renderGantt();
+}
+function delGanttProject(projId){
+  if(!confirm('删除此项目及所有任务？')) return;
+  const projects=ld(K.gantt).filter(p=>p.id!==projId);
+  sv(K.gantt,projects);
+  _ganttActiveId=projects.length?projects[0].id:null;
+  renderGantt();
+}
+
+function openAddGanttTaskModal(projId){
+  document.getElementById('agt-proj-id').value=projId;
+  document.getElementById('agt-task-id').value='';
+  document.getElementById('agt-name').value='';
+  document.getElementById('agt-start').value=today();
+  document.getElementById('agt-end').value=today();
+  document.getElementById('agt-progress').value='0';
+  document.getElementById('agt-progress-val').textContent='0%';
+  document.getElementById('agt-milestone').checked=false;
+  document.getElementById('agt-color').value='';
+  document.getElementById('agt-modal-title2').textContent='添加任务';
+  document.getElementById('agt-del-btn').style.display='none';
+  openModal('addGanttTaskModal');
+}
+function openEditGanttTaskModal(projId,taskId){
+  const proj=ld(K.gantt).find(p=>p.id===projId); if(!proj) return;
+  const task=(proj.tasks||[]).find(t=>t.id===taskId); if(!task) return;
+  document.getElementById('agt-proj-id').value=projId;
+  document.getElementById('agt-task-id').value=taskId;
+  document.getElementById('agt-name').value=task.name;
+  document.getElementById('agt-start').value=task.start;
+  document.getElementById('agt-end').value=task.end;
+  document.getElementById('agt-progress').value=task.progress||0;
+  document.getElementById('agt-progress-val').textContent=(task.progress||0)+'%';
+  document.getElementById('agt-milestone').checked=!!task.milestone;
+  document.getElementById('agt-color').value=task.color||'';
+  document.getElementById('agt-modal-title2').textContent='编辑任务';
+  document.getElementById('agt-del-btn').style.display='';
+  openModal('addGanttTaskModal');
+}
+function saveGanttTask(){
+  const projId=document.getElementById('agt-proj-id').value;
+  const taskId=document.getElementById('agt-task-id').value;
+  const name=document.getElementById('agt-name').value.trim();
+  const start=document.getElementById('agt-start').value;
+  const end=document.getElementById('agt-end').value;
+  const progress=parseInt(document.getElementById('agt-progress').value)||0;
+  const milestone=document.getElementById('agt-milestone').checked;
+  const colorVal=document.getElementById('agt-color').value;
+  const color=colorVal&&colorVal!=='#000000'?colorVal:null;
+  if(!name||!start||!end){toast('请填写任务名称和日期');return;}
+  if(end<start){toast('结束日期不能早于开始日期');return;}
+  const projects=ld(K.gantt);
+  const proj=projects.find(p=>p.id===projId); if(!proj) return;
+  if(!proj.tasks) proj.tasks=[];
+  if(taskId){const idx=proj.tasks.findIndex(t=>t.id===taskId);if(idx>=0)proj.tasks[idx]={...proj.tasks[idx],name,start,end,progress,milestone,color};}
+  else proj.tasks.push({id:uid(),name,start,end,progress,milestone,color});
+  sv(K.gantt,projects); closeModal('addGanttTaskModal'); renderGantt();
+}
+function delGanttTask(){
+  const projId=document.getElementById('agt-proj-id').value;
+  const taskId=document.getElementById('agt-task-id').value;
+  if(!taskId) return;
+  const projects=ld(K.gantt);
+  const proj=projects.find(p=>p.id===projId); if(!proj) return;
+  proj.tasks=(proj.tasks||[]).filter(t=>t.id!==taskId);
+  sv(K.gantt,projects); closeModal('addGanttTaskModal'); renderGantt();
+}
+
 // 初次加载
 document.addEventListener('DOMContentLoaded',()=>setTimeout(loadWall,800))
 </script>
+
+<!-- ── Gantt: Add/Edit Project Modal ── -->
+<div class="modal-overlay" id="addProjectModal" onclick="if(event.target===this)closeModal('addProjectModal')">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-title" id="agp-modal-title">新建项目</div>
+    <input type="hidden" id="agp-id">
+    <div class="form-row"><div>
+      <label>项目名称</label>
+      <input id="agp-name" placeholder="如：DGBaryIR NeurIPS 2026" onkeydown="if(event.key==='Enter')saveGanttProject()">
+    </div></div>
+    <div class="form-row"><div>
+      <label>项目主色</label>
+      <input type="color" id="agp-color" value="#4f8ef7" style="height:38px;width:100%;padding:3px 6px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface)">
+    </div></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveGanttProject()">保存</button>
+      <button class="btn btn-ghost" onclick="closeModal('addProjectModal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Gantt: Add/Edit Task Modal ── -->
+<div class="modal-overlay" id="addGanttTaskModal" onclick="if(event.target===this)closeModal('addGanttTaskModal')">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-title" id="agt-modal-title2">添加任务</div>
+    <input type="hidden" id="agt-proj-id">
+    <input type="hidden" id="agt-task-id">
+    <div class="form-row"><div>
+      <label>任务名称</label>
+      <input id="agt-name" placeholder="如：文献调研、模型训练、写作...">
+    </div></div>
+    <div class="form-row c2">
+      <div><label>开始日期</label><input type="date" id="agt-start"></div>
+      <div><label>结束日期</label><input type="date" id="agt-end"></div>
+    </div>
+    <div class="form-row"><div>
+      <label>完成进度&nbsp;<span id="agt-progress-val" style="color:var(--primary);font-weight:700">0%</span></label>
+      <input type="range" id="agt-progress" min="0" max="100" step="5" value="0"
+        oninput="document.getElementById('agt-progress-val').textContent=this.value+'%'"
+        style="width:100%;accent-color:var(--primary);cursor:pointer">
+    </div></div>
+    <div class="form-row c2">
+      <div style="display:flex;align-items:center;gap:8px;padding-top:18px">
+        <input type="checkbox" id="agt-milestone" style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer">
+        <label for="agt-milestone" style="margin:0;cursor:pointer;font-size:13px">里程碑（菱形标记）</label>
+      </div>
+      <div><label>自定义颜色 <span style="color:var(--text2);font-weight:400;font-size:11px">（选填，默认用项目色）</span></label>
+        <input type="color" id="agt-color" value="#4f8ef7" style="height:38px;width:100%;padding:3px 6px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface)">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveGanttTask()">保存</button>
+      <button class="btn btn-ghost btn-sm" id="agt-del-btn" style="color:var(--danger);display:none" onclick="delGanttTask()">🗑 删除</button>
+      <button class="btn btn-ghost" onclick="closeModal('addGanttTaskModal')">取消</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Scan Timer Modal ── -->
 <div class="modal-overlay" id="scanTimerModal">
