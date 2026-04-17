@@ -689,6 +689,48 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     </div>
   </div>
   <div class="settings-section">
+    <h3>🤖 AI 模型设置</h3>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+      用于摸鱼侦察局、留言墙 AI 回复等功能。<br>
+      支持 Groq / DeepSeek / OpenAI / Gemini / Kimi / Ollama 等。<b>不填则使用演示公共 Key</b>（可能受速率限制）。
+    </div>
+    <div class="form-row c2">
+      <div>
+        <label>服务商</label>
+        <select id="ai-provider-sel" onchange="onAIProviderChange()">
+          <option value="">── 使用演示公共 Key ──</option>
+          <option value="groq">Groq（免费·极快）</option>
+          <option value="deepseek">DeepSeek（便宜）</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="moonshot">Moonshot Kimi</option>
+          <option value="ollama">Ollama 本地</option>
+          <option value="custom">自定义 Base URL</option>
+        </select>
+      </div>
+      <div>
+        <label>API Key</label>
+        <input id="ai-key-inp" type="password" placeholder="sk-... 或 gsk_..." autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row c2">
+      <div>
+        <label>模型名称</label>
+        <input id="ai-model-inp" placeholder="选择服务商后自动填充">
+      </div>
+      <div id="ai-base-wrap" style="display:none">
+        <label>Base URL</label>
+        <input id="ai-base-inp" placeholder="https://your-api.com/v1">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveAISettings()">保存 AI 设置</button>
+      <button class="btn btn-ghost" onclick="testAIConnection()">🔌 测试连接</button>
+      <button class="btn btn-ghost" onclick="clearAISettings()" id="ai-clear-btn" style="display:none">清除</button>
+      <span id="ai-test-tip" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+  </div>
+  <div class="settings-section">
     <h3>⚠️ 危险区域</h3>
     <button class="btn btn-danger" onclick="resetAll()">🗑 清除所有数据（重新设置）</button>
   </div>
@@ -1786,6 +1828,84 @@ function populateSettingsForm(){
   const lbl=document.getElementById('set-start-label');
   if(lbl) lbl.textContent=ROLE_DATE_LABEL[cfg.role||'phd']||'入学日期';
   renderProjSettings();renderAreaTagsSettings();
+  _populateAISettings();
+}
+function _populateAISettings(){
+  try{
+    const s=localStorage.getItem('_ai_cfg')
+    if(!s) return
+    const c=JSON.parse(s)
+    const sel=document.getElementById('ai-provider-sel')
+    const keyInp=document.getElementById('ai-key-inp')
+    const modelInp=document.getElementById('ai-model-inp')
+    const baseInp=document.getElementById('ai-base-inp')
+    const clearBtn=document.getElementById('ai-clear-btn')
+    if(sel) sel.value=c.provider||''
+    if(keyInp) keyInp.value=c.key||''
+    if(modelInp) modelInp.value=c.model||''
+    if(baseInp) baseInp.value=c.base||''
+    if(clearBtn) clearBtn.style.display=''
+    onAIProviderChange()
+  }catch(_){}
+}
+function onAIProviderChange(){
+  const sel=document.getElementById('ai-provider-sel')
+  const modelInp=document.getElementById('ai-model-inp')
+  const baseWrap=document.getElementById('ai-base-wrap')
+  if(!sel) return
+  const pv=sel.value
+  const def=_AI_PROVIDERS[pv]
+  if(def&&modelInp&&!modelInp.value) modelInp.value=def.defModel||''
+  if(def&&modelInp&&modelInp.dataset.auto!=='false') modelInp.placeholder=def.defModel||''
+  if(baseWrap) baseWrap.style.display=(pv==='custom'||pv==='ollama')?'':'none'
+}
+function saveAISettings(){
+  const pv=document.getElementById('ai-provider-sel')?.value
+  const key=document.getElementById('ai-key-inp')?.value.trim()
+  const model=document.getElementById('ai-model-inp')?.value.trim()
+  const base=document.getElementById('ai-base-inp')?.value.trim()
+  const tip=document.getElementById('ai-test-tip')
+  if(!pv){localStorage.removeItem('_ai_cfg');_aiKeyCache=null;sessionStorage.removeItem('_gk');if(tip){tip.textContent='已恢复使用演示 Key';tip.style.color='var(--primary)'}; return}
+  if(!key){if(tip){tip.textContent='请输入 API Key';tip.style.color='#ef4444'};return}
+  const defModel=_AI_PROVIDERS[pv]?.defModel||''
+  const cfg={provider:pv, key, model:model||defModel, base:base||_AI_PROVIDERS[pv]?.base||''}
+  localStorage.setItem('_ai_cfg',JSON.stringify(cfg))
+  document.getElementById('ai-clear-btn').style.display=''
+  if(tip){tip.textContent='✅ 已保存';tip.style.color='#10b981'}
+  toast('✅ AI 设置已保存')
+}
+function clearAISettings(){
+  localStorage.removeItem('_ai_cfg')
+  _aiKeyCache=null; sessionStorage.removeItem('_gk')
+  document.getElementById('ai-provider-sel').value=''
+  document.getElementById('ai-key-inp').value=''
+  document.getElementById('ai-model-inp').value=''
+  document.getElementById('ai-base-inp').value=''
+  document.getElementById('ai-clear-btn').style.display='none'
+  const tip=document.getElementById('ai-test-tip')
+  if(tip){tip.textContent='已清除，将使用演示 Key';tip.style.color='var(--text2)'}
+}
+async function testAIConnection(){
+  const tip=document.getElementById('ai-test-tip')
+  if(tip){tip.textContent='测试中…';tip.style.color='var(--text2)'}
+  // 临时保存当前表单到 cfg，不覆盖 localStorage
+  const pv=document.getElementById('ai-provider-sel')?.value
+  const key=document.getElementById('ai-key-inp')?.value.trim()
+  const model=document.getElementById('ai-model-inp')?.value.trim()
+  const base=document.getElementById('ai-base-inp')?.value.trim()
+  if(!pv||!key){if(tip){tip.textContent='请先填写服务商和 Key';tip.style.color='#ef4444'};return}
+  const defModel=_AI_PROVIDERS[pv]?.defModel||''
+  const testCfg={provider:pv,key,model:model||defModel,base:base||_AI_PROVIDERS[pv]?.base||''}
+  // 临时替换
+  const oldCfg=localStorage.getItem('_ai_cfg')
+  localStorage.setItem('_ai_cfg',JSON.stringify(testCfg))
+  try{
+    const reply=await _callAI('用一句话回答：1+1等于多少？',20)
+    if(reply){if(tip){tip.textContent=`✅ 连接成功："${reply.slice(0,30)}"`;tip.style.color='#10b981'}}
+    else{if(tip){tip.textContent='❌ 无响应，请检查 Key 和模型名';tip.style.color='#ef4444'}}
+  }catch(_){if(tip){tip.textContent='❌ 请求失败';tip.style.color='#ef4444'}}
+  // 恢复旧配置（保存按钮才是真正保存）
+  if(oldCfg) localStorage.setItem('_ai_cfg',oldCfg); else localStorage.removeItem('_ai_cfg')
 }
 function saveBasicSettings(){
   const cfg=getCfg();
@@ -2069,22 +2189,65 @@ function relTime(ts){
   const d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日'
 }
 
-// ── AI 回复引擎 ──────────────────────────────────
-// Groq key 存储在 Supabase site_config 表（见 README SQL）
+// ══════════════════════════════════════
+//  AI 引擎（多服务商统一入口）
+// ══════════════════════════════════════
+const _AI_PROVIDERS={
+  groq:    {name:'Groq',          base:'https://api.groq.com/openai/v1',                    defModel:'llama-3.3-70b-versatile'},
+  deepseek:{name:'DeepSeek',      base:'https://api.deepseek.com/v1',                       defModel:'deepseek-chat'},
+  openai:  {name:'OpenAI',        base:'https://api.openai.com/v1',                         defModel:'gpt-4o-mini'},
+  gemini:  {name:'Gemini',        base:'https://generativelanguage.googleapis.com/v1beta',  defModel:'gemini-1.5-flash'},
+  moonshot:{name:'Kimi',          base:'https://api.moonshot.cn/v1',                        defModel:'moonshot-v1-8k'},
+  ollama:  {name:'Ollama',        base:'http://localhost:11434/v1',                          defModel:'llama3.2'},
+  custom:  {name:'自定义',        base:'',                                                   defModel:''},
+}
+
+// 获取用户配置（localStorage 优先；否则 fallback Supabase 演示 Key）
 let _aiKeyCache=null
-async function _getAIKey(){
-  if(_aiKeyCache) return _aiKeyCache
-  const cached=sessionStorage.getItem('_gk')
-  if(cached){_aiKeyCache=cached;return cached}
+async function _getActiveCfg(){
+  // 1. 用户自配
   try{
-    const r=await fetch(`${_SB_URL}/rest/v1/site_config?key=eq.groq_key&select=value`,{
-      headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}
-    })
-    const d=await r.json()
-    const k=d[0]?.value
-    if(k&&k.startsWith('gsk_')){_aiKeyCache=k;sessionStorage.setItem('_gk',k);return k}
+    const s=localStorage.getItem('_ai_cfg')
+    if(s){const c=JSON.parse(s);if(c&&c.key)return c}
+  }catch(_){}
+  // 2. Supabase 演示 Key（Groq）
+  if(_aiKeyCache) return{provider:'groq',base:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile',key:_aiKeyCache}
+  const sb=sessionStorage.getItem('_gk')
+  if(sb){_aiKeyCache=sb;return{provider:'groq',base:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile',key:sb}}
+  try{
+    const r=await fetch(`${_SB_URL}/rest/v1/site_config?key=eq.groq_key&select=value`,{headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}})
+    const d=await r.json();const k=d[0]?.value
+    if(k){_aiKeyCache=k;sessionStorage.setItem('_gk',k);return{provider:'groq',base:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile',key:k}}
   }catch(_){}
   return null
+}
+// 保持旧接口兼容（fetchIntel 用到）
+async function _getAIKey(){const c=await _getActiveCfg();return c?.key||null}
+
+// 统一 AI 调用入口
+async function _callAI(prompt,maxTokens=800){
+  const cfg=await _getActiveCfg()
+  if(!cfg) return null
+  try{
+    if(cfg.provider==='gemini'){
+      const r=await fetch(`${cfg.base}/models/${cfg.model}:generateContent?key=${cfg.key}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:maxTokens,temperature:0.4}})
+      })
+      const d=await r.json()
+      return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||null
+    }
+    // OpenAI-compatible（Groq / DeepSeek / OpenAI / Kimi / Ollama / custom）
+    const base=cfg.base||_AI_PROVIDERS[cfg.provider]?.base||''
+    const r=await fetch(`${base}/chat/completions`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+cfg.key,'Content-Type':'application/json'},
+      body:JSON.stringify({model:cfg.model,messages:[{role:'user',content:prompt}],temperature:0.4,max_tokens:maxTokens})
+    })
+    if(!r.ok) return null
+    const d=await r.json()
+    return d.choices?.[0]?.message?.content?.trim()||null
+  }catch(_){return null}
 }
 
 const _DISTRESS=['崩溃','绝望','想放弃','撑不住','不想做了','退学','抑郁','好难受','太累了','怎么办','帮帮我','救命','好痛苦','迷茫','绷不住','熬不住','坚持不下去','想哭','心态崩了','不知道该怎么']
@@ -2094,28 +2257,15 @@ function _needsAI(tag,msg){
   return false
 }
 
-const _aiCache={}  // sessionStorage-level cache: id -> reply
+const _aiCache={}
 async function _callGroq(id,msg){
   if(_aiCache[id]) return _aiCache[id]
-  const key=await _getAIKey()
-  if(!key) return null
+  const cfg=await _getActiveCfg()
+  if(!cfg) return null
   const prompt=`你是一位走过科研低谷、最终走出来的前辈研究者，内心温暖而有智慧。\n一位研究者写道：「${msg}」\n请用50-80字给出回应：温暖真实、包含一个具体可操作的小建议、像老朋友说话（不说教）、可以有一点幽默但不轻浮。直接开始，不要称呼，不要分段，不要说"我理解你"。`
-  try{
-    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
-        messages:[{role:'user',content:prompt}],
-        max_tokens:200,temperature:0.85
-      })
-    })
-    if(!r.ok) return null
-    const data=await r.json()
-    const reply=data.choices?.[0]?.message?.content?.trim()||null
-    if(reply) _aiCache[id]=reply
-    return reply
-  }catch(_){return null}
+  const reply=await _callAI(prompt,200)
+  if(reply) _aiCache[id]=reply
+  return reply
 }
 
 async function _generateAndShow(item){
@@ -2222,11 +2372,11 @@ async function fetchIntel(force=false){
   btn.style.display='none'; rfBtn.style.display='none'
   loadEl.style.display='block'; listEl.innerHTML=''; tip.textContent=''
 
-  const key=await _getAIKey()
-  if(!key){
+  const cfg=await _getActiveCfg()
+  if(!cfg){
     loadEl.style.display='none'
-    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">⚠️ 需要先配置 Groq API Key（见 README）</div>'
-    return
+    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">⚠️ 请先在「个人设置 → AI 模型设置」配置你的 API Key，或等待演示 Key 加载。</div>'
+    btn.style.display=''; return
   }
 
   // 尝试通过 Jina reader 抓取 tophub XHS 热榜
@@ -2240,26 +2390,14 @@ async function fetchIntel(force=false){
   }catch(_){}
 
   const today_=today()
-  const sysPrompt=rawContent
+  const prompt=(rawContent
     ?`你是一位资深科研社区运营者。以下是今天（${today_}）小红书热榜内容：\n\n${rawContent}\n\n请从中筛选3-6条与"AI辅助科研、科研自动化、论文写作技巧、投稿技巧、科研新工具、PhD/研究生生活经验"相关的内容。`
     :`今天是${today_}，请生成6条当下科研圈在小红书上热议的实用内容，涵盖AI辅助科研、科研自动化、论文写作、投稿技巧、科研工具、PhD生活各1条。`
-
-  const outputFmt=`返回严格的JSON数组，不要加markdown代码块，不要任何解释：
-[{"title":"帖子标题","summary":"30字内的精华摘要，用口语化的中文","url":"原帖链接，没有则填 https://www.xiaohongshu.com/search_result?keyword=关键词","tag":"AI科研|科研工具|论文写作|投稿技巧|科研自动化|PhD生活|其他"}]`
+  )+`\n\n返回严格的JSON数组，不要加markdown代码块，不要任何解释：\n[{"title":"帖子标题","summary":"30字内精华摘要，口语化中文","url":"原帖链接或 https://www.xiaohongshu.com/search_result?keyword=关键词","tag":"AI科研|科研工具|论文写作|投稿技巧|科研自动化|PhD生活|其他"}]`
 
   try{
-    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
-        messages:[{role:'user',content:sysPrompt+'\n\n'+outputFmt}],
-        temperature:0.4,max_tokens:1200
-      })
-    })
-    const d=await r.json()
-    const raw=(d.choices?.[0]?.message?.content||'').trim()
-    // 提取 JSON（防止模型加了 ```json ... ```）
+    const raw=await _callAI(prompt,1200)
+    if(!raw) throw new Error('no reply')
     const jsonStr=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'')
     const items=JSON.parse(jsonStr)
     if(!Array.isArray(items)||items.length===0) throw new Error('empty')
