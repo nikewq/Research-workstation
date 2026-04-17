@@ -997,16 +997,18 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <span style="font-size:11px;font-weight:400;color:var(--text2)">AI 帮你选，配计时器一起摸</span>
     </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" onclick="switchEntertainTab('tv',this)" id="etab-tv">📺 剧集</button>
       <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('movie',this)" id="etab-movie">🎬 电影</button>
       <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('novel',this)" id="etab-novel">📚 小说</button>
       <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('anime',this)" id="etab-anime">✨ 动漫</button>
     </div>
 
+    <input id="entertain-custom-req" placeholder="🔍 可选：输入具体要求后刷新，如「科幻」「2024年」「悬疑推理」…" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%;margin-bottom:10px;box-sizing:border-box" onkeydown="if(event.key==='Enter')fetchEntertain(null,true)">
+
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="fetchEntertain()" id="entertain-fetch-btn">🎯 获取推荐</button>
-      <button class="btn btn-ghost btn-sm" onclick="fetchEntertain(null,true)" id="entertain-refresh-btn" style="display:none">🔄 换一批</button>
+      <button class="btn btn-primary btn-sm" onclick="fetchEntertain()" id="entertain-fetch-btn">🎯 获取热榜推荐</button>
+      <button class="btn btn-ghost btn-sm" onclick="fetchEntertain(null,true)" id="entertain-refresh-btn" style="display:none">🔄 按要求刷新</button>
       <span id="entertain-cache-tip" style="font-size:11px;color:var(--text2)"></span>
     </div>
 
@@ -2975,16 +2977,20 @@ const _ENTERTAIN_KEY = cat => `_entertain_${cat}_${today()}`
 
 const _entertainMeta = {
   tv:    {label:'剧集',   emoji:'📺', color:'#e11d48',
-          prompt:'近期在爱奇艺/优酷/腾讯视频/B站正规上线、豆瓣评分≥7.5的国产或海外剧集（含短剧），内容健康向上，不涉及色情/暴力/政治敏感，简述最吸引人的一个看点',
+          rankUrl:'https://movie.douban.com/chart',
+          prompt:'近期在爱奇艺/优酷/腾讯视频/B站正规上线、内容健康向上、不涉及违禁内容的国产或海外剧集',
           sites:[['豆瓣剧集榜','https://movie.douban.com/chart'],['B站番剧','https://www.bilibili.com/'],['爱奇艺热播','https://www.iqiyi.com/']]},
   movie: {label:'电影',   emoji:'🎬', color:'#7c3aed',
-          prompt:'国内院线正规上映或经典口碑电影，豆瓣评分≥8，内容合规无违禁，说明最打动人的一个亮点',
+          rankUrl:'https://movie.douban.com/chart',
+          prompt:'国内院线正规上映或口碑佳作，内容合规无违禁',
           sites:[['豆瓣电影榜','https://movie.douban.com/chart'],['猫眼票房','https://www.maoyan.com/'],['腾讯视频','https://v.qq.com/']]},
   novel: {label:'小说',   emoji:'📚', color:'#0ea5e9',
-          prompt:'在国内正规平台（起点/番茄/微信读书等）上架、内容合规的优质小说，完结/连载均可，不含色情/暴力/违禁内容，给出一句让人迫不及待打开的推荐语',
+          rankUrl:'https://book.douban.com/chart',
+          prompt:'在起点/番茄/微信读书等正规平台上架、内容合规的优质小说',
           sites:[['豆瓣读书','https://book.douban.com/'],['番茄小说','https://fanqienovel.com/'],['微信读书','https://weread.qq.com/']]},
   anime: {label:'动漫',   emoji:'✨', color:'#f59e0b',
-          prompt:'在B站/爱奇艺正规引进或国产、豆瓣评分≥8的动漫/番剧，内容合规无违禁，写出最令人上头的设定或名场面',
+          rankUrl:'https://movie.douban.com/chart',
+          prompt:'B站/爱奇艺正规引进或国产、内容合规无违禁的动漫/番剧',
           sites:[['B站番剧','https://www.bilibili.com/anime/'],['豆瓣动画','https://movie.douban.com/tag/#/?sort=S&range=8,10&tags=%E5%8A%A8%E7%94%BB'],['爱奇艺动漫','https://www.iqiyi.com/']]}
 }
 
@@ -3080,8 +3086,10 @@ async function fetchEntertain(cat, force=false){
   const loadEl=document.getElementById('entertain-loading')
   const listEl=document.getElementById('entertain-list')
   const tip=document.getElementById('entertain-cache-tip')
+  const customReq=(document.getElementById('entertain-custom-req')?.value||'').trim()
 
-  if(!force){
+  // 有自定义要求时跳过缓存，否则走缓存
+  if(!force && !customReq){
     const cached=localStorage.getItem(_ENTERTAIN_KEY(cat))
     if(cached){
       try{
@@ -3095,20 +3103,43 @@ async function fetchEntertain(cat, force=false){
   }
 
   fetchBtn.style.display='none'; rfBtn.style.display='none'
-  loadEl.style.display='block'; listEl.innerHTML=''; tip.textContent=''
+  loadEl.style.display='block'; listEl.innerHTML=''
+  tip.textContent=customReq?'🔍 按要求获取中…':'📡 正在抓取实时热榜…'
+
+  // 尝试用 Jina 抓取豆瓣实时热榜
+  let rawContent=''
+  try{
+    const jinaR=await Promise.race([
+      fetch('https://r.jina.ai/'+meta.rankUrl,{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),
+      new Promise((_,rej)=>setTimeout(()=>rej('timeout'),7000))
+    ])
+    if(jinaR.ok) rawContent=(await jinaR.text()).slice(0,3500)
+  }catch(_){}
 
   const today_=today()
-  const prompt=`今天是${today_}，请推荐5部适合研究生解压放松的${meta.label}。内容要求：${meta.prompt}。安全合规要求：只推荐中国大陆正规平台合法上映/播出/出版的作品，不含违禁内容，URL仅限 douban.com/bilibili.com/iqiyi.com/youku.com/v.qq.com/mgtv.com/maoyan.com/fanqienovel.com/qidian.com/weread.qq.com，其他来源填空字符串。直接返回JSON数组，不要任何说明文字：[{"title":"","type":"${meta.label}","score":"","reason":"","emoji":"","url":""}]`
+  const safeRule=`安全合规：只推荐中国大陆正规平台合法上映/播出/出版作品，无违禁内容，URL仅限 douban.com/bilibili.com/iqiyi.com/youku.com/v.qq.com/mgtv.com/maoyan.com/fanqienovel.com/qidian.com/weread.qq.com，其他填空字符串。`
+  const jsonRule=`直接返回JSON数组，不要说明文字：[{"title":"","type":"${meta.label}","score":"豆瓣X.X或空","reason":"一句口语化推荐语","emoji":"","url":""}]`
+
+  let prompt
+  if(rawContent){
+    prompt=`今天是${today_}，以下是从豆瓣热榜实时抓取的内容：\n\n${rawContent}\n\n请根据热榜数据，选出5部当前排名最高、最受欢迎的${meta.label}（${meta.prompt}）。优先选热度高、讨论度大的。${safeRule}`
+  } else {
+    prompt=`今天是${today_}，请推荐5部当前最受欢迎、实时热度最高的${meta.label}（${meta.prompt}）。要有实际热度（近期播放量/票房/讨论量高），不要只推经典旧作。${safeRule}`
+  }
+  if(customReq) prompt+=`\n\n用户特别要求（优先满足）：${customReq}`
+  prompt+='\n\n'+jsonRule
 
   try{
-    const raw=await _callAI(prompt, 1200)
+    const raw=await _callAI(prompt, 1400)
     if(!raw) throw new Error('AI 未返回内容')
     const items=_extractJSONArray(raw)
     if(!items||items.length===0) throw new Error('JSON 解析失败: '+raw.slice(0,100))
-    localStorage.setItem(_ENTERTAIN_KEY(cat), JSON.stringify(items))
+    // 无自定义要求时才缓存
+    if(!customReq) localStorage.setItem(_ENTERTAIN_KEY(cat), JSON.stringify(items))
     loadEl.style.display='none'
     listEl.innerHTML=items.map(_renderEntertainCard).join('')
-    tip.textContent=`✅ 已为你精选 ${items.length} 部`
+    const src=rawContent?'📡 实时热榜':'🤖 AI推荐'
+    tip.textContent=`✅ ${src} · ${items.length} 部${customReq?' · 按「'+customReq+'」筛选':''}`
     rfBtn.style.display=''
   }catch(e){
     console.error('[fetchEntertain]', e)
