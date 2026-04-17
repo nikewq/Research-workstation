@@ -3140,10 +3140,6 @@ async function loadWall(){
   }catch(e){}
 }
 
-function escHtml(s){
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
-}
-
 async function submitWall(){
   const me=_getWallId()
   const rawMsg=document.getElementById('wall-msg').value.trim()
