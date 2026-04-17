@@ -467,7 +467,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <!-- 今日心情快选 -->
     <div id="wall-mood-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
     <div id="wall-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-      <input id="wall-day" type="number" min="0" max="9999" placeholder="博士第几天"
+      <input id="wall-day" type="number" min="0" max="9999" placeholder="第几天"
         style="width:110px;flex-shrink:0">
       <input id="wall-msg" maxlength="500" placeholder="说点什么（500字内）"
         style="flex:1;min-width:120px">
@@ -2763,6 +2763,13 @@ const _WALL_IDS = [
 // 每次发帖随机分配昵称（不持久化）
 let _wallNick=_WALL_IDS[Math.floor(Math.random()*_WALL_IDS.length)]
 function _getWallId(){ return _wallNick }
+function _calcWallDay(){
+  const inp=parseInt(document.getElementById('wall-day')?.value)||0
+  if(inp>0) return inp
+  const cfg=getCfg()
+  if(!cfg.startDate) return 0
+  return Math.max(1,Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1)
+}
 function _rerollNick(){
   let next
   do{ next=_WALL_IDS[Math.floor(Math.random()*_WALL_IDS.length)] }while(next.n===_wallNick.n)
@@ -2796,6 +2803,17 @@ function _renderIdentity(){
   const me=_getWallId()
   const el=document.getElementById('wall-identity')
   if(el) el.innerHTML=`<span style="user-select:none">本次以 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b> 身份发布</span> <button onclick="_rerollNick()" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 4px;color:var(--text2)" title="换一个">🎲</button>`
+  // 动态更新 placeholder 和自动填入天数
+  const cfg=getCfg()
+  const role=ROLE_CONFIG[cfg.role||'phd']
+  const dayInput=document.getElementById('wall-day')
+  if(dayInput){
+    dayInput.placeholder=role.label.replace(' N 天','第几天')
+    if(cfg.startDate&&!dayInput.value){
+      const d=Math.floor((new Date()-new Date(cfg.startDate))/86400000)+1
+      if(d>0)dayInput.value=d
+    }
+  }
   _renderMoodBar()
 }
 
@@ -2957,7 +2975,7 @@ async function _generateAndShow(item){
 }
 
 function _renderWallItem(d,idx){
-  const domId=d.created_at+idx  // unique stable key per render
+  const domId='w'+d.created_at.replace(/\D/g,'')  // 稳定 key，不含 idx，跨渲染可复用缓存
   d._domId=domId
   const needs=_needsAI(d.tag,d.msg)
   const aiBlock=needs
@@ -3525,8 +3543,15 @@ async function loadWall(){
     }
     el.innerHTML=data.map((d,i)=>_renderWallItem(d,i)).join('')
     _renderIdentity()
-    // 触发 AI 回复（异步，不阻塞渲染）
-    data.forEach(d=>{ if(_needsAI(d.tag,d.msg)) _generateAndShow(d) })
+    // 顺序触发 AI 回复，优先最新帖，最多处理5条；已缓存的立即显示
+    ;(async()=>{
+      let n=0
+      for(const d of data){
+        if(!_needsAI(d.tag,d.msg)) continue
+        if(n++>=5) break
+        await _generateAndShow(d)
+      }
+    })()
   }catch(e){}
 }
 
@@ -3542,7 +3567,7 @@ async function submitWall(){
     const r=await fetch(`${_SB_URL}/rest/v1/wall`,{
       method:'POST',
       headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({day:0,msg,nickname:me.n,avatar:me.e,tag:_wallCurrentType})
+      body:JSON.stringify({day:_calcWallDay(),msg,nickname:me.n,avatar:me.e,tag:_wallCurrentType})
     })
     if(r.ok){
       document.getElementById('wall-msg').value=''
