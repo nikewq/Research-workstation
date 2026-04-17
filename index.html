@@ -1950,18 +1950,17 @@ const _WALL_IDS = [
   {n:'Hamster',e:'🐹'},{n:'Capybara',e:'🦫'},{n:'Duckling',e:'🐥'},{n:'Cub',e:'🐻'},
 ]
 
-// 获取/创建本设备身份（localStorage 持久化）
-function _getWallId(){
-  let id=localStorage.getItem('_wall_id')
-  if(!id){
-    const pick=_WALL_IDS[Math.floor(Math.random()*_WALL_IDS.length)]
-    id=JSON.stringify(pick)
-    localStorage.setItem('_wall_id',id)
-  }
-  try{ return JSON.parse(id) }catch(e){ return _WALL_IDS[0] }
+// 每次发帖随机分配昵称（不持久化）
+let _wallNick=_WALL_IDS[Math.floor(Math.random()*_WALL_IDS.length)]
+function _getWallId(){ return _wallNick }
+function _rerollNick(){
+  let next
+  do{ next=_WALL_IDS[Math.floor(Math.random()*_WALL_IDS.length)] }while(next.n===_wallNick.n)
+  _wallNick=next
+  _renderIdentity()
 }
 
-// 渲染"你是 XX"身份标签
+// 渲染"你将以 XX 身份发布"预览
 
 const _WALL_MOODS=[
   {e:'🦸',l:'卷王模式'},{e:'😴',l:'今日摸鱼'},{e:'🧘',l:'佛系研究生'},
@@ -1986,7 +1985,7 @@ function _selectMood(label,emoji,btn){
 function _renderIdentity(){
   const me=_getWallId()
   const el=document.getElementById('wall-identity')
-  if(el) el.innerHTML=`<span style="user-select:none">你是 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b></span>`
+  if(el) el.innerHTML=`<span style="user-select:none">本次以 <span style="font-size:15px">${me.e}</span> <b style="color:var(--text)">${me.n}</b> 身份发布</span> <button onclick="_rerollNick()" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 4px;color:var(--text2)" title="换一个">🎲</button>`
   _renderMoodBar()
 }
 
@@ -2145,7 +2144,7 @@ async function submitWall(){
     if(r.ok){
       document.getElementById('wall-msg').value=''
       _wallMood=null
-      _renderMoodBar()
+      _rerollNick()  // 发布后随机换下一个昵称
       tip.textContent='✅ 已发布'
       tip.style.display='block'
       setTimeout(()=>{tip.style.display='none'},2000)
