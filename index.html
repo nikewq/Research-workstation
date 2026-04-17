@@ -690,31 +690,41 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   </div>
   <div class="settings-section">
     <h3>🤖 AI 模型设置</h3>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">
-      用于摸鱼侦察局、留言墙 AI 回复等功能。<br>
-      支持 Groq / DeepSeek / OpenAI / Gemini / Kimi / Ollama 等。<b>不填则使用演示公共 Key</b>（可能受速率限制）。
+    <!-- 免费推荐 banner -->
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(5,150,105,0.08));border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.7">
+      ✨ <b>无需注册即可使用：</b>默认已接入 <b>Pollinations AI</b>（免费·无限制）。<br>
+      想要更快/更强？选择下方免费选项并填入你的 Key：<br>
+      &nbsp;• <b>Groq</b> — <a href="https://console.groq.com" target="_blank" style="color:var(--primary)">console.groq.com</a> 注册秒得免费 Key，速度极快<br>
+      &nbsp;• <b>Gemini</b> — <a href="https://aistudio.google.com" target="_blank" style="color:var(--primary)">aistudio.google.com</a> 免费额度慷慨<br>
+      &nbsp;• <b>OpenRouter</b> — <a href="https://openrouter.ai" target="_blank" style="color:var(--primary)">openrouter.ai</a> 含多个完全免费的开源模型
     </div>
     <div class="form-row c2">
       <div>
         <label>服务商</label>
         <select id="ai-provider-sel" onchange="onAIProviderChange()">
-          <option value="">── 使用演示公共 Key ──</option>
-          <optgroup label="云端 API">
-            <option value="groq">Groq（免费·极快）</option>
-            <option value="deepseek">DeepSeek（便宜）</option>
-            <option value="openai">OpenAI</option>
+          <option value="">── 自动（演示 Key / Pollinations）──</option>
+          <optgroup label="✅ 完全免费 · 无需 Key">
+            <option value="pollinations">Pollinations AI ✨</option>
+            <option value="ollama">Ollama（本地）</option>
+            <option value="lmstudio">LM Studio（本地）</option>
+            <option value="jan">Jan（本地）</option>
+          </optgroup>
+          <optgroup label="🆓 注册即免费">
+            <option value="groq">Groq（极快）</option>
             <option value="gemini">Google Gemini</option>
+            <option value="openrouter">OpenRouter 免费模型</option>
+          </optgroup>
+          <optgroup label="💳 付费 API">
+            <option value="deepseek">DeepSeek</option>
+            <option value="openai">OpenAI</option>
             <option value="moonshot">Moonshot Kimi</option>
           </optgroup>
-          <optgroup label="本地 / 插件">
-            <option value="ollama">Ollama</option>
-            <option value="lmstudio">LM Studio</option>
-            <option value="jan">Jan</option>
+          <optgroup label="🔧 高级">
             <option value="custom">自定义 URL</option>
           </optgroup>
         </select>
       </div>
-      <div>
+      <div id="ai-key-wrap">
         <label>API Key</label>
         <input id="ai-key-inp" type="password" placeholder="sk-... 或 gsk_..." autocomplete="off">
       </div>
@@ -1860,21 +1870,21 @@ function onAIProviderChange(keepModel=false){
   const modelInp=document.getElementById('ai-model-inp')
   const baseWrap=document.getElementById('ai-base-wrap')
   const baseInp=document.getElementById('ai-base-inp')
+  const keyWrap=document.getElementById('ai-key-wrap')
   if(!sel) return
   const pv=sel.value
   const def=_AI_PROVIDERS[pv]
   if(def){
-    // 始终更新模型名（除非明确保留）
     if(modelInp&&!keepModel) modelInp.value=def.defModel||''
-    // 更新 datalist
     const dl=document.getElementById('ai-model-list')
     if(dl) dl.innerHTML=(def.models||[]).map(m=>`<option value="${m}">`).join('')
-    // 自动填充 base URL
     if(baseInp&&!keepModel&&def.base) baseInp.value=def.base
-    // 显示/隐藏 URL 字段
     if(baseWrap) baseWrap.style.display=def.needsUrl?'':'none'
+    // 无需 Key 的服务商（Pollinations / 本地）隐藏 Key 输入框
+    if(keyWrap) keyWrap.style.display=def.needsKey===false?'none':''
   } else {
     if(baseWrap) baseWrap.style.display='none'
+    if(keyWrap) keyWrap.style.display=''
   }
 }
 function saveAISettings(){
@@ -1883,8 +1893,9 @@ function saveAISettings(){
   const model=document.getElementById('ai-model-inp')?.value.trim()
   const base=document.getElementById('ai-base-inp')?.value.trim()
   const tip=document.getElementById('ai-test-tip')
-  if(!pv){localStorage.removeItem('_ai_cfg');_aiKeyCache=null;sessionStorage.removeItem('_gk');if(tip){tip.textContent='已恢复使用演示 Key';tip.style.color='var(--primary)'}; return}
-  if(!key){if(tip){tip.textContent='请输入 API Key';tip.style.color='#ef4444'};return}
+  if(!pv){localStorage.removeItem('_ai_cfg');_aiKeyCache=null;sessionStorage.removeItem('_gk');if(tip){tip.textContent='已恢复自动模式';tip.style.color='var(--primary)'}; return}
+  const provNeedsKey=_AI_PROVIDERS[pv]?.needsKey!==false
+  if(provNeedsKey&&!key){if(tip){tip.textContent='请输入 API Key';tip.style.color='#ef4444'};return}
   const defModel=_AI_PROVIDERS[pv]?.defModel||''
   const cfg={provider:pv, key, model:model||defModel, base:base||_AI_PROVIDERS[pv]?.base||''}
   localStorage.setItem('_ai_cfg',JSON.stringify(cfg))
@@ -1911,7 +1922,8 @@ async function testAIConnection(){
   const key=document.getElementById('ai-key-inp')?.value.trim()
   const model=document.getElementById('ai-model-inp')?.value.trim()
   const base=document.getElementById('ai-base-inp')?.value.trim()
-  if(!pv||!key){if(tip){tip.textContent='请先填写服务商和 Key';tip.style.color='#ef4444'};return}
+  const provNeedsKey2=_AI_PROVIDERS[pv]?.needsKey!==false
+  if(!pv||(provNeedsKey2&&!key)){if(tip){tip.textContent='请先选择服务商（无需 Key 的可直接测试）';tip.style.color='#ef4444'};return}
   const defModel=_AI_PROVIDERS[pv]?.defModel||''
   const testCfg={provider:pv,key,model:model||defModel,base:base||_AI_PROVIDERS[pv]?.base||''}
   // 临时替换
@@ -2211,33 +2223,53 @@ function relTime(ts){
 //  AI 引擎（多服务商统一入口）
 // ══════════════════════════════════════
 const _AI_PROVIDERS={
-  groq:    {name:'Groq',           base:'https://api.groq.com/openai/v1',                   defModel:'llama-3.3-70b-versatile', needsUrl:false,
+  // ── 完全免费，无需 Key ──────────────────────────────
+  pollinations:{name:'Pollinations AI ✨ 免费·无需注册',
+            base:'https://text.pollinations.ai/openai',    defModel:'openai',          needsUrl:false, needsKey:false,
+            models:['openai','mistral','llama','claude']},
+  // ── 注册即免费 ─────────────────────────────────────
+  openrouter:{name:'OpenRouter 免费模型',
+            base:'https://openrouter.ai/api/v1',           defModel:'meta-llama/llama-3.2-3b-instruct:free', needsUrl:false, needsKey:true,
+            models:['meta-llama/llama-3.2-3b-instruct:free','mistralai/mistral-7b-instruct:free','google/gemma-3-4b-it:free','qwen/qwen3-8b:free']},
+  groq:    {name:'Groq 免费额度',
+            base:'https://api.groq.com/openai/v1',         defModel:'llama-3.3-70b-versatile',  needsUrl:false, needsKey:true,
             models:['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','mixtral-8x7b-32768']},
-  deepseek:{name:'DeepSeek',       base:'https://api.deepseek.com/v1',                      defModel:'deepseek-chat',           needsUrl:false,
-            models:['deepseek-chat','deepseek-reasoner']},
-  openai:  {name:'OpenAI',         base:'https://api.openai.com/v1',                        defModel:'gpt-4o-mini',             needsUrl:false,
-            models:['gpt-4o-mini','gpt-4o','o1-mini','o3-mini','gpt-3.5-turbo']},
-  gemini:  {name:'Gemini',         base:'https://generativelanguage.googleapis.com/v1beta', defModel:'gemini-2.0-flash',        needsUrl:false,
+  gemini:  {name:'Gemini 免费额度',
+            base:'https://generativelanguage.googleapis.com/v1beta', defModel:'gemini-2.0-flash', needsUrl:false, needsKey:true,
             models:['gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro']},
-  moonshot:{name:'Kimi',           base:'https://api.moonshot.cn/v1',                       defModel:'moonshot-v1-8k',          needsUrl:false,
+  // ── 付费 API ───────────────────────────────────────
+  deepseek:{name:'DeepSeek',
+            base:'https://api.deepseek.com/v1',            defModel:'deepseek-chat',            needsUrl:false, needsKey:true,
+            models:['deepseek-chat','deepseek-reasoner']},
+  openai:  {name:'OpenAI',
+            base:'https://api.openai.com/v1',              defModel:'gpt-4o-mini',              needsUrl:false, needsKey:true,
+            models:['gpt-4o-mini','gpt-4o','o1-mini','o3-mini']},
+  moonshot:{name:'Kimi',
+            base:'https://api.moonshot.cn/v1',             defModel:'moonshot-v1-8k',           needsUrl:false, needsKey:true,
             models:['moonshot-v1-8k','moonshot-v1-32k','moonshot-v1-128k']},
-  ollama:  {name:'Ollama (本地)',   base:'http://localhost:11434/v1',                        defModel:'llama3.2',                needsUrl:true,
+  // ── 本地 / 插件 ────────────────────────────────────
+  ollama:  {name:'Ollama (本地)',
+            base:'http://localhost:11434/v1',               defModel:'llama3.2',                 needsUrl:true,  needsKey:false,
             models:['llama3.2','llama3.1','qwen2.5','gemma2','phi3','mistral','deepseek-r1']},
-  lmstudio:{name:'LM Studio (本地)',base:'http://localhost:1234/v1',                        defModel:'',                        needsUrl:true,
-            models:[]},
-  jan:     {name:'Jan (本地)',      base:'http://localhost:1337/v1',                        defModel:'',                        needsUrl:true,
-            models:[]},
-  custom:  {name:'自定义 URL',      base:'',                                                 defModel:'',                        needsUrl:true,
-            models:[]},
+  lmstudio:{name:'LM Studio (本地)',
+            base:'http://localhost:1234/v1',                defModel:'',                         needsUrl:true,  needsKey:false, models:[]},
+  jan:     {name:'Jan (本地)',
+            base:'http://localhost:1337/v1',                defModel:'',                         needsUrl:true,  needsKey:false, models:[]},
+  custom:  {name:'自定义 URL',
+            base:'',                                        defModel:'',                         needsUrl:true,  needsKey:true,  models:[]},
 }
 
-// 获取用户配置（localStorage 优先；否则 fallback Supabase 演示 Key）
+// 获取用户配置（localStorage → Supabase 演示 Key → Pollinations 免费兜底）
 let _aiKeyCache=null
+const _POLLINATIONS_CFG={provider:'pollinations',base:'https://text.pollinations.ai/openai',model:'openai',key:''}
 async function _getActiveCfg(){
-  // 1. 用户自配
+  // 1. 用户自配（含选了 Pollinations 的情况）
   try{
     const s=localStorage.getItem('_ai_cfg')
-    if(s){const c=JSON.parse(s);if(c&&c.key)return c}
+    if(s){
+      const c=JSON.parse(s)
+      if(c&&(c.key||_AI_PROVIDERS[c.provider]?.needsKey===false)) return c
+    }
   }catch(_){}
   // 2. Supabase 演示 Key（Groq）
   if(_aiKeyCache) return{provider:'groq',base:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile',key:_aiKeyCache}
@@ -2248,7 +2280,8 @@ async function _getActiveCfg(){
     const d=await r.json();const k=d[0]?.value
     if(k){_aiKeyCache=k;sessionStorage.setItem('_gk',k);return{provider:'groq',base:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile',key:k}}
   }catch(_){}
-  return null
+  // 3. Pollinations 免费兜底（无需任何 Key，所有访客均可用）
+  return _POLLINATIONS_CFG
 }
 // 保持旧接口兼容（fetchIntel 用到）
 async function _getAIKey(){const c=await _getActiveCfg();return c?.key||null}
@@ -2257,7 +2290,9 @@ async function _getAIKey(){const c=await _getActiveCfg();return c?.key||null}
 async function _callAI(prompt,maxTokens=800){
   const cfg=await _getActiveCfg()
   if(!cfg) return null
+  const provDef=_AI_PROVIDERS[cfg.provider]||{}
   try{
+    // Gemini 独立格式
     if(cfg.provider==='gemini'){
       const r=await fetch(`${cfg.base}/models/${cfg.model}:generateContent?key=${cfg.key}`,{
         method:'POST',headers:{'Content-Type':'application/json'},
@@ -2266,11 +2301,12 @@ async function _callAI(prompt,maxTokens=800){
       const d=await r.json()
       return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||null
     }
-    // OpenAI-compatible（Groq / DeepSeek / OpenAI / Kimi / Ollama / custom）
-    const base=cfg.base||_AI_PROVIDERS[cfg.provider]?.base||''
+    // OpenAI-compatible（含 Pollinations / OpenRouter / Groq / Ollama / 本地 etc.）
+    const base=cfg.base||provDef.base||''
+    const headers={'Content-Type':'application/json'}
+    if(provDef.needsKey!==false&&cfg.key) headers['Authorization']='Bearer '+cfg.key
     const r=await fetch(`${base}/chat/completions`,{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+cfg.key,'Content-Type':'application/json'},
+      method:'POST', headers,
       body:JSON.stringify({model:cfg.model,messages:[{role:'user',content:prompt}],temperature:0.4,max_tokens:maxTokens})
     })
     if(!r.ok) return null
