@@ -1565,6 +1565,65 @@ function renderTasks(){
 // ══════════════════════════════════════
 //  AI 任务建议
 // ══════════════════════════════════════
+// ── 反馈存储 ──────────────────────────
+const _FB_KEY='_ai_task_fb'
+let _aiSuggestItems=[]   // 当前这批建议，按索引引用
+
+function _saveFeedback(title,difficulty,urgency,type,reason=''){
+  const fb=JSON.parse(localStorage.getItem(_FB_KEY)||'[]')
+  fb.push({title,difficulty,urgency,type,reason,date:today()})
+  localStorage.setItem(_FB_KEY,JSON.stringify(fb.slice(-40)))
+}
+
+function _getFeedbackContext(){
+  const fb=JSON.parse(localStorage.getItem(_FB_KEY)||'[]')
+  if(!fb.length) return ''
+  const REASON={too_hard:'太难',too_easy:'太简单',not_relevant:'不相关',
+    too_vague:'描述模糊',already_done:'重复任务',wrong_timing:'时机不对',added:'主动添加'}
+  const good=fb.filter(f=>f.type==='good').slice(-12)
+  const bad=fb.filter(f=>f.type==='bad').slice(-12)
+  let s='\n\n用户历史偏好反馈（必须据此调整建议）：\n'
+  if(good.length) s+=`用户认为合适、已采纳的任务：${good.map(f=>`"${f.title}"（难度${f.difficulty}/紧迫${f.urgency}）`).join('；')}\n`
+  if(bad.length){
+    s+='用户认为不合适的任务及原因：\n'
+    bad.forEach(f=>{ s+=`· "${f.title}"（${REASON[f.reason]||'未说明'}，难度${f.difficulty}/紧迫${f.urgency}）\n` })
+    s+='请务必避免推荐类似的任务类型、难度或内容。'
+  }
+  if(good.length) s+='\n请多推荐与"合适任务"类型、难度相近的任务。'
+  return s
+}
+
+function _fbCount(){
+  return JSON.parse(localStorage.getItem(_FB_KEY)||'[]').length
+}
+
+// ── 反馈交互 ──────────────────────────
+function _fbGood(i){
+  const item=_aiSuggestItems[i]; if(!item) return
+  _saveFeedback(item.title,item.difficulty,item.urgency,'good')
+  const bar=document.getElementById(`fb-bar-${i}`)
+  if(bar) bar.innerHTML='<span style="font-size:11px;color:#10b981">👍 已记录，下次会更准！</span>'
+  const rp=document.getElementById(`fb-reason-${i}`)
+  if(rp) rp.style.display='none'
+}
+
+function _fbShowBad(i){
+  const rp=document.getElementById(`fb-reason-${i}`)
+  if(rp) rp.style.display=rp.style.display==='none'?'block':'none'
+}
+
+function _fbBad(i,reason){
+  const item=_aiSuggestItems[i]; if(!item) return
+  const LABEL={too_hard:'太难了',too_easy:'太简单',not_relevant:'不相关',
+    too_vague:'描述模糊',already_done:'重复任务',wrong_timing:'时机不对'}
+  _saveFeedback(item.title,item.difficulty,item.urgency,'bad',reason)
+  const bar=document.getElementById(`fb-bar-${i}`)
+  if(bar) bar.innerHTML=`<span style="font-size:11px;color:var(--text2)">📝 已记录"${LABEL[reason]||reason}"，下次改进</span>`
+  const rp=document.getElementById(`fb-reason-${i}`)
+  if(rp) rp.style.display='none'
+}
+
+// ── 生成建议 ──────────────────────────
 async function aiSuggestTasks(){
   const panel=document.getElementById('ai-task-panel')
   const loading=document.getElementById('ai-task-loading')
@@ -1579,15 +1638,13 @@ async function aiSuggestTasks(){
   footer.style.display='none'
   if(btn){btn.disabled=true;btn.textContent='🧠 生成中…'}
 
-  // 构建上下文
   const cfg=getCfg()
   const allTasks=ld(K.tasks)
   const doneLast7=allTasks.filter(t=>t.status==='done'&&t.done&&t.done>=_daysAgo(7)).slice(-10)
   const pending=allTasks.filter(t=>t.status!=='done').slice(0,10)
   const projs=getProjects()
 
-  const ctx=`
-用户信息：
+  const ctx=`用户信息：
 - 姓名：${cfg.name||'研究员'}
 - 研究方向：${cfg.field||'未填写'}
 - 所属单位：${cfg.univ||'未填写'}
@@ -1598,8 +1655,7 @@ async function aiSuggestTasks(){
 ${doneLast7.length?doneLast7.map(t=>`· ${t.title}（${t.proj?projName(t.proj):''}）`).join('\n'):'（无记录）'}
 
 当前待办任务（避免重复推荐）：
-${pending.length?pending.map(t=>`· ${t.title}（优先级:${t.prio}${t.due?'，截止:'+t.due:''}）`).join('\n'):'（无待办）'}
-`.trim()
+${pending.length?pending.map(t=>`· ${t.title}（优先级:${t.prio}${t.due?'，截止:'+t.due:''}）`).join('\n'):'（无待办）'}${_getFeedbackContext()}`
 
   const prompt=`你是一位严格但关爱学生的科研导师。请根据以下信息，为学生推荐今天应该完成的任务（最多5个）。
 
@@ -1610,55 +1666,68 @@ ${ctx}
 2. 结合研究方向和项目，避免与当前待办重复
 3. 兼顾不同类型（实验/写作/阅读/整理/沟通等）
 4. 按照紧迫度从高到低排序
+5. 严格参考用户偏好反馈，不推荐用户标记过"不合适"的类型
 
-返回严格的 JSON 数组，格式如下（不要加任何额外文字或 markdown 代码块）：
-[
-  {
-    "title": "具体任务名称",
-    "proj": "对应项目名（若无则空字符串）",
-    "difficulty": "低|中|高",
-    "urgency": "低|中|高",
-    "reason": "推荐原因（15字以内）",
-    "estMins": 30
-  }
-]`
+返回严格的 JSON 数组，不要加任何额外文字或 markdown 代码块：
+[{"title":"具体任务名称","proj":"对应项目名（若无则空字符串）","difficulty":"低|中|高","urgency":"低|中|高","reason":"推荐原因（15字以内）","estMins":30}]`
 
   try{
-    const raw=await _callAI(prompt,600)
+    const raw=await _callAI(prompt,700)
     loading.style.display='none'
-    if(!raw){throw new Error('no response')}
-    // 提取 JSON（容忍 AI 多输出文字）
+    if(!raw) throw new Error('no response')
     const match=raw.match(/\[[\s\S]*\]/)
-    if(!match)throw new Error('parse')
+    if(!match) throw new Error('parse')
     const items=JSON.parse(match[0])
-    if(!Array.isArray(items)||items.length===0)throw new Error('empty')
+    if(!Array.isArray(items)||items.length===0) throw new Error('empty')
 
+    _aiSuggestItems=items.slice(0,5)
     const diffColor={低:'#10b981',中:'#f59e0b',高:'#ef4444'}
-    const urgColor={低:'#10b981',中:'#f59e0b',高:'#ef4444'}
 
-    listEl.innerHTML=items.slice(0,5).map((item,i)=>{
+    listEl.innerHTML=_aiSuggestItems.map((item,i)=>{
       const dc=diffColor[item.difficulty]||'#8b949e'
-      const uc=urgColor[item.urgency]||'#8b949e'
+      const uc=diffColor[item.urgency]||'#8b949e'
       const projId=projs.find(p=>p.name===item.proj)?.id||''
-      const projTag=projId?projTagHtml(projId):`<span class="tag">${item.proj||'通用'}</span>`
-      return `<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start">
-        <div style="background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;margin-bottom:5px;line-height:1.4">${escHtml(item.title)}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:5px">
-            ${projTag}
-            <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${dc}22;color:${dc};font-weight:600">难度 ${item.difficulty}</span>
-            <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${uc}22;color:${uc};font-weight:600">紧迫 ${item.urgency}</span>
-            ${item.estMins?`<span style="font-size:10px;color:var(--text2)">⏱ 约${item.estMins}分钟</span>`:''}
+      const projTag=projId?projTagHtml(projId):`<span class="tag">${escHtml(item.proj||'通用')}</span>`
+      const addCfg=JSON.stringify({title:item.title,proj:projId,
+        prio:item.urgency==='高'?'high':item.urgency==='中'?'med':'low',
+        difficulty:item.difficulty,urgency:item.urgency})
+      return `<div id="ai-card-${i}" style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;margin-bottom:5px;line-height:1.4">${escHtml(item.title)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:4px">
+              ${projTag}
+              <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${dc}22;color:${dc};font-weight:600">难度 ${item.difficulty}</span>
+              <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${uc}22;color:${uc};font-weight:600">紧迫 ${item.urgency}</span>
+              ${item.estMins?`<span style="font-size:10px;color:var(--text2)">⏱ 约${item.estMins}min</span>`:''}
+            </div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:6px">${escHtml(item.reason||'')}</div>
+            <!-- 反馈栏 -->
+            <div id="fb-bar-${i}" style="display:flex;gap:5px;align-items:center">
+              <span style="font-size:10px;color:var(--text2)">这条建议：</span>
+              <button onclick="_fbGood(${i})" class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 8px">👍 合适</button>
+              <button onclick="_fbShowBad(${i})" class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 8px">👎 不合适</button>
+            </div>
+            <!-- 不合适原因选择（折叠） -->
+            <div id="fb-reason-${i}" style="display:none;margin-top:6px;padding:7px 8px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:10px;color:var(--text2);margin-bottom:5px">具体哪里不合适？（选一个，帮 AI 导师改进）</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px">
+                ${['too_hard:太难了','too_easy:太简单','not_relevant:不相关','too_vague:描述模糊','already_done:重复任务','wrong_timing:时机不对'].map(r=>{
+                  const[k,l]=r.split(':')
+                  return `<button onclick="_fbBad(${i},'${k}')" class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 8px">${l}</button>`
+                }).join('')}
+              </div>
+            </div>
           </div>
-          <div style="font-size:11px;color:var(--text2)">${escHtml(item.reason||'')}</div>
+          <button id="add-btn-${i}" class="btn btn-primary btn-sm" style="font-size:11px;flex-shrink:0;white-space:nowrap;margin-top:1px"
+            onclick="_addSuggestedTask(${JSON.stringify(addCfg)},${i})">+ 添加</button>
         </div>
-        <button class="btn btn-primary btn-sm" style="font-size:11px;flex-shrink:0;white-space:nowrap"
-          onclick="_addSuggestedTask(${JSON.stringify(JSON.stringify({title:item.title,proj:projId,prio:item.urgency==='高'?'high':item.urgency==='中'?'med':'low'}))},this)">+ 添加</button>
       </div>`
     }).join('')
 
-    meta.textContent=`已生成 ${Math.min(items.length,5)} 条建议 · 基于${doneLast7.length}条历史任务`
+    const fbCnt=_fbCount()
+    meta.textContent=`已生成 ${_aiSuggestItems.length} 条建议 · 基于${doneLast7.length}条历史任务${fbCnt?` · 已积累${fbCnt}条偏好反馈`:''}`
     footer.style.display='block'
   }catch(e){
     loading.style.display='none'
@@ -1669,18 +1738,28 @@ ${ctx}
   }
   if(btn){btn.disabled=false;btn.textContent='🤖 AI 规划今日任务'}
 }
-function _addSuggestedTask(cfgStr,btn){
+
+function _addSuggestedTask(cfgStr,cardIdx){
   const item=JSON.parse(cfgStr)
+  // 添加任务
   const tasks=ld(K.tasks)
   tasks.push({id:uid(),title:item.title,proj:item.proj||'',prio:item.prio||'med',
     due:'',status:'todo',created:today(),done:null,pomos:0})
   sv(K.tasks,tasks)
-  btn.textContent='✅'
-  btn.disabled=true
-  btn.style.background='#10b981'
+  // 自动记录正向反馈
+  if(item.difficulty&&item.urgency) _saveFeedback(item.title,item.difficulty,item.urgency,'good','added')
+  // 更新按钮外观
+  const addBtn=document.getElementById(`add-btn-${cardIdx}`)
+  if(addBtn){addBtn.textContent='✅ 已添加';addBtn.disabled=true;addBtn.style.background='#10b981';addBtn.style.borderColor='#10b981'}
+  // 隐藏反馈栏（已添加 = 正向反馈）
+  const bar=document.getElementById(`fb-bar-${cardIdx}`)
+  if(bar) bar.innerHTML='<span style="font-size:11px;color:#10b981">✅ 已加入待办，导师已记录你的偏好</span>'
+  const rp=document.getElementById(`fb-reason-${cardIdx}`)
+  if(rp) rp.style.display='none'
   renderTasks();renderOverview()
   toast(`✅ 已添加：${item.title}`)
 }
+
 function _daysAgo(n){
   const d=new Date();d.setDate(d.getDate()-n);
   return d.toISOString().slice(0,10)
