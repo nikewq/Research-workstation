@@ -699,13 +699,19 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
         <label>服务商</label>
         <select id="ai-provider-sel" onchange="onAIProviderChange()">
           <option value="">── 使用演示公共 Key ──</option>
-          <option value="groq">Groq（免费·极快）</option>
-          <option value="deepseek">DeepSeek（便宜）</option>
-          <option value="openai">OpenAI</option>
-          <option value="gemini">Google Gemini</option>
-          <option value="moonshot">Moonshot Kimi</option>
-          <option value="ollama">Ollama 本地</option>
-          <option value="custom">自定义 Base URL</option>
+          <optgroup label="云端 API">
+            <option value="groq">Groq（免费·极快）</option>
+            <option value="deepseek">DeepSeek（便宜）</option>
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="moonshot">Moonshot Kimi</option>
+          </optgroup>
+          <optgroup label="本地 / 插件">
+            <option value="ollama">Ollama</option>
+            <option value="lmstudio">LM Studio</option>
+            <option value="jan">Jan</option>
+            <option value="custom">自定义 URL</option>
+          </optgroup>
         </select>
       </div>
       <div>
@@ -716,11 +722,12 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="form-row c2">
       <div>
         <label>模型名称</label>
-        <input id="ai-model-inp" placeholder="选择服务商后自动填充">
+        <input id="ai-model-inp" placeholder="选择服务商后自动填充" list="ai-model-list" autocomplete="off">
+        <datalist id="ai-model-list"></datalist>
       </div>
       <div id="ai-base-wrap" style="display:none">
-        <label>Base URL</label>
-        <input id="ai-base-inp" placeholder="https://your-api.com/v1">
+        <label>网络地址 (Base URL)</label>
+        <input id="ai-base-inp" placeholder="http://localhost:1234/v1">
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -1842,22 +1849,33 @@ function _populateAISettings(){
     const clearBtn=document.getElementById('ai-clear-btn')
     if(sel) sel.value=c.provider||''
     if(keyInp) keyInp.value=c.key||''
-    if(modelInp) modelInp.value=c.model||''
-    if(baseInp) baseInp.value=c.base||''
     if(clearBtn) clearBtn.style.display=''
-    onAIProviderChange()
+    onAIProviderChange(false)  // 先填 defModel + datalist
+    if(modelInp) modelInp.value=c.model||''  // 再覆盖为用户保存的模型
+    if(baseInp) baseInp.value=c.base||''
   }catch(_){}
 }
-function onAIProviderChange(){
+function onAIProviderChange(keepModel=false){
   const sel=document.getElementById('ai-provider-sel')
   const modelInp=document.getElementById('ai-model-inp')
   const baseWrap=document.getElementById('ai-base-wrap')
+  const baseInp=document.getElementById('ai-base-inp')
   if(!sel) return
   const pv=sel.value
   const def=_AI_PROVIDERS[pv]
-  if(def&&modelInp&&!modelInp.value) modelInp.value=def.defModel||''
-  if(def&&modelInp&&modelInp.dataset.auto!=='false') modelInp.placeholder=def.defModel||''
-  if(baseWrap) baseWrap.style.display=(pv==='custom'||pv==='ollama')?'':'none'
+  if(def){
+    // 始终更新模型名（除非明确保留）
+    if(modelInp&&!keepModel) modelInp.value=def.defModel||''
+    // 更新 datalist
+    const dl=document.getElementById('ai-model-list')
+    if(dl) dl.innerHTML=(def.models||[]).map(m=>`<option value="${m}">`).join('')
+    // 自动填充 base URL
+    if(baseInp&&!keepModel&&def.base) baseInp.value=def.base
+    // 显示/隐藏 URL 字段
+    if(baseWrap) baseWrap.style.display=def.needsUrl?'':'none'
+  } else {
+    if(baseWrap) baseWrap.style.display='none'
+  }
 }
 function saveAISettings(){
   const pv=document.getElementById('ai-provider-sel')?.value
@@ -2193,13 +2211,24 @@ function relTime(ts){
 //  AI 引擎（多服务商统一入口）
 // ══════════════════════════════════════
 const _AI_PROVIDERS={
-  groq:    {name:'Groq',          base:'https://api.groq.com/openai/v1',                    defModel:'llama-3.3-70b-versatile'},
-  deepseek:{name:'DeepSeek',      base:'https://api.deepseek.com/v1',                       defModel:'deepseek-chat'},
-  openai:  {name:'OpenAI',        base:'https://api.openai.com/v1',                         defModel:'gpt-4o-mini'},
-  gemini:  {name:'Gemini',        base:'https://generativelanguage.googleapis.com/v1beta',  defModel:'gemini-1.5-flash'},
-  moonshot:{name:'Kimi',          base:'https://api.moonshot.cn/v1',                        defModel:'moonshot-v1-8k'},
-  ollama:  {name:'Ollama',        base:'http://localhost:11434/v1',                          defModel:'llama3.2'},
-  custom:  {name:'自定义',        base:'',                                                   defModel:''},
+  groq:    {name:'Groq',           base:'https://api.groq.com/openai/v1',                   defModel:'llama-3.3-70b-versatile', needsUrl:false,
+            models:['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','mixtral-8x7b-32768']},
+  deepseek:{name:'DeepSeek',       base:'https://api.deepseek.com/v1',                      defModel:'deepseek-chat',           needsUrl:false,
+            models:['deepseek-chat','deepseek-reasoner']},
+  openai:  {name:'OpenAI',         base:'https://api.openai.com/v1',                        defModel:'gpt-4o-mini',             needsUrl:false,
+            models:['gpt-4o-mini','gpt-4o','o1-mini','o3-mini','gpt-3.5-turbo']},
+  gemini:  {name:'Gemini',         base:'https://generativelanguage.googleapis.com/v1beta', defModel:'gemini-2.0-flash',        needsUrl:false,
+            models:['gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro']},
+  moonshot:{name:'Kimi',           base:'https://api.moonshot.cn/v1',                       defModel:'moonshot-v1-8k',          needsUrl:false,
+            models:['moonshot-v1-8k','moonshot-v1-32k','moonshot-v1-128k']},
+  ollama:  {name:'Ollama (本地)',   base:'http://localhost:11434/v1',                        defModel:'llama3.2',                needsUrl:true,
+            models:['llama3.2','llama3.1','qwen2.5','gemma2','phi3','mistral','deepseek-r1']},
+  lmstudio:{name:'LM Studio (本地)',base:'http://localhost:1234/v1',                        defModel:'',                        needsUrl:true,
+            models:[]},
+  jan:     {name:'Jan (本地)',      base:'http://localhost:1337/v1',                        defModel:'',                        needsUrl:true,
+            models:[]},
+  custom:  {name:'自定义 URL',      base:'',                                                 defModel:'',                        needsUrl:true,
+            models:[]},
 }
 
 // 获取用户配置（localStorage 优先；否则 fallback Supabase 演示 Key）
