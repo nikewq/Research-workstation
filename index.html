@@ -484,7 +484,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="page-title">任务管理</div>
   <div class="page-subtitle" id="tasks-subtitle">管理你的科研任务</div>
   <div class="card mb-16">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="card-title" style="margin-bottom:0">新建任务</div>
       <button class="btn btn-ghost btn-sm" onclick="aiSuggestTasks()" id="ai-suggest-btn"
         style="font-size:11px;border-color:rgba(124,58,237,.4);color:var(--primary);white-space:nowrap">
@@ -1787,9 +1787,6 @@ ${ctx}
       const uc=diffColor[item.urgency]||'#8b949e'
       const projId=projs.find(p=>p.name===item.proj)?.id||''
       const projTag=projId?projTagHtml(projId):`<span class="tag">${escHtml(item.proj||'通用')}</span>`
-      const addCfg=JSON.stringify({title:item.title,proj:projId,
-        prio:item.urgency==='高'?'high':item.urgency==='中'?'med':'low',
-        difficulty:item.difficulty,urgency:item.urgency})
       return `<div id="ai-card-${i}" style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:10px;padding:10px 12px">
         <div style="display:flex;gap:10px;align-items:flex-start">
           <div style="background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
@@ -1820,7 +1817,7 @@ ${ctx}
             </div>
           </div>
           <button id="add-btn-${i}" class="btn btn-primary btn-sm" style="font-size:11px;flex-shrink:0;white-space:nowrap;margin-top:1px"
-            onclick="_addSuggestedTask(${JSON.stringify(addCfg)},${i})">+ 添加</button>
+            onclick="_addSuggestedTask(${i})">+ 添加</button>
         </div>
       </div>`
     }).join('')
@@ -1838,21 +1835,31 @@ ${ctx}
   if(btn){btn.disabled=false;btn.textContent='🤖 AI 规划今日任务'}
 }
 
-function _addSuggestedTask(cfgStr,cardIdx){
-  const item=JSON.parse(cfgStr)
+function _addSuggestedTask(cardIdx){
+  const item=_aiSuggestItems[cardIdx]
+  if(!item) return
+  const projId=getProjects().find(p=>p.name===item.proj)?.id||''
+  const prio=item.urgency==='高'?'high':item.urgency==='中'?'med':'low'
+  const newId=uid()
   // 添加任务
   const tasks=ld(K.tasks)
-  tasks.push({id:uid(),title:item.title,proj:item.proj||'',prio:item.prio||'med',
+  tasks.push({id:newId,title:item.title,proj:projId,prio,
     due:'',status:'todo',created:today(),done:null,pomos:0})
   sv(K.tasks,tasks)
   // 自动记录正向反馈
   if(item.difficulty&&item.urgency) _saveFeedback(item.title,item.difficulty,item.urgency,'good','added')
-  // 更新按钮外观
+  // 更新按钮外观 → 变成"编辑"按钮
   const addBtn=document.getElementById(`add-btn-${cardIdx}`)
-  if(addBtn){addBtn.textContent='✅ 已添加';addBtn.disabled=true;addBtn.style.background='#10b981';addBtn.style.borderColor='#10b981'}
-  // 隐藏反馈栏（已添加 = 正向反馈）
+  if(addBtn){
+    addBtn.textContent='✏️ 修改'
+    addBtn.style.background='var(--surface)'
+    addBtn.style.color='var(--primary)'
+    addBtn.style.borderColor='var(--primary)'
+    addBtn.onclick=()=>openEditTask(newId)
+  }
+  // 反馈栏提示
   const bar=document.getElementById(`fb-bar-${cardIdx}`)
-  if(bar) bar.innerHTML='<span style="font-size:11px;color:#10b981">✅ 已加入待办，导师已记录你的偏好</span>'
+  if(bar) bar.innerHTML='<span style="font-size:11px;color:#10b981">✅ 已加入待办 · 点「修改」可调整内容</span>'
   const rp=document.getElementById(`fb-reason-${cardIdx}`)
   if(rp) rp.style.display='none'
   renderTasks();renderOverview()
