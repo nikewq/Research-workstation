@@ -952,77 +952,89 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="page-title">摸鱼侦察局 <span style="font-size:18px">📡</span></div>
   <div class="page-subtitle">替你刷小红书，省你俩小时 · 每日科研情报自动汇总</div>
 
-  <div class="card" style="background:linear-gradient(135deg,var(--card) 0%,rgba(124,58,237,0.08) 100%);border:1px solid rgba(124,58,237,0.15);margin-bottom:14px">
-    <div style="display:flex;align-items:flex-start;gap:12px">
-      <div style="font-size:30px;line-height:1;flex-shrink:0">🕵️</div>
-      <div>
-        <div style="font-weight:600;font-size:13px;margin-bottom:5px">每日自动扫描科研圈动态</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.7">
-          覆盖：<span style="color:var(--primary)">AI辅助科研</span> · <span style="color:var(--primary)">科研自动化</span> · <span style="color:var(--primary)">论文写作</span> · <span style="color:var(--primary)">投稿技巧</span> · <span style="color:var(--primary)">科研新工具</span> · <span style="color:var(--primary)">PhD生活</span><br>
-          结果当日缓存，明天自动刷新。你只需要动一根手指，剩下的交给我。
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+
+    <!-- ── LEFT: 科研情报 ── -->
+    <div>
+      <div class="card" style="background:linear-gradient(135deg,var(--card) 0%,rgba(124,58,237,0.08) 100%);border:1px solid rgba(124,58,237,0.15);margin-bottom:14px">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="font-size:30px;line-height:1;flex-shrink:0">🕵️</div>
+          <div>
+            <div style="font-weight:600;font-size:13px;margin-bottom:5px">每日自动扫描科研圈动态</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">
+              覆盖：<span style="color:var(--primary)">AI辅助科研</span> · <span style="color:var(--primary)">科研自动化</span> · <span style="color:var(--primary)">论文写作</span> · <span style="color:var(--primary)">投稿技巧</span> · <span style="color:var(--primary)">科研新工具</span> · <span style="color:var(--primary)">PhD生活</span><br>
+              结果当日缓存，明天自动刷新。你只需要动一根手指，剩下的交给我。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="fetchIntel()" id="intel-fetch-btn">📡 获取今日情报</button>
+        <button class="btn btn-ghost" onclick="fetchIntel(true)" id="intel-refresh-btn" style="display:none">🔄 强制刷新</button>
+        <span id="intel-cache-tip" style="font-size:11px;color:var(--text2)"></span>
+      </div>
+
+      <div id="intel-loading" style="display:none;padding:32px;text-align:center;color:var(--text2)">
+        <div style="font-size:32px;margin-bottom:10px;animation:pulse 1.2s infinite">📡</div>
+        <div style="font-size:13px">正在扫描科研圈情报，请稍候……</div>
+      </div>
+
+      <div id="intel-list" style="margin-bottom:16px"></div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px">🔍 直达搜索</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=AI辅助科研')">🤖 AI辅助科研</button>
+          <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=科研自动化工具')">⚙️ 科研自动化</button>
+          <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=SCI论文写作技巧')">✍️ 论文写作</button>
+          <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=SCI投稿技巧')">📨 投稿技巧</button>
+          <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=科研工具效率')">🛠️ 科研工具</button>
+          <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=博士生活经验')">🎓 PhD生活</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-    <button class="btn btn-primary" onclick="fetchIntel()" id="intel-fetch-btn">📡 获取今日情报</button>
-    <button class="btn btn-ghost" onclick="fetchIntel(true)" id="intel-refresh-btn" style="display:none">🔄 强制刷新</button>
-    <span id="intel-cache-tip" style="font-size:11px;color:var(--text2)"></span>
-  </div>
+    <!-- ── RIGHT: 摸鱼娱乐推荐 ── -->
+    <div>
+      <div class="card" style="background:linear-gradient(135deg,var(--card) 0%,rgba(251,146,60,0.08) 100%);border:1px solid rgba(251,146,60,0.2);margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:28px;line-height:1;flex-shrink:0">🎬</div>
+          <div>
+            <div style="font-weight:600;font-size:13px;margin-bottom:3px">摸鱼娱乐推荐</div>
+            <div style="font-size:12px;color:var(--text2)">AI 帮你选，配计时器一起摸</div>
+          </div>
+        </div>
+      </div>
 
-  <div id="intel-loading" style="display:none;padding:32px;text-align:center;color:var(--text2)">
-    <div style="font-size:32px;margin-bottom:10px;animation:pulse 1.2s infinite">📡</div>
-    <div style="font-size:13px">正在扫描科研圈情报，请稍候……</div>
-  </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="switchEntertainTab('tv',this)" id="etab-tv">📺 剧集</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('movie',this)" id="etab-movie">🎬 电影</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('novel',this)" id="etab-novel">📚 小说</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('anime',this)" id="etab-anime">✨ 动漫</button>
+      </div>
 
-  <div id="intel-list" style="margin-bottom:16px"></div>
+      <input id="entertain-custom-req" placeholder="🔍 可选：输入具体要求后刷新，如「科幻」「2024年」「悬疑推理」…" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%;margin-bottom:10px;box-sizing:border-box" onkeydown="if(event.key==='Enter')fetchEntertain(null,true)">
 
-  <div class="card">
-    <div class="card-title" style="margin-bottom:10px">🔍 直达搜索</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=AI辅助科研')">🤖 AI辅助科研</button>
-      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=科研自动化工具')">⚙️ 科研自动化</button>
-      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=SCI论文写作技巧')">✍️ 论文写作</button>
-      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=SCI投稿技巧')">📨 投稿技巧</button>
-      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=科研工具效率')">🛠️ 科研工具</button>
-      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=博士生活经验')">🎓 PhD生活</button>
-    </div>
-  </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="fetchEntertain()" id="entertain-fetch-btn">🎯 获取热榜推荐</button>
+        <button class="btn btn-ghost btn-sm" onclick="fetchEntertain(null,true)" id="entertain-refresh-btn" style="display:none">🔄 按要求刷新</button>
+        <span id="entertain-cache-tip" style="font-size:11px;color:var(--text2)"></span>
+      </div>
 
-  <!-- ── Entertainment Recommendations ── -->
-  <div style="margin-top:18px">
-    <div style="font-weight:700;font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
-      🎬 摸鱼娱乐推荐
-      <span style="font-size:11px;font-weight:400;color:var(--text2)">AI 帮你选，配计时器一起摸</span>
-    </div>
+      <div id="entertain-loading" style="display:none;padding:24px;text-align:center;color:var(--text2)">
+        <div style="font-size:28px;margin-bottom:8px;animation:pulse 1.2s infinite">🍿</div>
+        <div style="font-size:12px">AI 正在为你筛选好货，摸鱼前最后一步……</div>
+      </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="switchEntertainTab('tv',this)" id="etab-tv">📺 剧集</button>
-      <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('movie',this)" id="etab-movie">🎬 电影</button>
-      <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('novel',this)" id="etab-novel">📚 小说</button>
-      <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('anime',this)" id="etab-anime">✨ 动漫</button>
-    </div>
+      <div id="entertain-list" style="margin-bottom:14px"></div>
 
-    <input id="entertain-custom-req" placeholder="🔍 可选：输入具体要求后刷新，如「科幻」「2024年」「悬疑推理」…" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%;margin-bottom:10px;box-sizing:border-box" onkeydown="if(event.key==='Enter')fetchEntertain(null,true)">
-
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="fetchEntertain()" id="entertain-fetch-btn">🎯 获取热榜推荐</button>
-      <button class="btn btn-ghost btn-sm" onclick="fetchEntertain(null,true)" id="entertain-refresh-btn" style="display:none">🔄 按要求刷新</button>
-      <span id="entertain-cache-tip" style="font-size:11px;color:var(--text2)"></span>
+      <div class="card" style="margin-top:4px">
+        <div class="card-title" style="margin-bottom:8px;font-size:12px">🔗 快速跳转</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="entertain-quick-links"></div>
+      </div>
     </div>
 
-    <div id="entertain-loading" style="display:none;padding:24px;text-align:center;color:var(--text2)">
-      <div style="font-size:28px;margin-bottom:8px;animation:pulse 1.2s infinite">🍿</div>
-      <div style="font-size:12px">AI 正在为你筛选好货，摸鱼前最后一步……</div>
-    </div>
-
-    <div id="entertain-list" style="margin-bottom:14px"></div>
-
-    <div class="card" style="margin-top:4px">
-      <div class="card-title" style="margin-bottom:8px;font-size:12px">🔗 快速跳转</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap" id="entertain-quick-links"></div>
-    </div>
   </div>
 </div>
 
