@@ -187,6 +187,16 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
 .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 
+/* Scan Timer float widget */
+#scan-timer-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--primary);border-radius:40px;padding:8px 18px;display:flex;align-items:center;gap:10px;z-index:1200;box-shadow:0 4px 24px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;transform:translateX(-50%) translateY(12px)}
+#scan-timer-bar.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
+#scan-timer-bar .stb-time{font-size:15px;font-weight:700;color:var(--primary);min-width:42px;text-align:center}
+#scan-timer-bar .stb-time.urgent{color:#ef4444;animation:timerPulse .6s infinite}
+#scan-timer-bar .stb-label{font-size:12px;color:var(--text2)}
+#scan-timer-bar .stb-cancel{font-size:11px;cursor:pointer;color:var(--text2);background:none;border:none;padding:2px 6px;border-radius:8px}
+#scan-timer-bar .stb-cancel:hover{background:var(--hover)}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* Setup Wizard */
 #setup-overlay{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;align-items:center;justify-content:center;flex-direction:column}
 .setup-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:520px;max-width:95vw}
@@ -910,12 +920,12 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="card">
     <div class="card-title" style="margin-bottom:10px">🔍 直达搜索</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <a href="https://www.xiaohongshu.com/search_result?keyword=AI辅助科研" target="_blank" class="btn btn-ghost btn-sm">🤖 AI辅助科研</a>
-      <a href="https://www.xiaohongshu.com/search_result?keyword=科研自动化工具" target="_blank" class="btn btn-ghost btn-sm">⚙️ 科研自动化</a>
-      <a href="https://www.xiaohongshu.com/search_result?keyword=SCI论文写作技巧" target="_blank" class="btn btn-ghost btn-sm">✍️ 论文写作</a>
-      <a href="https://www.xiaohongshu.com/search_result?keyword=SCI投稿技巧" target="_blank" class="btn btn-ghost btn-sm">📨 投稿技巧</a>
-      <a href="https://www.xiaohongshu.com/search_result?keyword=科研工具效率" target="_blank" class="btn btn-ghost btn-sm">🛠️ 科研工具</a>
-      <a href="https://www.xiaohongshu.com/search_result?keyword=博士生活经验" target="_blank" class="btn btn-ghost btn-sm">🎓 PhD生活</a>
+      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=AI辅助科研')">🤖 AI辅助科研</button>
+      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=科研自动化工具')">⚙️ 科研自动化</button>
+      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=SCI论文写作技巧')">✍️ 论文写作</button>
+      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=SCI投稿技巧')">📨 投稿技巧</button>
+      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=科研工具效率')">🛠️ 科研工具</button>
+      <button class="btn btn-ghost btn-sm" onclick="openWithTimer('https://www.xiaohongshu.com/search_result?keyword=博士生活经验')">🎓 PhD生活</button>
     </div>
   </div>
 </div>
@@ -2399,7 +2409,7 @@ function _tagColor(tag){
 
 function _renderIntelCard(item){
   const c=_tagColor(item.tag), e=_INTEL_TAGS[item.tag]||'📌'
-  const link=item.url?`<a href="${escHtml(item.url)}" target="_blank" class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px">🔗 查看原帖</a>`:''
+  const link=item.url?`<button onclick="openWithTimer(${JSON.stringify(item.url)})" class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px">🔗 查看原帖 ⏱</button>`:''
   return `<div class="card" style="margin-bottom:10px;border-left:3px solid ${c}">
     <div style="display:flex;gap:8px;align-items:flex-start">
       <span style="font-size:20px;flex-shrink:0">${e}</span>
@@ -2553,8 +2563,111 @@ window.switchPage=function(p){
   _origSwitch&&_origSwitch(p)
   if(p==='overview') loadWall()
 }
+// ══════════════════════════════════════
+// 摸鱼限时系统
+// ══════════════════════════════════════
+let _pendingUrl=null, _scanTimerId=null, _scanSecsLeft=0
+const _SCAN_ALARMS=[
+  '🚨 摸鱼超时警报！论文第三章正在向你发出灵魂拷问……',
+  '⏰ 时间到！你的鱼已经摸完了，导师的眼神飘过来了。',
+  '📡 摸鱼侦察局紧急通报：检测到科研进度危急，请立即撤退！',
+  '🐟 鱼已摸够，够了！再摸下去鱼都要控诉你了。',
+  '🎓 叮！你的学位论文刚刚又等了你这么久，它哭了。',
+  '🔔 系统提示：你已摸鱼完毕，下载量为 0，引用量为 0，摸鱼量 +1。',
+  '🤖 AI 检测到：用户已进入深度摸鱼状态，正在强制唤醒……成功！',
+  '📊 摸鱼数据分析：本次摸鱼效率 100%，论文进度增量：0。建议收手。',
+]
+function openWithTimer(url){
+  _pendingUrl=url
+  openModal('scanTimerModal')
+}
+function _openPendingUrl(){
+  if(_pendingUrl) window.open(_pendingUrl,'_blank')
+  _pendingUrl=null
+}
+function _pickTime(mins){
+  closeModal('scanTimerModal')
+  _openPendingUrl()
+  _startScanTimer(mins*60)
+}
+function _pickTimeCustom(){
+  const v=parseInt(document.getElementById('scan-custom-min')?.value)||0
+  if(v<1||v>120){toast('⚠️ 请输入 1~120 分钟');return}
+  _pickTime(v)
+}
+function _startScanTimer(secs){
+  _cancelScanTimer()
+  _scanSecsLeft=secs
+  _updateTimerDisp()
+  document.getElementById('scan-timer-bar').classList.add('show')
+  _scanTimerId=setInterval(()=>{
+    _scanSecsLeft--
+    _updateTimerDisp()
+    if(_scanSecsLeft<=0){
+      _cancelScanTimer()
+      _fireScanAlarm()
+    }
+  },1000)
+}
+function _updateTimerDisp(){
+  const el=document.getElementById('stb-time-disp')
+  if(!el)return
+  const m=Math.floor(_scanSecsLeft/60),s=_scanSecsLeft%60
+  el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+  el.classList.toggle('urgent',_scanSecsLeft<=30)
+}
+function _cancelScanTimer(){
+  if(_scanTimerId){clearInterval(_scanTimerId);_scanTimerId=null}
+  document.getElementById('scan-timer-bar')?.classList.remove('show')
+}
+function _fireScanAlarm(){
+  const msg=_SCAN_ALARMS[Math.floor(Math.random()*_SCAN_ALARMS.length)]
+  // 震动（移动端）
+  if(navigator.vibrate) navigator.vibrate([200,100,200])
+  // 大弹窗
+  const overlay=document.createElement('div')
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center'
+  overlay.innerHTML=`<div style="background:var(--surface);border:2px solid #ef4444;border-radius:16px;padding:28px 24px;max-width:360px;width:90%;text-align:center;animation:modalIn .25s ease">
+    <div style="font-size:48px;margin-bottom:10px">🚨</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:10px;line-height:1.5">${msg}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:18px">关掉这个，去写论文吧……</div>
+    <button class="btn btn-primary" onclick="this.closest('div[style*=fixed]').remove();toast('💪 收心了！加油冲！')">好的好的，我去了</button>
+  </div>`
+  document.body.appendChild(overlay)
+  overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.remove();toast('💪 收心了！加油冲！')}})
+}
+
 // 初次加载
 document.addEventListener('DOMContentLoaded',()=>setTimeout(loadWall,800))
 </script>
+
+<!-- ── Scan Timer Modal ── -->
+<div class="modal-overlay" id="scanTimerModal">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:28px;margin-bottom:6px">🐟</div>
+    <div class="modal-title" style="text-align:center;font-size:15px">本次摸鱼限时多久？</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">超时将强制呼唤你回来写论文 🚨</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px">
+      <button class="btn btn-ghost btn-sm" onclick="_pickTime(3)">3 分钟</button>
+      <button class="btn btn-ghost btn-sm" onclick="_pickTime(5)">5 分钟</button>
+      <button class="btn btn-ghost btn-sm" onclick="_pickTime(10)">10 分钟</button>
+      <button class="btn btn-ghost btn-sm" onclick="_pickTime(15)">15 分钟</button>
+      <button class="btn btn-ghost btn-sm" onclick="_pickTime(30)">30 分钟（够了）</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:14px">
+      <input type="number" id="scan-custom-min" min="1" max="120" placeholder="自定义分钟" style="width:110px;text-align:center;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+      <button class="btn btn-primary btn-sm" onclick="_pickTimeCustom()">确定</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeModal('scanTimerModal');_openPendingUrl()" style="font-size:11px;color:var(--text2)">不用了，直接打开</button>
+  </div>
+</div>
+
+<!-- ── Floating Timer Bar ── -->
+<div id="scan-timer-bar">
+  <span style="font-size:16px">⏱</span>
+  <span class="stb-label">摸鱼倒计时</span>
+  <span class="stb-time" id="stb-time-disp">05:00</span>
+  <button class="stb-cancel" onclick="_cancelScanTimer()" title="结束计时">✕</button>
+</div>
 </body>
 </html>
