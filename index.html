@@ -619,9 +619,15 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="card-title">添加投稿</div>
     <div class="form-row c2">
       <div><label>论文标题</label><input id="sub-title" placeholder="论文标题..."></div>
-      <div><label>会议/期刊</label><input id="sub-venue" placeholder="如：NeurIPS 2026"></div>
+      <div><label>会议/期刊名称</label><input id="sub-venue" placeholder="如：NeurIPS 2026" oninput="_autoFillVenueUrl(this.value,'sub-url')"></div>
     </div>
-    <div class="form-row c3">
+    <div class="form-row c2">
+      <div><label>投稿/期刊链接 <span style="color:var(--text2);font-weight:400;font-size:11px">（会自动识别常见会议）</span></label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="sub-url" placeholder="https://openreview.net/..." style="flex:1">
+          <button class="btn btn-ghost btn-sm" id="sub-url-go" style="display:none;font-size:11px;white-space:nowrap" onclick="window.open(document.getElementById('sub-url').value,'_blank')">🔗 打开</button>
+        </div>
+      </div>
       <div><label>状态</label>
         <select id="sub-status">
           <option value="submitted">审核中</option>
@@ -631,6 +637,8 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
           <option value="withdrawn">撤稿</option>
         </select>
       </div>
+    </div>
+    <div class="form-row c2">
       <div><label>投稿日期</label><input type="date" id="sub-date"></div>
       <div><label>结果日期(预计)</label><input type="date" id="sub-decision"></div>
     </div>
@@ -911,7 +919,10 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <input type="hidden" id="es-id">
     <div class="form-row"><div><label>论文标题</label><input id="es-title"></div></div>
     <div class="form-row c2">
-      <div><label>会议/期刊</label><input id="es-venue"></div>
+      <div><label>会议/期刊名称</label><input id="es-venue" oninput="_autoFillVenueUrl(this.value,'es-url')"></div>
+      <div><label>投稿/期刊链接</label><input id="es-url" placeholder="https://..."></div>
+    </div>
+    <div class="form-row c2">
       <div><label>状态</label>
         <select id="es-status">
           <option value="submitted">审核中</option>
@@ -1981,17 +1992,59 @@ function renderHabitStreaks(){
 //  SUBMISSIONS
 // ══════════════════════════════════════
 const SUB_LBL={submitted:'审核中',revision:'修改中',accepted:'✅ 录用',rejected:'❌ 拒稿',withdrawn:'撤稿'};
+
+// 常见会议/期刊 → 官网 / 投稿入口
+const _VENUE_URLS={
+  neurips:'https://neurips.cc', nips:'https://neurips.cc',
+  icml:'https://icml.cc', iclr:'https://iclr.cc',
+  cvpr:'https://cvpr.thecvf.com', iccv:'https://iccv.thecvf.com',
+  eccv:'https://eccv.ecva.net', wacv:'https://wacv.thecvf.com',
+  aaai:'https://aaai.org', ijcai:'https://www.ijcai.org',
+  acl:'https://www.aclweb.org', emnlp:'https://www.emnlp.org',
+  acmmm:'https://acmmm.org', sigkdd:'https://www.kdd.org',
+  sigir:'https://sigir.org', www:'https://www2.org',
+  nature:'https://www.nature.com/authors/submit',
+  science:'https://www.science.org/content/page/submit-science',
+  'nature communications':'https://www.nature.com/ncomms/submit',
+  tpami:'https://www.computer.org/csdl/journal/tp',
+  ijcv:'https://link.springer.com/journal/11263',
+  jmlr:'https://jmlr.org/authors.html',
+  openreview:'https://openreview.net',
+  arxiv:'https://arxiv.org/submit',
+}
+function _autoFillVenueUrl(venueStr, urlInputId){
+  const urlInput=document.getElementById(urlInputId); if(!urlInput)return
+  const vl=venueStr.toLowerCase()
+  const match=Object.entries(_VENUE_URLS).find(([k])=>vl.includes(k))
+  if(match&&!urlInput.value){ urlInput.value=match[1]; urlInput.style.color='var(--primary)' }
+  // 显示"打开"按钮
+  const goBtn=document.getElementById('sub-url-go')
+  if(goBtn) goBtn.style.display=urlInput.value?'':'none'
+}
+// URL 输入框变化时也更新按钮显隐
+document.addEventListener('input',e=>{
+  if(e.target.id==='sub-url'){
+    const goBtn=document.getElementById('sub-url-go')
+    if(goBtn) goBtn.style.display=e.target.value?'':'none'
+  }
+})
+
 function addSubmission(){
   const title=document.getElementById('sub-title').value.trim();
   if(!title){toast('请填写论文标题','error');return;}
   const list=ld(K.subs);
-  list.unshift({id:uid(),title,venue:document.getElementById('sub-venue').value,
+  list.unshift({id:uid(),title,
+    venue:document.getElementById('sub-venue').value,
+    url:document.getElementById('sub-url').value.trim(),
     status:document.getElementById('sub-status').value,
     submitDate:document.getElementById('sub-date').value,
     decisionDate:document.getElementById('sub-decision').value,
     notes:document.getElementById('sub-notes').value});
   sv(K.subs,list);
-  document.getElementById('sub-title').value='';document.getElementById('sub-notes').value='';
+  document.getElementById('sub-title').value='';
+  document.getElementById('sub-url').value='';
+  document.getElementById('sub-notes').value='';
+  const goBtn=document.getElementById('sub-url-go');if(goBtn)goBtn.style.display='none'
   renderSubmissions();renderOverview();toast('📄 投稿记录已添加');
 }
 function delSub(id){if(!confirm('确认删除？'))return;sv(K.subs,ld(K.subs).filter(s=>s.id!==id));renderSubmissions();renderOverview();}
@@ -2000,6 +2053,7 @@ function openEditSub(id){
   document.getElementById('es-id').value=id;
   document.getElementById('es-title').value=s.title;
   document.getElementById('es-venue').value=s.venue;
+  document.getElementById('es-url').value=s.url||'';
   document.getElementById('es-status').value=s.status;
   document.getElementById('es-date').value=s.submitDate||'';
   document.getElementById('es-decision').value=s.decisionDate||'';
@@ -2008,9 +2062,13 @@ function openEditSub(id){
 }
 function saveEditSub(){
   const id=document.getElementById('es-id').value,list=ld(K.subs),s=list.find(s=>s.id===id);if(!s)return;
-  s.title=document.getElementById('es-title').value;s.venue=document.getElementById('es-venue').value;
-  s.status=document.getElementById('es-status').value;s.submitDate=document.getElementById('es-date').value;
-  s.decisionDate=document.getElementById('es-decision').value;s.notes=document.getElementById('es-notes').value;
+  s.title=document.getElementById('es-title').value;
+  s.venue=document.getElementById('es-venue').value;
+  s.url=document.getElementById('es-url').value.trim();
+  s.status=document.getElementById('es-status').value;
+  s.submitDate=document.getElementById('es-date').value;
+  s.decisionDate=document.getElementById('es-decision').value;
+  s.notes=document.getElementById('es-notes').value;
   sv(K.subs,list);closeModal('editSubModal');renderSubmissions();renderOverview();
 }
 function renderSubmissions(){
@@ -2021,22 +2079,33 @@ function renderSubmissions(){
   document.getElementById('ss-rev').textContent=list.filter(s=>s.status==='revision').length;
   if(!el)return;
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">📄</div><p>暂无投稿记录</p></div>';return;}
-  el.innerHTML=list.map(s=>`<div class="sub-item status-${s.status}">
-    <div class="flex items-center gap-8">
-      <div style="flex:1"><div class="sub-title">${s.title}</div>
-        <div class="sub-meta"><span>🏛 ${s.venue}</span>
-          ${s.submitDate?`<span>📅 ${s.submitDate}</span>`:''}
-          ${s.decisionDate?`<span>⏳ ${s.decisionDate}</span>`:''}
+  el.innerHTML=list.map(s=>{
+    const venueHtml=s.url
+      ?`<a href="${escHtml(s.url)}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:500" title="打开 ${escHtml(s.venue)}">🏛 ${escHtml(s.venue)} ↗</a>`
+      :`<span>🏛 ${escHtml(s.venue)}</span>`
+    const daysLeft=s.decisionDate?Math.ceil((new Date(s.decisionDate)-new Date())/86400000):null
+    const daysTag=daysLeft!==null
+      ?`<span style="font-size:11px;color:${daysLeft<=7?'#ef4444':daysLeft<=30?'#f59e0b':'var(--text2)'}">⏳ ${daysLeft>0?'还有'+daysLeft+'天':'已到期'}</span>`
+      :''
+    return `<div class="sub-item status-${s.status}">
+      <div class="flex items-center gap-8">
+        <div style="flex:1">
+          <div class="sub-title">${escHtml(s.title)}</div>
+          <div class="sub-meta" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px">
+            ${venueHtml}
+            ${s.submitDate?`<span>📅 ${s.submitDate}</span>`:''}
+            ${daysTag}
+          </div>
+        </div>
+        <div class="flex gap-8 items-center">
+          <span class="status status-${s.status}">${SUB_LBL[s.status]||s.status}</span>
+          <button class="btn btn-ghost btn-sm" onclick="openEditSub('${s.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="delSub('${s.id}')">🗑</button>
         </div>
       </div>
-      <div class="flex gap-8 items-center">
-        <span class="status status-${s.status}">${SUB_LBL[s.status]||s.status}</span>
-        <button class="btn btn-ghost btn-sm" onclick="openEditSub('${s.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="delSub('${s.id}')">🗑</button>
-      </div>
-    </div>
-    ${s.notes?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${s.notes}</div>`:''}
-  </div>`).join('');
+      ${s.notes?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${escHtml(s.notes)}</div>`:''}
+    </div>`
+  }).join('');
 }
 
 // ══════════════════════════════════════
@@ -2124,10 +2193,17 @@ function renderOverview(){
   </div>`).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">✅</div><p>今日任务全部完成！</p></div>';
 
   const subs=ld(K.subs).slice(0,4),sEl=document.getElementById('ov-subs');
-  if(sEl)sEl.innerHTML=subs.length?subs.map(s=>`<div style="padding:8px;background:var(--surface2);border-radius:6px;margin-bottom:8px">
-    <div style="font-size:13px;font-weight:500">${s.title}</div>
-    <div class="flex gap-8 items-center" style="margin-top:4px"><span class="text-sm text-muted">${s.venue}</span><span class="status status-${s.status}">${SUB_LBL[s.status]}</span></div>
-  </div>`).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">📄</div><p>暂无投稿记录</p></div>';
+  if(sEl)sEl.innerHTML=subs.length?subs.map(s=>{
+    const venueHtml=s.url
+      ?`<a href="${escHtml(s.url)}" target="_blank" style="color:var(--primary);text-decoration:none;font-size:12px" title="打开 ${escHtml(s.venue)}">🏛 ${escHtml(s.venue)} ↗</a>`
+      :`<span class="text-sm text-muted">🏛 ${escHtml(s.venue)}</span>`
+    const daysLeft=s.decisionDate?Math.ceil((new Date(s.decisionDate)-new Date())/86400000):null
+    const daysTag=daysLeft!==null?`<span style="font-size:10px;color:${daysLeft<=7?'#ef4444':daysLeft<=30?'#f59e0b':'var(--text2)'}">⏳ ${daysLeft>0?daysLeft+'天后':'已到期'}</span>`:''
+    return `<div style="padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:8px;border-left:3px solid var(--status-${s.status},var(--border))">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px;line-height:1.3">${escHtml(s.title)}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${venueHtml}<span class="status status-${s.status}">${SUB_LBL[s.status]}</span>${daysTag}</div>
+    </div>`
+  }).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">📄</div><p>暂无投稿记录</p></div>';
 
   const defs=getHabitDefs(),h=ld(K.habits),td=today(),tData=h[td]||{};
   const hEl=document.getElementById('ov-habits');
