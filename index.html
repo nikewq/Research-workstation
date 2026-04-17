@@ -2314,9 +2314,9 @@ function saveReflection(){
   const wins=document.getElementById('r-wins').value.trim(),str=document.getElementById('r-struggles').value.trim(),
     tmr=document.getElementById('r-tomorrow').value.trim(),grt=document.getElementById('r-gratitude').value.trim();
   if(!wins&&!str&&!tmr){toast('请至少填写一项','error');return;}
-  const list=ld(K.refs),idx=list.findIndex(r=>r.date===today());
+  const list=ld(K.refs);
   const entry={id:uid(),date:today(),mood:selMoodVal,wins,struggles:str,tomorrow:tmr,gratitude:grt,ts:new Date().toLocaleString('zh-CN')};
-  if(idx>=0)list[idx]=entry;else list.unshift(entry);
+  list.unshift(entry);
   sv(K.refs,list);
   ['r-wins','r-struggles','r-tomorrow'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('r-gratitude').value='';
