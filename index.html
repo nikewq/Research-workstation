@@ -501,11 +501,36 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <div style="display:flex;align-items:flex-end"><button class="btn btn-primary" style="width:100%" onclick="addTask()">➕ 添加</button></div>
     </div>
   </div>
-  <div class="flex gap-8 mb-16">
+  <!-- AI 建议区域 -->
+  <div id="ai-task-panel" style="display:none;margin-bottom:16px">
+    <div class="card" style="border:1.5px solid rgba(124,58,237,.35);background:linear-gradient(135deg,rgba(124,58,237,.05),rgba(5,150,105,.04))">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:20px">🤖</span>
+          <div>
+            <div style="font-size:13px;font-weight:700">AI 导师今日任务建议</div>
+            <div style="font-size:11px;color:var(--text2)" id="ai-task-meta">基于你的研究方向与历史记录生成</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ai-task-panel').style.display='none'" style="font-size:11px">✕</button>
+      </div>
+      <div id="ai-task-loading" style="display:none;text-align:center;padding:20px;color:var(--text2)">
+        <div style="font-size:24px;animation:pulse 1.2s infinite">🧠</div>
+        <div style="font-size:12px;margin-top:6px">导师正在分析你的研究状态……</div>
+      </div>
+      <div id="ai-task-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="ai-task-footer" style="display:none;margin-top:10px;text-align:center">
+        <button class="btn btn-ghost btn-sm" onclick="aiSuggestTasks()" style="font-size:11px">🔄 换一批建议</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-8 mb-16" style="align-items:center">
     <button class="btn btn-ghost btn-sm task-filter active" onclick="filterTasks('all',this)">全部</button>
     <button class="btn btn-ghost btn-sm task-filter" onclick="filterTasks('todo',this)">待做</button>
     <div id="proj-filters" class="flex gap-8"></div>
     <div style="flex:1"></div>
+    <button class="btn btn-ghost btn-sm" onclick="aiSuggestTasks()" id="ai-suggest-btn" style="font-size:11px;border-color:rgba(124,58,237,.4);color:var(--primary)">🤖 AI 规划今日任务</button>
     <span class="text-muted text-sm" id="task-count"></span>
   </div>
   <div id="task-list" class="scrollable" style="max-height:600px"></div>
@@ -1535,6 +1560,130 @@ function renderTasks(){
   }).join('');
   const sub=document.getElementById('tasks-subtitle');
   if(sub){const cfg=getCfg();sub.textContent=cfg.areas?.join(' · ')||'管理你的科研任务';}
+}
+
+// ══════════════════════════════════════
+//  AI 任务建议
+// ══════════════════════════════════════
+async function aiSuggestTasks(){
+  const panel=document.getElementById('ai-task-panel')
+  const loading=document.getElementById('ai-task-loading')
+  const listEl=document.getElementById('ai-task-list')
+  const footer=document.getElementById('ai-task-footer')
+  const meta=document.getElementById('ai-task-meta')
+  const btn=document.getElementById('ai-suggest-btn')
+
+  panel.style.display=''
+  loading.style.display='block'
+  listEl.innerHTML=''
+  footer.style.display='none'
+  if(btn){btn.disabled=true;btn.textContent='🧠 生成中…'}
+
+  // 构建上下文
+  const cfg=getCfg()
+  const allTasks=ld(K.tasks)
+  const doneLast7=allTasks.filter(t=>t.status==='done'&&t.done&&t.done>=_daysAgo(7)).slice(-10)
+  const pending=allTasks.filter(t=>t.status!=='done').slice(0,10)
+  const projs=getProjects()
+
+  const ctx=`
+用户信息：
+- 姓名：${cfg.name||'研究员'}
+- 研究方向：${cfg.field||'未填写'}
+- 所属单位：${cfg.univ||'未填写'}
+- 研究项目：${projs.map(p=>p.name).join('、')||'暂无项目'}
+- 今天日期：${today()}
+
+近7天已完成任务（了解工作节奏）：
+${doneLast7.length?doneLast7.map(t=>`· ${t.title}（${t.proj?projName(t.proj):''}）`).join('\n'):'（无记录）'}
+
+当前待办任务（避免重复推荐）：
+${pending.length?pending.map(t=>`· ${t.title}（优先级:${t.prio}${t.due?'，截止:'+t.due:''}）`).join('\n'):'（无待办）'}
+`.trim()
+
+  const prompt=`你是一位严格但关爱学生的科研导师。请根据以下信息，为学生推荐今天应该完成的任务（最多5个）。
+
+${ctx}
+
+要求：
+1. 每个任务必须具体可执行，聚焦今天能完成的范围
+2. 结合研究方向和项目，避免与当前待办重复
+3. 兼顾不同类型（实验/写作/阅读/整理/沟通等）
+4. 按照紧迫度从高到低排序
+
+返回严格的 JSON 数组，格式如下（不要加任何额外文字或 markdown 代码块）：
+[
+  {
+    "title": "具体任务名称",
+    "proj": "对应项目名（若无则空字符串）",
+    "difficulty": "低|中|高",
+    "urgency": "低|中|高",
+    "reason": "推荐原因（15字以内）",
+    "estMins": 30
+  }
+]`
+
+  try{
+    const raw=await _callAI(prompt,600)
+    loading.style.display='none'
+    if(!raw){throw new Error('no response')}
+    // 提取 JSON（容忍 AI 多输出文字）
+    const match=raw.match(/\[[\s\S]*\]/)
+    if(!match)throw new Error('parse')
+    const items=JSON.parse(match[0])
+    if(!Array.isArray(items)||items.length===0)throw new Error('empty')
+
+    const diffColor={低:'#10b981',中:'#f59e0b',高:'#ef4444'}
+    const urgColor={低:'#10b981',中:'#f59e0b',高:'#ef4444'}
+
+    listEl.innerHTML=items.slice(0,5).map((item,i)=>{
+      const dc=diffColor[item.difficulty]||'#8b949e'
+      const uc=urgColor[item.urgency]||'#8b949e'
+      const projId=projs.find(p=>p.name===item.proj)?.id||''
+      const projTag=projId?projTagHtml(projId):`<span class="tag">${item.proj||'通用'}</span>`
+      return `<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start">
+        <div style="background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;margin-bottom:5px;line-height:1.4">${escHtml(item.title)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:5px">
+            ${projTag}
+            <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${dc}22;color:${dc};font-weight:600">难度 ${item.difficulty}</span>
+            <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${uc}22;color:${uc};font-weight:600">紧迫 ${item.urgency}</span>
+            ${item.estMins?`<span style="font-size:10px;color:var(--text2)">⏱ 约${item.estMins}分钟</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--text2)">${escHtml(item.reason||'')}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="font-size:11px;flex-shrink:0;white-space:nowrap"
+          onclick="_addSuggestedTask(${JSON.stringify(JSON.stringify({title:item.title,proj:projId,prio:item.urgency==='高'?'high':item.urgency==='中'?'med':'low'}))},this)">+ 添加</button>
+      </div>`
+    }).join('')
+
+    meta.textContent=`已生成 ${Math.min(items.length,5)} 条建议 · 基于${doneLast7.length}条历史任务`
+    footer.style.display='block'
+  }catch(e){
+    loading.style.display='none'
+    listEl.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text2);font-size:12px">
+      ⚠️ 生成失败，请检查 AI 设置或稍后重试<br>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px" onclick="aiSuggestTasks()">重试</button>
+    </div>`
+  }
+  if(btn){btn.disabled=false;btn.textContent='🤖 AI 规划今日任务'}
+}
+function _addSuggestedTask(cfgStr,btn){
+  const item=JSON.parse(cfgStr)
+  const tasks=ld(K.tasks)
+  tasks.push({id:uid(),title:item.title,proj:item.proj||'',prio:item.prio||'med',
+    due:'',status:'todo',created:today(),done:null,pomos:0})
+  sv(K.tasks,tasks)
+  btn.textContent='✅'
+  btn.disabled=true
+  btn.style.background='#10b981'
+  renderTasks();renderOverview()
+  toast(`✅ 已添加：${item.title}`)
+}
+function _daysAgo(n){
+  const d=new Date();d.setDate(d.getDate()-n);
+  return d.toISOString().slice(0,10)
 }
 
 // ══════════════════════════════════════
