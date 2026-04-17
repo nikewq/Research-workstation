@@ -972,6 +972,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="fetchIntel()" id="intel-fetch-btn">📡 获取今日情报</button>
         <button class="btn btn-ghost" onclick="fetchIntel(true)" id="intel-refresh-btn" style="display:none">🔄 强制刷新</button>
+        <button class="btn btn-ghost" onclick="_showNoteSettings()" style="font-size:12px">📎 笔记链接</button>
         <span id="intel-cache-tip" style="font-size:11px;color:var(--text2)"></span>
       </div>
 
@@ -1035,6 +1036,40 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ── Note Settings Modal ── -->
+<div class="modal-overlay" id="noteSettingsModal" onclick="if(event.target===this)closeModal('noteSettingsModal')">
+  <div class="modal-box" style="max-width:420px;width:90%">
+    <div class="modal-title" style="margin-bottom:14px">📎 笔记空间设置</div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">笔记工具类型</div>
+      <select id="note-type-sel" onchange="_onNoteTypeChange()" style="width:100%">
+        <option value="url">通用链接（飞书 / Notion / 语雀 / 其他）</option>
+        <option value="obsidian">Obsidian（本地 URI）</option>
+      </select>
+    </div>
+    <div id="note-url-wrap">
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">文档 URL</div>
+        <input id="note-url-inp" placeholder="粘贴飞书 / Notion 文档链接" style="width:100%">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">按钮显示名称</div>
+        <input id="note-label-inp" placeholder="例如：飞书日志 / My Notion" style="width:100%">
+      </div>
+    </div>
+    <div id="note-obsidian-wrap" style="display:none">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Vault 名称（区分大小写）</div>
+      <input id="note-vault-inp" placeholder="例如：Research" style="width:100%">
+      <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">收藏时会自动用 <code>obsidian://new</code> 在 Vault 中创建笔记页面</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:16px">
+      <button class="btn btn-primary btn-sm" onclick="_saveNoteSettings()">保存</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('noteSettingsModal')">取消</button>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:11px;color:var(--text2)" onclick="_clearNoteSettings()">清除设置</button>
+    </div>
   </div>
 </div>
 
@@ -2899,20 +2934,121 @@ function _tagColor(tag){
 
 function _renderIntelCard(item){
   const c=_tagColor(item.tag), e=_INTEL_TAGS[item.tag]||'📌'
-  const link=item.url?`<button onclick="openWithTimer('${item.url.replace(/'/g,'%27')}')" class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px">🔗 查看原帖 ⏱</button>`:''
+  const link=item.url?`<button onclick="openWithTimer('${item.url.replace(/'/g,'%27')}')" class="btn btn-ghost btn-sm" style="font-size:11px">🔗 查看原帖 ⏱</button>`:''
+  const enc=encodeURIComponent(JSON.stringify({title:item.title||'',summary:item.summary||'',url:item.url||'',tag:item.tag||''}))
+  const bmBtn=`<button onclick="_showBmMenu(event,'${enc}')" class="btn btn-ghost btn-sm" style="font-size:11px">🔖 收藏</button>`
   return `<div class="card" style="margin-bottom:10px;border-left:3px solid ${c}">
     <div style="display:flex;gap:8px;align-items:flex-start">
       <span style="font-size:20px;flex-shrink:0">${e}</span>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
-          <span style="font-size:11px;font-weight:600;background:${c}22;color:${c};padding:1px 7px;border-radius:10px">${item.tag}</span>
+          <span style="font-size:11px;font-weight:600;background:${c}22;color:${c};padding:1px 7px;border-radius:10px">${escHtml(item.tag)}</span>
         </div>
         <div style="font-size:13px;font-weight:600;margin-bottom:4px;line-height:1.4">${escHtml(item.title)}</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${escHtml(item.summary)}</div>
-        ${link}
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${link}${bmBtn}</div>
       </div>
     </div>
   </div>`
+}
+
+// ══════════════════════════════════════
+//  BOOKMARK ENGINE（收藏 → 今日反思 / 笔记空间）
+// ══════════════════════════════════════
+const _NOTE_LINKS_KEY='_phd_note_links'
+
+function _showBmMenu(event,encodedItem){
+  event.stopPropagation()
+  document.getElementById('_bm-menu')?.remove()
+  const btn=event.currentTarget
+  const rect=btn.getBoundingClientRect()
+  const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
+  const noteLabel=cfg.label||(cfg.type==='obsidian'?'Obsidian 新建笔记':'打开笔记空间（未设置）')
+  const m=document.createElement('div')
+  m.id='_bm-menu'
+  m.style.cssText=`position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:0 8px 28px rgba(0,0,0,0.45);min-width:178px;top:${Math.min(rect.bottom+6,window.innerHeight-130)}px;left:${Math.min(rect.left,window.innerWidth-190)}px`
+  const opts=[['📝','存入今日反思',0],['📋','复制 Markdown',1],['🔗',noteLabel,2]]
+  m.innerHTML=opts.map(([ic,lb,idx])=>
+    `<div class="_bmo" onclick="_bmAct(${idx},'${encodedItem}')" style="padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">${ic} ${escHtml(lb)}</div>`
+  ).join('')
+  document.body.appendChild(m)
+  setTimeout(()=>document.addEventListener('click',()=>document.getElementById('_bm-menu')?.remove(),{once:true}),0)
+}
+
+function _bmAct(idx,encodedItem){
+  document.getElementById('_bm-menu')?.remove()
+  let item
+  try{item=JSON.parse(decodeURIComponent(encodedItem))}catch(_){toast('收藏失败');return}
+  if(idx===0)_bmToReflection(item)
+  else if(idx===1)_bmCopyMd(item)
+  else _bmOpenNote(item)
+}
+
+function _bmToReflection(item){
+  const list=ld(K.refs)
+  const note=`\n📌 [${item.tag||'情报'}] ${item.title}：${item.summary}`
+  const idx=list.findIndex(r=>r.date===today())
+  if(idx>=0){
+    list[idx].wins=(list[idx].wins||'')+note
+  }else{
+    list.unshift({id:uid(),date:today(),mood:'📌',wins:'摸鱼侦察收藏：'+note,struggles:'',tomorrow:'',gratitude:'',ts:new Date().toLocaleString('zh-CN')})
+  }
+  sv(K.refs,list)
+  renderRefHistory()
+  toast('📝 已存入今日反思！')
+}
+
+function _bmCopyMd(item){
+  const md=`## ${item.title}\n\n> ${item.summary}\n\n**标签**：${item.tag||''}  \n**来源**：${item.url||'摸鱼侦察局'}  \n**日期**：${today()}`
+  navigator.clipboard?.writeText(md)
+    .then(()=>toast('📋 已复制 Markdown！'))
+    .catch(()=>toast('❌ 复制失败，请手动复制'))
+}
+
+function _bmOpenNote(item){
+  const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
+  if(!cfg.url&&cfg.type!=='obsidian'){_showNoteSettings();toast('请先设置笔记空间链接');return}
+  if(cfg.type==='obsidian'){
+    const content=encodeURIComponent(`## ${item.title}\n\n${item.summary}\n\n来源：${item.url||'摸鱼侦察局'}\n日期：${today()}`)
+    const name=encodeURIComponent((item.title||'摸鱼笔记').slice(0,40))
+    window.location.href=`obsidian://new?vault=${encodeURIComponent(cfg.vault||'')}&name=${name}&content=${content}`
+  }else{
+    window.open(cfg.url,'_blank')
+  }
+}
+
+function _showNoteSettings(){
+  const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
+  const t=document.getElementById('note-type-sel');if(t)t.value=cfg.type||'url'
+  const u=document.getElementById('note-url-inp');if(u)u.value=cfg.url||''
+  const l=document.getElementById('note-label-inp');if(l)l.value=cfg.label||''
+  const v=document.getElementById('note-vault-inp');if(v)v.value=cfg.vault||''
+  _onNoteTypeChange()
+  openModal('noteSettingsModal')
+}
+
+function _onNoteTypeChange(){
+  const type=document.getElementById('note-type-sel')?.value
+  const uw=document.getElementById('note-url-wrap');if(uw)uw.style.display=type==='obsidian'?'none':''
+  const ow=document.getElementById('note-obsidian-wrap');if(ow)ow.style.display=type==='obsidian'?'':'none'
+}
+
+function _saveNoteSettings(){
+  const type=document.getElementById('note-type-sel')?.value||'url'
+  const url=document.getElementById('note-url-inp')?.value.trim()||''
+  const label=document.getElementById('note-label-inp')?.value.trim()||''
+  const vault=document.getElementById('note-vault-inp')?.value.trim()||''
+  if(type!=='obsidian'&&!url){toast('请输入文档链接');return}
+  if(type==='obsidian'&&!vault){toast('请输入 Vault 名称');return}
+  localStorage.setItem(_NOTE_LINKS_KEY,JSON.stringify({type,url,label,vault}))
+  closeModal('noteSettingsModal')
+  toast('📎 笔记设置已保存！')
+}
+
+function _clearNoteSettings(){
+  localStorage.removeItem(_NOTE_LINKS_KEY)
+  closeModal('noteSettingsModal')
+  toast('已清除笔记设置')
 }
 
 async function fetchIntel(force=false){
