@@ -113,6 +113,62 @@
   --red:#d45a4a;--red-soft:rgba(212,90,74,.15);
   --blue:#64c4b8;--blue-soft:rgba(100,196,184,.15);
 }
+/* ── Light Mode Overrides ── */
+/* 默认主题 浅色 */
+:root[data-mode="light"]{
+  --bg:#f8f6ff;--surface:#ffffff;--surface2:#f1ecff;--border:#ddd4ff;
+  --text:#1a0a30;--text2:#6040a0;
+}
+/* wuxia 浅色 */
+:root[data-mode="light"][data-theme="wuxia"]{
+  --bg:#fdf6f3;--surface:#ffffff;--surface2:#faede8;--border:#f0cfc0;
+  --text:#1a0800;--text2:#7a3020;
+}
+/* kawaii 深色 */
+:root[data-mode="dark"][data-theme="kawaii"]{
+  --bg:#1a0818;--surface:#240e24;--surface2:#2e1430;--border:#4a1e44;
+  --text:#f8d8ee;--text2:#c878a8;
+}
+/* neutral 深色 */
+:root[data-mode="dark"][data-theme="neutral"]{
+  --bg:#0d1214;--surface:#161e22;--surface2:#1e2830;--border:#2a3840;
+  --text:#d8e8ec;--text2:#7890a0;
+}
+/* queen 浅色 */
+:root[data-mode="light"][data-theme="queen"]{
+  --bg:#fdf9e8;--surface:#ffffff;--surface2:#faf3d4;--border:#ede0a8;
+  --text:#1a1400;--text2:#7a6020;
+}
+/* aurora 浅色 */
+:root[data-mode="light"][data-theme="aurora"]{
+  --bg:#f0faff;--surface:#ffffff;--surface2:#e4f5ff;--border:#b8e4f8;
+  --text:#001830;--text2:#2868a0;
+}
+/* pku 浅色 */
+:root[data-mode="light"][data-theme="pku"]{
+  --bg:#fdf5f5;--surface:#ffffff;--surface2:#faecec;--border:#edd0d0;
+  --text:#1a0005;--text2:#6a1818;
+}
+/* thu 浅色 */
+:root[data-mode="light"][data-theme="thu"]{
+  --bg:#faf5fd;--surface:#ffffff;--surface2:#f3e8fb;--border:#e4cef5;
+  --text:#150020;--text2:#580878;
+}
+/* fdu 浅色 */
+:root[data-mode="light"][data-theme="fdu"]{
+  --bg:#f5f8ff;--surface:#ffffff;--surface2:#eaf0ff;--border:#c8d8ff;
+  --text:#001050;--text2:#2a4888;
+}
+/* zju 浅色 */
+:root[data-mode="light"][data-theme="zju"]{
+  --bg:#fdf9ee;--surface:#ffffff;--surface2:#faf2d8;--border:#ede0a8;
+  --text:#1a1000;--text2:#705820;
+}
+/* sustech 浅色 */
+:root[data-mode="light"][data-theme="sustech"]{
+  --bg:#fffaf5;--surface:#ffffff;--surface2:#fff2e6;--border:#ffd8a8;
+  --text:#1a0800;--text2:#884818;
+}
 /* ── Theme Picker Cards ── */
 .theme-section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);opacity:.55;margin:4px 0 8px;padding-left:1px}
 .theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:7px}
@@ -128,6 +184,13 @@
 .theme-check{position:absolute;top:7px;right:7px;width:16px;height:16px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;line-height:1}
 .school-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--surface2);color:var(--text2);transition:all .15s;user-select:none}
 .school-chip:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+/* ── Mode Toggle ── */
+.mode-toggle{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s;user-select:none;width:100%}
+.mode-toggle:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+.mode-toggle-track{width:28px;height:16px;border-radius:8px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0}
+:root[data-mode="light"] .mode-toggle-track{background:var(--primary)}
+.mode-toggle-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+:root[data-mode="light"] .mode-toggle-thumb{transform:translateX(12px)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;font-size:14px;min-height:100vh;display:flex}
 
@@ -491,6 +554,10 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="nav-group">设置</div>
     <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
     <div class="nav-item" onclick="openThemeModal()"><span class="nav-icon">🎨</span>界面主题</div>
+    <div class="mode-toggle" onclick="toggleMode()" title="切换深色/浅色模式">
+      <div class="mode-toggle-track"><div class="mode-toggle-thumb"></div></div>
+      <span id="mode-label">深色模式</span>
+    </div>
     <div class="nav-item" onclick="openSyncModal()"><span class="nav-icon">☁️</span>云同步</div>
     <div class="nav-item" id="exportBtn"><span class="nav-icon">💾</span>导出数据</div>
     <div class="nav-item" id="importBtn"><span class="nav-icon">📥</span>导入数据</div>
@@ -4285,7 +4352,24 @@ function applyTheme(id){
   localStorage.setItem('_theme',id);
   document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.theme===id));
 }
+function _updateModeLabel(){
+  const mode=document.documentElement.dataset.mode||'dark';
+  const txt=mode==='dark'?'深色':'浅色';
+  document.querySelectorAll('#mode-label,#mode-label-modal').forEach(el=>{if(el)el.textContent=txt;});
+}
+function toggleMode(){
+  const root=document.documentElement;
+  const cur=root.dataset.mode||'dark';
+  root.dataset.mode=cur==='dark'?'light':'dark';
+  localStorage.setItem('_mode',root.dataset.mode);
+  _updateModeLabel();
+}
 function loadTheme(){
+  // 恢复深浅色模式
+  const mode=localStorage.getItem('_mode')||'dark';
+  document.documentElement.dataset.mode=mode;
+  _updateModeLabel();
+  // 恢复主题
   const id=localStorage.getItem('_theme')||'default';
   if(id==='custom'){
     try{
@@ -4580,7 +4664,13 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWal
         <div style="font-weight:700;font-size:16px">界面主题</div>
         <div style="font-size:11px;color:var(--text2);margin-top:3px;opacity:.7">选择配色风格，即时生效</div>
       </div>
-      <button onclick="closeModal('themeModal')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:16px;line-height:1;opacity:.55">✕</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="toggleMode()" style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:16px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:11px;color:var(--text2);transition:all .15s" title="深色/浅色切换">
+          <div class="mode-toggle-track" style="width:24px;height:14px"><div class="mode-toggle-thumb" style="width:10px;height:10px;top:2px;left:2px"></div></div>
+          <span id="mode-label-modal"></span>
+        </button>
+        <button onclick="closeModal('themeModal')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:16px;line-height:1;opacity:.55">✕</button>
+      </div>
     </div>
     <div id="theme-picker-grid"></div>
   </div>
