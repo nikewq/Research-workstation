@@ -1369,6 +1369,15 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <!-- 对比面板 -->
       <div class="card" id="procure-compare-panel" style="display:none"></div>
 
+      <!-- 对比记录 -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="card-title" style="margin-bottom:0">📂 对比记录 <span id="procure-cmp-count" style="font-size:11px;color:var(--text2);font-weight:400"></span></div>
+          <span style="font-size:11px;color:var(--text2)">勾选商品后在对比面板点「保存对比」</span>
+        </div>
+        <div id="procure-cmp-history"></div>
+      </div>
+
       <!-- 采购清单主列表 -->
       <div class="card">
         <div class="section-header">
@@ -4968,6 +4977,7 @@ function initProcurePage(){
   const locEl=document.getElementById('procure-loc-val');if(locEl)locEl.textContent=loc||'未设置'
   const locInp=document.getElementById('procure-loc-input');if(locInp&&loc)locInp.value=loc
   renderProcureList()
+  _renderCmpHistory()
 }
 function _initBookmarklet(){
   const link=document.getElementById('procure-bm-link');if(!link)return
@@ -5019,8 +5029,113 @@ function _renderProcureCompare(){
   const dL=['同城🏠','同区域','邻省🚚','跨区✈'],sM={eval:'待评估',pick:'已选定',done:'已采购',drop:'已拒绝'}
   const rows=[['价格',x=>x.price?`¥${x.price.toLocaleString()}`:'—'],['品牌',x=>x.brand||'—'],['评分',x=>x.rating?'★'.repeat(Math.round(x.rating))+'☆'.repeat(5-Math.round(x.rating))+` (${x.rating})`:'—'],['销量',x=>x.sales?x.sales.toLocaleString()+'件':'—'],['货期',x=>x.deliveryDays?x.deliveryDays+'天':'—'],['发货地',x=>x.shipFrom||'—'],['运距',x=>dL[x.distScore]||'—'],['平台',x=>x.platform||'—'],['类别',x=>x.category||'—'],['状态',x=>sM[x.status]||x.status],['备注',x=>x.notes?x.notes.slice(0,40):'—']]
   panel.style.display=''
-  panel.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:600">📊 对比（${sel.length}款）</div><button class="btn btn-ghost btn-sm" onclick="_procureCompare.clear();renderProcureList();_renderProcureCompare()">清空</button></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><tr style="border-bottom:2px solid var(--border)"><th style="padding:6px 8px;font-size:11px;color:var(--text2);text-align:left;background:var(--surface2)">字段</th>${sel.map(x=>`<th style="padding:6px 8px;font-size:12px;font-weight:600;color:var(--primary);max-width:100px;word-break:break-all">${escHtml(x.name.slice(0,25))}</th>`).join('')}</tr>${rows.map(([l,fn])=>`<tr><td style="padding:5px 8px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;background:var(--surface2)">${l}</td>${sel.map(x=>`<td style="padding:5px 8px;font-size:12px">${escHtml(String(fn(x)))}</td>`).join('')}</tr>`).join('')}</table></div>`
+  panel.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><div style="font-size:12px;font-weight:600">📊 对比（${sel.length}款）</div><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="saveProcureComparison()">💾 保存对比</button><button class="btn btn-ghost btn-sm" onclick="exportCmpDirect([..._procureCompare])">⬇️ 直接下载</button><button class="btn btn-ghost btn-sm" onclick="_procureCompare.clear();renderProcureList();_renderProcureCompare()">清空</button></div></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><tr style="border-bottom:2px solid var(--border)"><th style="padding:6px 8px;font-size:11px;color:var(--text2);text-align:left;background:var(--surface2)">字段</th>${sel.map(x=>`<th style="padding:6px 8px;font-size:12px;font-weight:600;color:var(--primary);max-width:100px;word-break:break-all">${escHtml(x.name.slice(0,25))}</th>`).join('')}</tr>${rows.map(([l,fn])=>`<tr><td style="padding:5px 8px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;background:var(--surface2)">${l}</td>${sel.map(x=>`<td style="padding:5px 8px;font-size:12px">${escHtml(String(fn(x)))}</td>`).join('')}</tr>`).join('')}</table></div>`
 }
+// ── 对比记录存储 ──
+const K_PROCURE_CMP='_phd_procure_cmp'
+function _ldCmp(){try{return JSON.parse(localStorage.getItem(K_PROCURE_CMP)||'[]')}catch(_){return[]}}
+function _svCmp(list){localStorage.setItem(K_PROCURE_CMP,JSON.stringify(list))}
+
+// 把 ids 对应商品导出为对比格式 CSV（转置：字段为行，商品为列）
+function _buildCmpCSV(items){
+  const dL=['同城','同区域','邻省','跨区域'],sM={eval:'待评估',pick:'已选定',done:'已采购',drop:'已拒绝'}
+  const fields=[
+    ['商品名称',x=>x.name||''],
+    ['品牌/厂家',x=>x.brand||''],
+    ['价格(元)',x=>x.price||''],
+    ['平台',x=>x.platform||''],
+    ['商家评分(0-5)',x=>x.rating||''],
+    ['月销量(件)',x=>x.sales||''],
+    ['发货地',x=>x.shipFrom||''],
+    ['运距估算',x=>dL[x.distScore]||''],
+    ['货期(天)',x=>x.deliveryDays||''],
+    ['用户反馈',x=>x.userFeedback||''],
+    ['类别',x=>x.category||''],
+    ['状态',x=>sM[x.status]||x.status||''],
+    ['备注/参数',x=>x.notes||''],
+    ['商品链接',x=>x.url||''],
+    ['录入时间',x=>x.savedAt||''],
+  ]
+  // 横向对比格式：第一列为字段名，后续列为各商品
+  const header=['字段',...items.map(x=>x.name.slice(0,30))]
+  const rows=fields.map(([label,fn])=>[label,...items.map(fn)])
+  return[header,...rows].map(row=>row.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n')
+}
+
+// 保存当前对比到记录（弹框输入名称）
+function saveProcureComparison(){
+  const ids=[..._procureCompare]
+  if(ids.length<2){toast('请先勾选至少2款商品加入对比','error');return}
+  const allItems=_ldProcure(),sel=ids.map(id=>allItems.find(x=>x.id===id)).filter(Boolean)
+  if(sel.length<2){toast('商品不存在，请刷新','error');return}
+  const defaultName=`对比_${sel[0].name.slice(0,8)}等${sel.length}款_${today()}`
+  const name=(prompt('保存对比记录名称：',defaultName)||'').trim()||defaultName
+  const list=_ldCmp()
+  list.unshift({id:uid(),name,savedAt:today(),items:sel})
+  _svCmp(list)
+  _renderCmpHistory()
+  toast('✅ 对比记录已保存，可在下方管理')
+}
+
+// 直接下载当前对比（不保存记录）
+function exportCmpDirect(ids){
+  const allItems=_ldProcure(),sel=ids.map(id=>allItems.find(x=>x.id===id)).filter(Boolean)
+  if(!sel.length){toast('无商品','error');return}
+  const csv=_buildCmpCSV(sel)
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`采购对比_${today()}.csv`;a.click()
+  toast('📊 对比表已下载（Excel可直接打开）')
+}
+
+// 渲染对比记录列表
+function _renderCmpHistory(){
+  const el=document.getElementById('procure-cmp-history');if(!el)return
+  const list=_ldCmp()
+  const cntEl=document.getElementById('procure-cmp-count');if(cntEl)cntEl.textContent=list.length?list.length+'条':''
+  if(!list.length){el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:12px 0;text-align:center">暂无对比记录</div>';return}
+  el.innerHTML=list.map(entry=>{
+    const preview=entry.items.map(x=>x.name.slice(0,10)).join(' · ')
+    return`<div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(entry.name)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:1px">${entry.savedAt} &nbsp;·&nbsp; ${entry.items.length}款 &nbsp;·&nbsp; ${escHtml(preview)}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;flex-shrink:0" onclick="viewCmp('${entry.id}')">📊 查看</button>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;flex-shrink:0" onclick="downloadCmp('${entry.id}')">⬇️ 下载</button>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;flex-shrink:0;color:var(--red)" onclick="deleteCmp('${entry.id}')">×</button>
+    </div>`
+  }).join('')
+}
+
+// 查看某条对比记录（在对比面板展开）
+function viewCmp(id){
+  const entry=_ldCmp().find(x=>x.id===id);if(!entry)return
+  const dL=['同城🏠','同区域','邻省🚚','跨区✈'],sM={eval:'待评估',pick:'已选定',done:'已采购',drop:'已拒绝'}
+  const sel=entry.items
+  const rows=[['价格',x=>x.price?`¥${x.price.toLocaleString()}`:'—'],['品牌',x=>x.brand||'—'],['评分',x=>x.rating?'★'.repeat(Math.round(x.rating))+'☆'.repeat(5-Math.round(x.rating))+` (${x.rating})`:'—'],['月销量',x=>x.sales?x.sales.toLocaleString()+'件':'—'],['货期',x=>x.deliveryDays?x.deliveryDays+'天':'—'],['发货地',x=>x.shipFrom||'—'],['运距',x=>dL[x.distScore]||'—'],['平台',x=>x.platform||'—'],['类别',x=>x.category||'—'],['状态',x=>sM[x.status]||x.status],['备注',x=>x.notes?x.notes.slice(0,40):'—']]
+  const panel=document.getElementById('procure-compare-panel');if(!panel)return
+  panel.style.display=''
+  panel.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><div style="font-size:12px;font-weight:600">📂 ${escHtml(entry.name)} <span style="font-size:11px;color:var(--text2);font-weight:400">${entry.savedAt}</span></div><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="downloadCmp('${entry.id}')">⬇️ 下载此对比</button><button class="btn btn-ghost btn-sm" onclick="document.getElementById('procure-compare-panel').style.display='none'">关闭</button></div></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><tr style="border-bottom:2px solid var(--border)"><th style="padding:6px 8px;font-size:11px;color:var(--text2);text-align:left;background:var(--surface2)">字段</th>${sel.map(x=>`<th style="padding:6px 8px;font-size:12px;font-weight:600;color:var(--primary);max-width:100px;word-break:break-all">${escHtml(x.name.slice(0,25))}</th>`).join('')}</tr>${rows.map(([l,fn])=>`<tr><td style="padding:5px 8px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;background:var(--surface2)">${l}</td>${sel.map(x=>`<td style="padding:5px 8px;font-size:12px">${escHtml(String(fn(x)))}</td>`).join('')}</tr>`).join('')}</table></div>`
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'})
+}
+
+// 下载某条对比记录
+function downloadCmp(id){
+  const entry=_ldCmp().find(x=>x.id===id);if(!entry)return
+  const csv=_buildCmpCSV(entry.items)
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${entry.name.replace(/[/\\?:*"<>|]/g,'_')}_${entry.savedAt}.csv`;a.click()
+  toast('📊 对比表已下载（Excel可直接打开）')
+}
+
+// 删除某条对比记录
+function deleteCmp(id){
+  if(!confirm('确认删除此对比记录？'))return
+  _svCmp(_ldCmp().filter(x=>x.id!==id))
+  _renderCmpHistory()
+  toast('已删除')
+}
+
 function sortProcureBy(field){if(_procureSortField===field)_procureSortDir=_procureSortDir==='asc'?'desc':'asc';else{_procureSortField=field;_procureSortDir=['price','deliveryDays','distScore'].includes(field)?'asc':'desc'};renderProcureList()}
 function renderProcureList(){
   const el=document.getElementById('procure-list');if(!el)return
