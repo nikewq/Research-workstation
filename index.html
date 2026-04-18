@@ -5043,45 +5043,103 @@ async function extractProductURL(){
   }catch(e){tip.textContent='提取失败，可手动填写'}
   btn.disabled=false;btn.textContent='🔍 提取'
 }
+// 用 Jina 抓单个商品页，失败返回 null
+async function _jinaFetch(url,maxLen=3000){
+  try{
+    const jr=await Promise.race([
+      fetch('https://r.jina.ai/'+url,{headers:{'Accept':'text/plain','X-Return-Format':'markdown','X-No-Cache':'true'}}),
+      new Promise((_,r)=>setTimeout(()=>r(null),14000))
+    ])
+    if(jr&&jr.ok){const t=await jr.text();return t.slice(0,maxLen)}
+  }catch(_){}
+  return null
+}
+
+// 从单品页文本用 AI 提取商品信息
+async function _extractOneProduct(pageText,productUrl,host){
+  const prompt=`商品页面（来源：${host}）：\n\n${pageText}\n\n提取商品信息，返回JSON（不确定填空或0）：\n{"name":"商品全名含品牌型号","brand":"品牌","price":数字,"platform":"${host}","rating":评分0-5小数,"sales":月销量整数,"shipFrom":"发货地省市","deliveryDays":货期天数整数,"userFeedback":"主要卖点或用户评价1-2句","category":"类别","notes":"核心规格参数分号分隔","url":"${productUrl}"}\n只返回JSON。`
+  const raw=await _callAI(prompt,700)
+  const s=raw.indexOf('{'),e=raw.lastIndexOf('}')
+  if(s!==-1&&e>s){try{return JSON.parse(raw.slice(s,e+1))}catch(_){}}
+  return null
+}
+
 async function importComparePageURL(){
   const urlEl=document.getElementById('procure-cmp-url-input'),url=urlEl?.value.trim()
   if(!url||!url.startsWith('http')){toast('请输入有效的对比页 URL','error');return}
   const btn=document.getElementById('procure-cmp-import-btn'),tip=document.getElementById('procure-cmp-import-tip')
-  btn.disabled=true;btn.textContent='⏳';tip.innerHTML='正在读取对比页面…'
+  btn.disabled=true;btn.textContent='⏳'
   try{
-    let pageText=''
-    try{
-      const jr=await Promise.race([
-        fetch('https://r.jina.ai/'+url,{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),
-        new Promise((_,r)=>setTimeout(()=>r('timeout'),12000))
-      ])
-      if(jr&&jr.ok)pageText=(await jr.text()).slice(0,5000)
-    }catch(_){}
-    if(!pageText){tip.innerHTML='<span style="color:var(--red)">页面读取失败，请确认链接可以正常访问</span>';return}
-    tip.innerHTML='AI 正在解析商品信息…'
     const host=new URL(url).hostname.replace(/^www\./,'')
-    const prompt=`以下是一个商品对比页面的内容（来源：${host}）：\n\n${pageText}\n\n请提取页面中所有被对比的商品，每个商品作为独立对象，返回JSON数组：\n[{"name":"商品全名含品牌型号","brand":"品牌","price":数字价格(0表示未知),"platform":"${host}","rating":评分0-5小数(0表示未知),"sales":月销量整数(0表示未知),"shipFrom":"发货地省市","deliveryDays":货期天数整数(0表示未知),"userFeedback":"主要卖点或用户评价摘要","category":"商品类别","notes":"核心规格参数用分号分隔","url":"该商品的直链（如能识别）"}]\n重要：必须识别并分别返回页面中每一款被对比的商品，不要合并。只返回JSON数组。`
-    const raw=await _callAI(prompt,2000)
-    const products=_extractJSONArray(raw)
-    if(!products||!products.length){tip.innerHTML='<span style="color:var(--red)">未能识别商品，请确认是商品对比页面</span>';return}
-    // 批量写入清单并自动勾选
-    const userCity=_getProcureLoc()
-    const newItems=products.map(p=>{
-      const shipFrom=p.shipFrom||''
-      return{id:uid(),name:p.name||'未知商品',brand:p.brand||'',price:parseFloat(p.price)||0,currency:'CNY',platform:p.platform||host,rating:parseFloat(p.rating)||0,sales:parseInt(p.sales)||0,userFeedback:p.userFeedback||'',deliveryDays:parseInt(p.deliveryDays)||0,shipFrom,distScore:_distScore(shipFrom,userCity),category:p.category||'',url:p.url||url,notes:p.notes||'',status:'eval',savedAt:today()}
-    })
-    const existing=_ldProcure()
-    _svProcure([...newItems,...existing])
-    // 自动勾选进对比面板（最多4款）
-    _procureCompare.clear()
-    newItems.slice(0,4).forEach(x=>_procureCompare.add(x.id))
-    renderProcureList()
-    _renderProcureCompare()
-    tip.innerHTML=`<span style="color:var(--primary)">✅ 已导入 ${newItems.length} 款商品，已自动选中对比。可直接「保存对比」或「下载」。</span>`
-    // 滚动到对比面板
-    setTimeout(()=>document.getElementById('procure-compare-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'}),300)
-  }catch(e){tip.innerHTML='<span style="color:var(--red)">解析失败：'+escHtml(String(e))+'</span>'}
+    let productUrls=[]
+
+    // ── 京东对比页：直接从 URL 提取商品 ID ──
+    const jdCmp=url.match(/item\.jd\.com\/compare\/([0-9]+(?:-[0-9]+)+)\.html/i)
+    if(jdCmp){
+      const ids=jdCmp[1].split('-').filter(x=>x.length>=6)
+      productUrls=ids.map(id=>`https://item.jd.com/${id}.html`)
+      tip.innerHTML=`检测到京东对比页，共 ${ids.length} 款商品，并行读取中…`
+    } else {
+      // ── 其他平台：先尝试直接抓对比页 ──
+      tip.innerHTML='读取对比页面中…'
+      const pageText=await _jinaFetch(url,6000)
+      if(pageText){
+        tip.innerHTML='AI 解析中…'
+        const prompt=`以下是商品对比页（来源：${host}）：\n\n${pageText}\n\n提取所有被对比的商品，每款独立返回，JSON数组：\n[{"name":"完整商品名","brand":"品牌","price":数字,"platform":"${host}","rating":评分0-5,"sales":月销量整数,"shipFrom":"发货地","deliveryDays":货期整数,"userFeedback":"卖点/评价","category":"类别","notes":"规格参数分号分隔","url":"商品链接"}]\n必须逐款分别列出，只返回JSON。`
+        const raw=await _callAI(prompt,2000)
+        const products=_extractJSONArray(raw)
+        if(products&&products.length){
+          await _saveCmpProducts(products,host,url,tip)
+          btn.disabled=false;btn.textContent='🆚 批量导入';return
+        }
+      }
+      tip.innerHTML='<span style="color:var(--red)">对比页读取失败。请改用「URL提取」逐个添加商品，或手动填写。</span>'
+      btn.disabled=false;btn.textContent='🆚 批量导入';return
+    }
+
+    // ── 并行抓各单品页 ──
+    tip.innerHTML=`正在并行读取 ${productUrls.length} 个商品页面（约需 10-20 秒）…`
+    const fetchResults=await Promise.allSettled(productUrls.map(u=>_jinaFetch(u,3000)))
+    const succeeded=fetchResults.map((r,i)=>({ok:r.status==='fulfilled'&&r.value,text:r.status==='fulfilled'?r.value:null,url:productUrls[i]})).filter(x=>x.ok)
+
+    if(!succeeded.length){
+      tip.innerHTML='<span style="color:var(--red)">所有商品页面读取失败（可能被反爬拦截）。请使用「URL提取」逐个添加或手动填写。</span>'
+      btn.disabled=false;btn.textContent='🆚 批量导入';return
+    }
+
+    tip.innerHTML=`✅ 成功读取 ${succeeded.length}/${productUrls.length} 页，AI 逐一解析中…`
+    // 顺序解析（避免并发太多 AI 请求）
+    const products=[]
+    for(let i=0;i<succeeded.length;i++){
+      const {text,url:pUrl}=succeeded[i]
+      tip.innerHTML=`AI 解析第 ${i+1}/${succeeded.length} 款商品…`
+      const p=await _extractOneProduct(text,pUrl,host)
+      if(p)products.push(p)
+    }
+
+    if(!products.length){
+      tip.innerHTML='<span style="color:var(--red)">AI 未能提取任何商品信息，请尝试手动填写。</span>'
+      btn.disabled=false;btn.textContent='🆚 批量导入';return
+    }
+    await _saveCmpProducts(products,host,url,tip)
+  }catch(e){tip.innerHTML='<span style="color:var(--red)">发生错误：'+escHtml(String(e))+'</span>'}
   btn.disabled=false;btn.textContent='🆚 批量导入'
+}
+
+// 共用：将 products 写入清单并自动勾选对比
+async function _saveCmpProducts(products,host,sourceUrl,tip){
+  const userCity=_getProcureLoc()
+  const newItems=products.map(p=>{
+    const shipFrom=p.shipFrom||''
+    return{id:uid(),name:(p.name||'未知商品').slice(0,120),brand:p.brand||'',price:parseFloat(p.price)||0,currency:'CNY',platform:p.platform||host,rating:Math.min(5,parseFloat(p.rating)||0),sales:parseInt(p.sales)||0,userFeedback:p.userFeedback||'',deliveryDays:parseInt(p.deliveryDays)||0,shipFrom,distScore:_distScore(shipFrom,userCity),category:p.category||'',url:p.url||sourceUrl,notes:p.notes||'',status:'eval',savedAt:today()}
+  })
+  _svProcure([...newItems,..._ldProcure()])
+  _procureCompare.clear()
+  newItems.slice(0,4).forEach(x=>_procureCompare.add(x.id))
+  renderProcureList()
+  _renderProcureCompare()
+  tip.innerHTML=`<span style="color:var(--primary)">✅ 已导入 ${newItems.length} 款商品并自动选中对比，可直接「💾 保存对比」或「⬇️ 下载」。</span>`
+  setTimeout(()=>document.getElementById('procure-compare-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'}),400)
 }
 function importProcurePaste(){
   const raw=document.getElementById('procure-paste-input')?.value.trim();if(!raw){toast('请粘贴书签工具复制的内容','error');return}
