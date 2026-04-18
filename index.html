@@ -4209,28 +4209,50 @@ function openCustomThemeModal(){
   if(btn){btn.disabled=false;btn.textContent='✨ AI 生成配色';}
   openModal('customThemeModal');
 }
+async function _searchSchoolColors(name){
+  try{
+    const q=encodeURIComponent(`${name} 官方VI色彩标准 PANTONE 标准色`);
+    const r=await fetch(`https://s.jina.ai/${q}`,{signal:AbortSignal.timeout(8000)});
+    if(!r.ok) return null;
+    const t=await r.text();
+    // 截取前 2000 字，重点保留含颜色信息的行
+    const lines=t.split('\n').filter(l=>/pantone|#[0-9a-f]{3,6}|rgb|色|color/i.test(l));
+    return lines.slice(0,30).join('\n')||t.slice(0,1500);
+  }catch(e){ return null; }
+}
 async function generateCustomTheme(){
   const name=(document.getElementById('ct-school')?.value||'').trim();
   if(!name){toast('请输入学校名称','error');return;}
   const btn=document.getElementById('ct-gen-btn');
-  if(btn){btn.disabled=true;btn.textContent='生成中...';}
-  const prompt=`你是UI设计师。请为"${name}"生成暗色界面主题配色，使用该校官方VI标准色作为主色（--primary）。只返回JSON不含其他文字：{"--bg":"","--surface":"","--surface2":"","--border":"","--text":"","--text2":"","--primary":"","--primary-soft":"rgba(0,0,0,.15)","--primary-bg":"rgba(0,0,0,.08)","--green":"#059669","--green-soft":"rgba(5,150,105,.15)","--orange":"#f59e0b","--orange-soft":"rgba(245,158,11,.15)","--red":"#ef4444","--red-soft":"rgba(239,68,68,.15)","--blue":"#3b82f6","--blue-soft":"rgba(59,130,246,.15)"}`;
+  const setPrev=txt=>{const p=document.getElementById('ct-preview');if(p){p.style.display='';p.innerHTML=`<div style="color:var(--text2);font-size:12px;padding:8px 0">${txt}</div>`;}};
+  if(btn){btn.disabled=true;btn.textContent='🔍 搜索配色资料...';}
+  setPrev('正在搜索官方 VI 色彩规范...');
+  const searchCtx=await _searchSchoolColors(name);
+  if(btn) btn.textContent='🎨 生成主题...';
+  const ctxBlock=searchCtx
+    ?`【搜索到的官方VI资料（请优先使用其中的PANTONE或HEX色号作为--primary）】\n${searchCtx}`
+    :`【未找到官方VI资料】请使用该校官方微信公众号头像的主色调作为--primary。`;
+  const prompt=`你是专业UI设计师，请严格根据以下资料为"${name}"生成暗色界面主题。\n${ctxBlock}\n\n要求：--primary必须使用该校真实品牌色；背景深色；只返回JSON不含任何其他文字：\n{"--bg":"","--surface":"","--surface2":"","--border":"","--text":"","--text2":"","--primary":"","--primary-soft":"rgba(0,0,0,.15)","--primary-bg":"rgba(0,0,0,.08)","--green":"#059669","--green-soft":"rgba(5,150,105,.15)","--orange":"#f59e0b","--orange-soft":"rgba(245,158,11,.15)","--red":"#ef4444","--red-soft":"rgba(239,68,68,.15)","--blue":"#3b82f6","--blue-soft":"rgba(59,130,246,.15)"}`;
   try{
-    const res=await _callAI(prompt,500);
-    const m=res.match(/\{[\s\S]+\}/);
+    const res=await _callAI(prompt,600);
+    const m=res.match(/\{[\s\S]+?\}/);
     if(!m) throw new Error('no json');
-    _pendingCustomVars={vars:JSON.parse(m[0]),schoolName:name};
+    _pendingCustomVars={vars:JSON.parse(m[0]),schoolName:name,searchFound:!!searchCtx};
     _showCustomPreview();
-  }catch(e){toast('生成失败，请重试','error');}
+  }catch(e){
+    setPrev('生成失败，请重试');
+    toast('生成失败，请重试','error');
+  }
   if(btn){btn.disabled=false;btn.textContent='✨ AI 生成配色';}
 }
 function _showCustomPreview(){
   if(!_pendingCustomVars) return;
-  const {vars}=_pendingCustomVars;
+  const {vars,schoolName,searchFound}=_pendingCustomVars;
   const el=document.getElementById('ct-preview');if(!el) return;
   el.style.display='';
   const swatches=Object.entries(vars).filter(([k])=>!k.includes('-soft')&&!k.includes('-bg')&&k!=='--text2').map(([k,v])=>`<div title="${k}" style="width:26px;height:26px;border-radius:5px;background:${v};border:1px solid rgba(128,128,128,.2);flex-shrink:0"></div>`).join('');
-  el.innerHTML=`<div style="font-size:12px;color:var(--text2);margin:12px 0 8px">配色预览（${_pendingCustomVars.schoolName}）</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${swatches}</div><div style="display:flex;gap:8px"><button class="btn btn-primary" style="flex:1" onclick="_applyCustomAndClose()">应用此主题</button><button class="btn btn-ghost" onclick="generateCustomTheme()">重新生成</button></div>`;
+  const src=searchFound?'<span style="color:var(--green);font-size:11px">✓ 基于官方VI资料</span>':'<span style="color:var(--orange);font-size:11px">⚠ 基于官微头像色（未找到VI规范）</span>';
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px"><span style="font-size:12px;color:var(--text2)">配色预览（${schoolName}）</span>${src}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${swatches}</div><div style="display:flex;gap:8px"><button class="btn btn-primary" style="flex:1" onclick="_applyCustomAndClose()">应用此主题</button><button class="btn btn-ghost" onclick="generateCustomTheme()">重新生成</button></div>`;
 }
 function _applyCustomAndClose(){
   if(!_pendingCustomVars) return;
