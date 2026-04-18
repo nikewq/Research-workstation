@@ -114,13 +114,20 @@
   --blue:#64c4b8;--blue-soft:rgba(100,196,184,.15);
 }
 /* ── Theme Picker Cards ── */
-.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:12px}
-.theme-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;background:var(--surface)}
-.theme-card:hover{border-color:var(--primary);transform:translateY(-1px)}
-.theme-card.active{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-.theme-swatch{width:30px;height:30px;border-radius:7px;flex-shrink:0}
-.theme-card-name{font-size:13px;font-weight:600;margin-bottom:2px}
-.theme-card-desc{font-size:11px;color:var(--text2)}
+.theme-section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);opacity:.55;margin:4px 0 8px;padding-left:1px}
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:7px}
+.theme-card{border-radius:12px;border:2px solid var(--border);cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;overflow:hidden;background:var(--surface2);position:relative}
+.theme-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.35);border-color:var(--primary)}
+.theme-card.active{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary),0 4px 16px var(--primary-soft)}
+.theme-swatch-banner{height:54px;position:relative;overflow:hidden}
+.theme-card-info{padding:8px 10px 9px}
+.theme-card-name{font-size:12px;font-weight:600;margin-bottom:2px;color:var(--text)}
+.theme-card-desc{font-size:10px;color:var(--text2)}
+.theme-card-custom{border-style:dashed}
+.theme-card-custom:hover{background:var(--primary-bg)}
+.theme-check{position:absolute;top:7px;right:7px;width:16px;height:16px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;line-height:1}
+.school-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--surface2);color:var(--text2);transition:all .15s;user-select:none}
+.school-chip:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;font-size:14px;min-height:100vh;display:flex}
 
@@ -4147,38 +4154,113 @@ function delGanttTask(){
 // ══════════════════════════════════════
 // 已核验高校配色数据库（主色 + 配色提示）
 const SCHOOL_COLORS_DB={
-  '北京大学':      {p:'#b22234',hint:'燕红 Pantone 200C'},
-  '清华大学':      {p:'#5c1a7a',hint:'清华紫 Pantone 268C'},
-  '复旦大学':      {p:'#1b4fab',hint:'复旦蓝 Pantone 286C'},
-  '浙江大学':      {p:'#003e7e',hint:'浙大蓝，辅助浙大金 #c8a952'},
-  '上海交通大学':  {p:'#b5121b',hint:'交大红'},
-  '南方科技大学':  {p:'#e8783c',blue:'#64c4b8',green:'#3daa8a',hint:'南科大橙 Pantone 7578C + 天青 #64c4b8(Pantone 2401C) + 墨绿 →深色UI适配 #3daa8a'},
-  '武汉大学':      {p:'#bf1b2c',hint:'珞珈红'},
-  '中山大学':      {p:'#007b43',hint:'中大绿'},
-  '同济大学':      {p:'#1b4fab',hint:'同济蓝'},
-  '南京大学':      {p:'#1b3a8c',hint:'南大蓝'},
-  '四川大学':      {p:'#c41230',hint:'川大红'},
-  '华中科技大学':  {p:'#c00c18',hint:'华科红'},
-  '西安交通大学':  {p:'#c41230',hint:'交大红'},
-  '哈尔滨工业大学':{p:'#003a7a',hint:'航天蓝'},
+  // ── 985 高校 ──
+  '北京大学':        {p:'#b22234',hint:'燕红 Pantone 200C'},
+  '清华大学':        {p:'#5c1a7a',hint:'清华紫 Pantone 268C'},
+  '中国人民大学':    {p:'#b22234',hint:'人大红'},
   '北京航空航天大学':{p:'#003a7a',hint:'航天蓝'},
-  '厦门大学':      {p:'#003087',hint:'厦大蓝'},
-  '中国人民大学':  {p:'#b22234',hint:'人大红'},
-  '北京师范大学':  {p:'#006634',hint:'师大绿'},
-  '东南大学':      {p:'#1b3a8c',hint:'东大蓝'},
-  '北京理工大学':  {p:'#1b3a8c',hint:'理工蓝'},
+  '北京理工大学':    {p:'#1b3a8c',hint:'理工蓝'},
+  '中国农业大学':    {p:'#007b43',hint:'农大绿'},
+  '北京师范大学':    {p:'#006634',hint:'师大绿'},
+  '南开大学':        {p:'#005a9e',hint:'南开蓝 Pantone 287C'},
+  '天津大学':        {p:'#1b3a8c',hint:'天大蓝'},
+  '大连理工大学':    {p:'#003a7a',hint:'工大蓝'},
+  '吉林大学':        {p:'#003087',hint:'吉大蓝'},
+  '哈尔滨工业大学':  {p:'#003a7a',hint:'哈工大航天蓝'},
+  '复旦大学':        {p:'#1b4fab',hint:'复旦蓝 Pantone 286C'},
+  '同济大学':        {p:'#1b4fab',hint:'同济蓝'},
+  '上海交通大学':    {p:'#b5121b',hint:'交大红'},
+  '华东师范大学':    {p:'#c41230',hint:'华师大红'},
+  '南京大学':        {p:'#1b3a8c',hint:'南大蓝'},
+  '东南大学':        {p:'#1b3a8c',hint:'东大蓝'},
+  '浙江大学':        {p:'#003e7e',hint:'浙大蓝，辅助浙大金 #c8a952'},
   '中国科学技术大学':{p:'#cc1b1b',hint:'中科大红'},
-  '华南理工大学':  {p:'#c41230',hint:'华工红'},
-  '天津大学':      {p:'#1b3a8c',hint:'天大蓝'},
-  '大连理工大学':  {p:'#003a7a',hint:'工大蓝'},
-  '电子科技大学':  {p:'#003087',hint:'电科蓝'},
-  '兰州大学':      {p:'#1b4fab',hint:'兰大蓝'},
-  '吉林大学':      {p:'#003087',hint:'吉大蓝'},
-  '山东大学':      {p:'#cc1b1b',hint:'山大红'},
-  '北京邮电大学':  {p:'#cc1b1b',hint:'北邮红'},
-  '香港大学':      {p:'#00843d',hint:'港大绿'},
-  '香港科技大学':  {p:'#003087',hint:'科大蓝'},
-  '香港中文大学':  {p:'#003087',hint:'中大蓝'},
+  '厦门大学':        {p:'#003087',hint:'厦大蓝'},
+  '山东大学':        {p:'#cc1b1b',hint:'山大红'},
+  '武汉大学':        {p:'#bf1b2c',hint:'珞珈红'},
+  '华中科技大学':    {p:'#c00c18',hint:'华科红'},
+  '湖南大学':        {p:'#007b43',hint:'湖大绿'},
+  '中南大学':        {p:'#c41230',hint:'中南红'},
+  '中山大学':        {p:'#007b43',hint:'中大绿'},
+  '华南理工大学':    {p:'#c41230',hint:'华工红'},
+  '四川大学':        {p:'#c41230',hint:'川大红'},
+  '重庆大学':        {p:'#1b4fab',hint:'重大蓝'},
+  '电子科技大学':    {p:'#003087',hint:'电科蓝'},
+  '西安交通大学':    {p:'#c41230',hint:'交大红'},
+  '西北工业大学':    {p:'#1b3a8c',hint:'西工大蓝'},
+  '兰州大学':        {p:'#1b4fab',hint:'兰大蓝'},
+  '中国海洋大学':    {p:'#1b4fab',hint:'海大蓝'},
+  '中央民族大学':    {p:'#c41230',hint:'民大红'},
+  '东北大学':        {p:'#c41230',hint:'东大红'},
+  '国防科技大学':    {p:'#c41230',hint:'国防红'},
+  // ── 211/双一流高校 ──
+  '北京交通大学':    {p:'#003087',hint:'北交蓝'},
+  '北京科技大学':    {p:'#c41230',hint:'北科红'},
+  '北京化工大学':    {p:'#003a7a',hint:'化工蓝'},
+  '北京邮电大学':    {p:'#cc1b1b',hint:'北邮红'},
+  '中国传媒大学':    {p:'#c41230',hint:'传媒红'},
+  '对外经济贸易大学':{p:'#003087',hint:'贸大蓝'},
+  '中央财经大学':    {p:'#c41230',hint:'央财红'},
+  '北京外国语大学':  {p:'#003087',hint:'北外蓝'},
+  '中国政法大学':    {p:'#c41230',hint:'法大红'},
+  '北京工业大学':    {p:'#c41230',hint:'北工大红'},
+  '天津医科大学':    {p:'#1b4fab',hint:'津医蓝'},
+  '河北工业大学':    {p:'#c41230',hint:'河工大红'},
+  '太原理工大学':    {p:'#c41230',hint:'太理红'},
+  '内蒙古大学':      {p:'#1b4fab',hint:'内大蓝'},
+  '辽宁大学':        {p:'#003087',hint:'辽大蓝'},
+  '大连海事大学':    {p:'#003087',hint:'海大蓝'},
+  '哈尔滨工程大学':  {p:'#003a7a',hint:'哈工程蓝'},
+  '延边大学':        {p:'#1b4fab',hint:'延大蓝'},
+  '东北师范大学':    {p:'#c41230',hint:'东师红'},
+  '华东理工大学':    {p:'#1b4fab',hint:'华理工蓝'},
+  '上海财经大学':    {p:'#c41230',hint:'财大红'},
+  '上海大学':        {p:'#c41230',hint:'上大红'},
+  '东华大学':        {p:'#003087',hint:'东华蓝'},
+  '河海大学':        {p:'#003087',hint:'河海蓝'},
+  '苏州大学':        {p:'#c41230',hint:'苏大红'},
+  '南京航空航天大学':{p:'#c41230',hint:'南航红'},
+  '南京理工大学':    {p:'#c41230',hint:'南理工红'},
+  '江南大学':        {p:'#c41230',hint:'江大红'},
+  '南京农业大学':    {p:'#007b43',hint:'南农绿'},
+  '中国矿业大学':    {p:'#003087',hint:'矿大蓝'},
+  '南京师范大学':    {p:'#1b4fab',hint:'南师蓝'},
+  '安徽大学':        {p:'#1b4fab',hint:'安大蓝'},
+  '合肥工业大学':    {p:'#1b3a8c',hint:'合工大蓝'},
+  '福州大学':        {p:'#c41230',hint:'福大红'},
+  '南昌大学':        {p:'#c41230',hint:'南大红'},
+  '山东农业大学':    {p:'#007b43',hint:'农大绿'},
+  '中国石油大学':    {p:'#003087',hint:'石大蓝'},
+  '郑州大学':        {p:'#c41230',hint:'郑大红'},
+  '武汉理工大学':    {p:'#1b4fab',hint:'武理工蓝'},
+  '华中农业大学':    {p:'#007b43',hint:'华农绿'},
+  '中南财经政法大学':{p:'#c41230',hint:'中南财政红'},
+  '华中师范大学':    {p:'#1b4fab',hint:'华师蓝'},
+  '暨南大学':        {p:'#c41230',hint:'暨大红'},
+  '华南师范大学':    {p:'#1b4fab',hint:'华师蓝'},
+  '广西大学':        {p:'#007b43',hint:'广大绿'},
+  '西南交通大学':    {p:'#1b4fab',hint:'西南交大蓝'},
+  '西南大学':        {p:'#007b43',hint:'西南大绿'},
+  '西南财经大学':    {p:'#c41230',hint:'西财红'},
+  '云南大学':        {p:'#1b4fab',hint:'云大蓝'},
+  '贵州大学':        {p:'#007b43',hint:'贵大绿'},
+  '西北大学':        {p:'#c41230',hint:'西大红'},
+  '西北农林科技大学':{p:'#007b43',hint:'农林绿'},
+  '新疆大学':        {p:'#1b4fab',hint:'新大蓝'},
+  '中国地质大学':    {p:'#003087',hint:'地大蓝'},
+  '北京林业大学':    {p:'#006634',hint:'林大绿'},
+  '北京中医药大学':  {p:'#007b43',hint:'中医绿'},
+  '中国科学院大学':  {p:'#003087',hint:'国科大蓝'},
+  // ── 港澳台及知名高校 ──
+  '香港大学':        {p:'#00843d',hint:'港大绿'},
+  '香港科技大学':    {p:'#003087',hint:'科大蓝'},
+  '香港中文大学':    {p:'#4e2583',hint:'中大紫'},
+  '香港理工大学':    {p:'#8b0000',hint:'理大红'},
+  '香港城市大学':    {p:'#006b54',hint:'城大绿'},
+  '澳门大学':        {p:'#003087',hint:'澳大蓝'},
+  '台湾大学':        {p:'#003087',hint:'台大蓝'},
+  '深圳大学':        {p:'#1b4fab',hint:'深大蓝'},
+  '南方科技大学':    {p:'#e8783c',blue:'#64c4b8',green:'#3daa8a',hint:'南科大橙 Pantone 7578C + 天青 #64c4b8 + 墨绿适配 #3daa8a'},
 };
 const THEMES=[
   {id:'default', name:'极夜·默认',  desc:'深紫夜空', bg:'#0d1117', primary:'#7c3aed'},
@@ -4232,8 +4314,16 @@ function renderThemePicker(){
   let cd={};
   try{ cd=JSON.parse(localStorage.getItem('_theme_custom')||'{}'); }catch(e){}
   const cp=cd.vars?.['--primary']||'#888', cb=cd.vars?.['--bg']||'#111';
-  const customCard=`<div class="theme-card${cur==='custom'?' active':''}" data-theme="custom" onclick="openCustomThemeModal()"><div class="theme-swatch" style="background:linear-gradient(135deg,${cb} 40%,${cp});border:1px dashed rgba(255,255,255,.2)"></div><div><div class="theme-card-name">${cd.schoolName||'其他学校'}</div><div class="theme-card-desc">${cur==='custom'?'✓ 当前主题':'AI 生成配色 ✨'}</div></div></div>`;
-  el.innerHTML=THEMES.map(t=>`<div class="theme-card${t.id===cur?' active':''}" data-theme="${t.id}" onclick="applyTheme('${t.id}')"><div class="theme-swatch" style="background:linear-gradient(135deg,${t.bg} 40%,${t.primary})"></div><div><div class="theme-card-name">${t.name}</div><div class="theme-card-desc">${t.desc}</div></div></div>`).join('')+customCard;
+  const mkCard=(id,name,desc,bg,primary,isCustom=false)=>{
+    const act=id===cur;
+    const onclick=isCustom?`openCustomThemeModal()`:`applyTheme('${id}')`;
+    const sparkle=isCustom&&!act?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.4;pointer-events:none">✦</div>`:'';
+    return `<div class="theme-card${act?' active':''}${isCustom?' theme-card-custom':''}" data-theme="${id}" onclick="${onclick}"><div class="theme-swatch-banner" style="background:${bg}"><div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${primary};opacity:.9"></div><div style="position:absolute;bottom:10px;right:11px;width:13px;height:13px;border-radius:50%;background:${primary};box-shadow:0 0 8px ${primary}99"></div>${sparkle}</div><div class="theme-card-info"><div class="theme-card-name">${name}</div><div class="theme-card-desc">${desc}</div></div>${act?'<div class="theme-check">✓</div>':''}</div>`;
+  };
+  const personal=THEMES.filter(t=>['default','wuxia','kawaii','neutral','queen','aurora'].includes(t.id));
+  const unis=THEMES.filter(t=>!['default','wuxia','kawaii','neutral','queen','aurora'].includes(t.id));
+  const customCard=mkCard('custom',cd.schoolName||'其他学校',cur==='custom'?'当前主题':'AI 生成配色',cb,cp,true);
+  el.innerHTML=`<div class="theme-section-label">个性主题</div><div class="theme-grid">${personal.map(t=>mkCard(t.id,t.name,t.desc,t.bg,t.primary)).join('')}</div><div class="theme-section-label" style="margin-top:18px">高校配色</div><div class="theme-grid">${unis.map(t=>mkCard(t.id,t.name,t.desc,t.bg,t.primary)).join('')}${customCard}</div>`;
 }
 function openThemeModal(){renderThemePicker();openModal('themeModal');}
 function openCustomThemeModal(){
@@ -4307,10 +4397,44 @@ function _showCustomPreview(){
   const {vars,schoolName}=_pendingCustomVars;
   const el=document.getElementById('ct-preview');if(!el) return;
   el.style.display='';
-  const swatches=Object.entries(vars).filter(([k])=>!k.includes('-soft')&&!k.includes('-bg')&&k!=='--text2').map(([k,v])=>`<div title="${k}" style="width:26px;height:26px;border-radius:5px;background:${v};border:1px solid rgba(128,128,128,.2);flex-shrink:0"></div>`).join('');
-  const srcMap={db:`<span style="color:var(--green);font-size:11px">✓ 内置标准色（${_pendingCustomVars.hint||''}）</span>`,ai:'<span style="color:var(--orange);font-size:11px">⚠ AI推断（建议核实）</span>'};
-  const src=srcMap[_pendingCustomVars.source]||srcMap.ai;
-  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px"><span style="font-size:12px;color:var(--text2)">配色预览（${schoolName}）</span>${src}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${swatches}</div><div style="display:flex;gap:8px"><button class="btn btn-primary" style="flex:1" onclick="_applyCustomAndClose()">应用此主题</button><button class="btn btn-ghost" onclick="generateCustomTheme()">重新生成</button></div>`;
+  const g=k=>vars[k]||'';
+  const bg=g('--bg')||'#111',sf=g('--surface')||'#1c1c1c',sf2=g('--surface2')||'#222',bd=g('--border')||'#333';
+  const tx=g('--text')||'#eee',tx2=g('--text2')||'#888',pr=g('--primary')||'#888';
+  const bl=g('--blue')||'#3b82f6',gr=g('--green')||'#10b981';
+  const srcBadge=_pendingCustomVars.source==='db'
+    ?`<span style="background:rgba(61,170,138,.15);color:#3daa8a;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap">✓ 官方标准色</span>`
+    :`<span style="background:rgba(232,120,60,.12);color:#e8783c;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap">⚠ AI 推断</span>`;
+  el.innerHTML=`<div style="margin:14px 0 0;border-radius:12px;overflow:hidden;border:1px solid ${bd};box-shadow:0 4px 24px rgba(0,0,0,.45)">
+    <div style="background:${bg};padding:9px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid ${bd}">
+      <div style="width:7px;height:7px;border-radius:50%;background:${pr};box-shadow:0 0 6px ${pr}88;flex-shrink:0"></div>
+      <span style="font-size:11px;font-weight:600;color:${tx};flex:1">${schoolName}</span>
+      ${srcBadge}
+    </div>
+    <div style="background:${sf};padding:10px 12px;display:flex;gap:10px;align-items:flex-start">
+      <div style="width:62px;flex-shrink:0;background:${bg};border-radius:6px;padding:8px 7px;border:1px solid ${bd}">
+        <div style="height:4px;border-radius:2px;background:${pr};margin-bottom:6px;width:75%"></div>
+        <div style="height:3px;border-radius:1.5px;background:${tx2};margin-bottom:4px;opacity:.45;width:55%"></div>
+        <div style="height:3px;border-radius:1.5px;background:${tx2};opacity:.3;width:65%"></div>
+        <div style="height:3px;border-radius:1.5px;background:${tx2};margin-top:4px;opacity:.25;width:45%"></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="height:5px;border-radius:2.5px;background:${tx};width:70%;margin-bottom:7px;opacity:.85"></div>
+        <div style="height:3px;border-radius:1.5px;background:${tx2};width:88%;margin-bottom:4px;opacity:.38"></div>
+        <div style="height:3px;border-radius:1.5px;background:${tx2};width:60%;margin-bottom:10px;opacity:.28"></div>
+        <div style="display:flex;gap:5px">
+          <div style="height:20px;border-radius:5px;background:${pr};padding:0 10px;display:flex;align-items:center"><div style="height:3px;width:22px;border-radius:2px;background:rgba(255,255,255,.75)"></div></div>
+          <div style="height:20px;border-radius:5px;border:1px solid ${bd};padding:0 8px;display:flex;align-items:center"><div style="height:3px;width:16px;border-radius:2px;background:${tx2};opacity:.5"></div></div>
+        </div>
+      </div>
+    </div>
+    <div style="background:${bg};padding:7px 12px 8px;display:flex;gap:3px;border-top:1px solid ${bd}">
+      ${[bg,sf,sf2,pr,bl,gr].map((c,i)=>`<div title="${['bg','surface','s2','primary','blue','green'][i]}: ${c}" style="flex:1;height:6px;border-radius:3px;background:${c}"></div>`).join('')}
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button class="btn btn-primary" style="flex:1" onclick="_applyCustomAndClose()">应用此主题</button>
+    <button class="btn btn-ghost" style="flex-shrink:0" onclick="generateCustomTheme()">重新生成</button>
+  </div>`;
 }
 function _applyCustomAndClose(){
   if(!_pendingCustomVars) return;
@@ -4318,6 +4442,11 @@ function _applyCustomAndClose(){
   closeModal('customThemeModal');
   renderThemePicker();
   toast('主题已应用 ✨');
+}
+function _quickPick(name){
+  const inp=document.getElementById('ct-school');
+  if(inp){inp.value=name;}
+  generateCustomTheme();
 }
 
 // 初次加载
@@ -4445,29 +4574,42 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWal
 
 <!-- ── Theme Picker Modal ── -->
 <div class="modal-overlay" id="themeModal" onclick="if(event.target===this)closeModal('themeModal')">
-  <div class="modal" style="max-width:620px;width:95%">
+  <div class="modal" style="max-width:660px;width:95%">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-weight:700;font-size:15px">🎨 界面主题</div>
-      <button onclick="closeModal('themeModal')" class="btn btn-ghost btn-sm" style="padding:4px 8px">✕</button>
+      <div>
+        <div style="font-weight:700;font-size:16px">界面主题</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;opacity:.7">选择配色风格，即时生效</div>
+      </div>
+      <button onclick="closeModal('themeModal')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:16px;line-height:1;opacity:.55">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:4px">选择你喜欢的配色风格，即时生效</div>
-    <div class="theme-grid" id="theme-picker-grid"></div>
+    <div id="theme-picker-grid"></div>
   </div>
 </div>
 
 <!-- ── Custom Theme Modal ── -->
 <div class="modal-overlay" id="customThemeModal" onclick="if(event.target===this)closeModal('customThemeModal')">
   <div class="modal" style="max-width:480px;width:95%">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-weight:700;font-size:15px">🏫 自定义学校主题</div>
-      <button onclick="closeModal('customThemeModal')" class="btn btn-ghost btn-sm" style="padding:4px 8px">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div>
+        <div style="font-weight:700;font-size:16px">学校专属主题</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;opacity:.7">基于官方 VI 色彩规范自动生成</div>
+      </div>
+      <button onclick="closeModal('customThemeModal')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:16px;line-height:1;opacity:.55">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
-      输入学校名称，AI 会根据官方 VI 色彩规范自动生成专属主题。
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin:12px 0 10px;align-items:center">
+      <span style="font-size:10px;color:var(--text2);opacity:.55;margin-right:2px;flex-shrink:0">快选</span>
+      <span class="school-chip" onclick="_quickPick('清华大学')">清华</span>
+      <span class="school-chip" onclick="_quickPick('北京大学')">北大</span>
+      <span class="school-chip" onclick="_quickPick('复旦大学')">复旦</span>
+      <span class="school-chip" onclick="_quickPick('浙江大学')">浙大</span>
+      <span class="school-chip" onclick="_quickPick('武汉大学')">武大</span>
+      <span class="school-chip" onclick="_quickPick('中山大学')">中大</span>
+      <span class="school-chip" onclick="_quickPick('同济大学')">同济</span>
+      <span class="school-chip" onclick="_quickPick('华中科技大学')">华科</span>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
-      <input id="ct-school" placeholder="如：上海交通大学、中国人民大学、武汉大学..." style="flex:1" onkeydown="if(event.key==='Enter')generateCustomTheme()">
-      <button id="ct-gen-btn" class="btn btn-primary" onclick="generateCustomTheme()">✨ AI 生成配色</button>
+      <input id="ct-school" placeholder="输入学校名称，如：上海交通大学..." style="flex:1" onkeydown="if(event.key==='Enter')generateCustomTheme()">
+      <button id="ct-gen-btn" class="btn btn-primary" style="padding:0 16px" onclick="generateCustomTheme()">生成</button>
     </div>
     <div id="ct-preview" style="display:none"></div>
   </div>
