@@ -417,6 +417,22 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .text-muted{color:var(--text2)}.text-sm{font-size:12px}
 .flex{display:flex}.items-center{align-items:center}.gap-8{gap:8px}.gap-12{gap:12px}.flex-1{flex:1}
 .chart-wrap{position:relative;height:200px}
+/* ── 采购清单 ── */
+.procure-table{width:100%;border-collapse:collapse;font-size:12px;min-width:620px}
+.procure-table th{text-align:left;padding:7px 8px;border-bottom:2px solid var(--border);color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;user-select:none;background:var(--surface2)}
+.procure-table th:hover{color:var(--primary)}
+.procure-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.4}
+.procure-table tr:hover td{background:var(--surface2)}
+.procure-sort-asc::after{content:' ↑';color:var(--primary)}
+.procure-sort-desc::after{content:' ↓';color:var(--primary)}
+.procure-stars{color:#f59e0b;letter-spacing:-1px;font-size:11px}
+.procure-ai-card{background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--primary)}
+.procure-add-tab{flex:1;padding:5px 8px;border-radius:7px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:11px;font-weight:500;transition:.15s}
+.procure-add-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.procure-filter-btn{padding:3px 10px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:11px;transition:.15s}
+.procure-filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.procure-bm-link{display:inline-block;padding:8px 16px;background:var(--primary);color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;cursor:grab;user-select:none}
+.procure-input{font-size:12px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -556,6 +572,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="nav-item" data-page="reflection"><span class="nav-icon">🌙</span>反思日记</div>
     <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
     <div class="nav-item" data-page="intel"><span class="nav-icon">📡</span>摸鱼侦察局</div>
+    <div class="nav-item" data-page="procure"><span class="nav-icon">🛒</span>采购清单</div>
     <div class="nav-group">设置</div>
     <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
     <div class="nav-item" onclick="openThemeModal()"><span class="nav-icon">🎨</span>界面主题</div>
@@ -1262,6 +1279,116 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   </div>
 </div>
 
+<!-- ── Procure ── -->
+<div class="page" id="page-procure">
+  <div class="page-title">采购清单 🛒</div>
+  <div class="page-subtitle">科研仪器·试剂·设备 · AI全网推荐 + 多维对比 + 导出Excel</div>
+
+  <div class="grid-2">
+    <!-- LEFT: AI搜索 + 添加 + 书签工具 -->
+    <div>
+      <!-- AI 产品搜索 -->
+      <div class="card">
+        <div class="section-header"><div class="card-title" style="margin-bottom:0">🤖 AI 产品推荐</div></div>
+        <textarea id="procure-search-input" rows="2" placeholder="描述采购需求，如：离心机 转速≥12000rpm 预算5万以内" style="width:100%;resize:vertical;margin-bottom:8px;font-size:12px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);box-sizing:border-box"></textarea>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary btn-sm" id="procure-search-btn" onclick="searchProcureAI()">🔍 AI 搜索推荐</button>
+          <span style="font-size:11px;color:var(--text2)">推荐结果可一键加入清单</span>
+        </div>
+        <div id="procure-ai-results" style="margin-top:10px"></div>
+      </div>
+
+      <!-- 添加商品 -->
+      <div class="card" id="procure-add-section">
+        <div class="section-header"><div class="card-title" style="margin-bottom:0">➕ 添加商品</div></div>
+        <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--surface2);padding:3px;border-radius:10px">
+          <button class="procure-add-tab active" data-mode="url" onclick="switchProcureAddMode('url',this)">🔗 URL提取</button>
+          <button class="procure-add-tab" data-mode="manual" onclick="switchProcureAddMode('manual',this)">✏️ 手动填写</button>
+          <button class="procure-add-tab" data-mode="paste" onclick="switchProcureAddMode('paste',this)">📋 粘贴导入</button>
+        </div>
+        <!-- URL提取 -->
+        <div class="procure-add-pane" data-mode="url">
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input id="procure-url-input" class="procure-input" placeholder="粘贴商品页面URL（京东/淘宝/1688/厂商官网均可）" style="flex:1;width:auto">
+            <button class="btn btn-primary btn-sm" id="procure-extract-btn" onclick="extractProductURL()" style="flex-shrink:0">🔍 提取</button>
+          </div>
+          <div id="procure-extract-tip" style="font-size:11px;color:var(--text2)"></div>
+        </div>
+        <!-- 手动填写 -->
+        <div class="procure-add-pane" data-mode="manual" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
+            <input id="pf-name" class="procure-input" placeholder="商品名称 *" style="grid-column:1/-1">
+            <input id="pf-brand" class="procure-input" placeholder="品牌/厂家">
+            <input id="pf-category" class="procure-input" placeholder="类别（仪器/试剂/耗材…）">
+            <input id="pf-price" type="number" class="procure-input" placeholder="价格（元）">
+            <input id="pf-platform" class="procure-input" placeholder="平台（京东/淘宝/1688…）">
+            <input id="pf-rating" type="number" step="0.1" min="0" max="5" class="procure-input" placeholder="评分（0-5）">
+            <input id="pf-sales" type="number" class="procure-input" placeholder="销量">
+            <input id="pf-deliveryDays" type="number" class="procure-input" placeholder="货期（天）">
+            <input id="pf-shipFrom" class="procure-input" placeholder="发货地（如：广东深圳）">
+            <input id="pf-userFeedback" class="procure-input" placeholder="用户反馈摘要">
+            <input id="pf-url" class="procure-input" placeholder="商品链接" style="grid-column:1/-1">
+            <input id="pf-notes" class="procure-input" placeholder="备注（规格/参数/对比要点…）" style="grid-column:1/-1">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveProcureItem()">💾 保存到清单</button>
+          <button class="btn btn-ghost btn-sm" onclick="_clearProcureForm()">清空</button>
+        </div>
+        <!-- 粘贴导入 -->
+        <div class="procure-add-pane" data-mode="paste" style="display:none">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:8px;line-height:1.7">
+            ① 将右下方 <strong style="color:var(--primary)">「📦 保存到采购清单」</strong> 按钮拖入书签栏<br>
+            ② 访问任意商品页面时点击该书签<br>
+            ③ 将弹出的内容粘贴到下方
+          </div>
+          <textarea id="procure-paste-input" rows="3" placeholder="粘贴书签工具复制的数据…" style="width:100%;resize:none;font-size:11px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);box-sizing:border-box;margin-bottom:8px;font-family:monospace"></textarea>
+          <button class="btn btn-primary btn-sm" onclick="importProcurePaste()">📥 导入</button>
+        </div>
+      </div>
+
+      <!-- 书签工具 -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom:6px">🔖 浏览器书签工具</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">将下方按钮 <strong>拖到浏览器书签栏</strong>，访问任意商品页面时点击即可一键复制商品信息</div>
+        <a id="procure-bm-link" class="procure-bm-link" href="#" draggable="true" onclick="return false">📦 保存到采购清单</a>
+        <div style="font-size:11px;color:var(--text2);margin-top:8px">← 长按或拖动此按钮到书签栏</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: 位置 + 对比 + 清单 -->
+    <div>
+      <!-- 我的位置 -->
+      <div class="card" style="padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--text2);flex-shrink:0;white-space:nowrap">📍 我的位置：<strong id="procure-loc-val" style="color:var(--primary)">未设置</strong></span>
+          <input id="procure-loc-input" class="procure-input" placeholder="输入你的城市（如：深圳）" style="flex:1;min-width:80px;width:auto">
+          <button class="btn btn-primary btn-sm" onclick="saveProcureLoc()" style="flex-shrink:0">保存</button>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">设置后可按发货地运距排序</div>
+      </div>
+
+      <!-- 对比面板 -->
+      <div class="card" id="procure-compare-panel" style="display:none"></div>
+
+      <!-- 采购清单主列表 -->
+      <div class="card">
+        <div class="section-header">
+          <div class="card-title" style="margin-bottom:0">📋 采购清单 <span id="procure-count" style="font-size:11px;color:var(--text2);font-weight:400"></span></div>
+          <button class="btn btn-ghost btn-sm" onclick="exportProcureCSV()">⬇ 导出Excel</button>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="procure-filter-btn active" data-filter="all" onclick="switchProcureFilter('all',this)">全部</button>
+          <button class="procure-filter-btn" data-filter="eval" onclick="switchProcureFilter('eval',this)">待评估</button>
+          <button class="procure-filter-btn" data-filter="pick" onclick="switchProcureFilter('pick',this)">已选定</button>
+          <button class="procure-filter-btn" data-filter="done" onclick="switchProcureFilter('done',this)">已采购</button>
+          <button class="procure-filter-btn" data-filter="drop" onclick="switchProcureFilter('drop',this)">已拒绝</button>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px">☑ 勾选商品可横向对比 · 点击列标题排序</div>
+        <div id="procure-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Note Settings Modal ── -->
 <div class="modal-overlay" id="noteSettingsModal" onclick="if(event.target===this)closeModal('noteSettingsModal')">
   <div class="modal-box" style="max-width:420px;width:90%">
@@ -1569,6 +1696,7 @@ function switchPage(name) {
   if (name==='tools') renderTools();
   if (name==='intel') initIntelPage();
   if (name==='gantt') renderGantt();
+  if (name==='procure') initProcurePage();
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
 
@@ -4810,6 +4938,147 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWal
     <div id="ct-preview" style="display:none"></div>
   </div>
 </div>
+
+<!-- ── Procurement Engine JS ── -->
+<script>
+// ══════════════════════════════════════
+//  采购清单 PROCUREMENT ENGINE
+// ══════════════════════════════════════
+const K_PROCURE='_phd_procure', K_PROCURE_LOC='_phd_procure_loc'
+const _REGION_MAP={
+  华北:['北京','天津','河北','石家庄','保定','唐山','邯郸','山西','太原','大同','内蒙古','呼和浩特','包头'],
+  东北:['辽宁','沈阳','大连','鞍山','吉林','长春','黑龙江','哈尔滨','齐齐哈尔'],
+  华东:['上海','江苏','南京','苏州','无锡','常州','南通','浙江','杭州','宁波','温州','绍兴','安徽','合肥','芜湖','福建','福州','厦门','泉州','江西','南昌','山东','济南','青岛','烟台'],
+  华中:['河南','郑州','洛阳','开封','湖北','武汉','宜昌','湖南','长沙','株洲'],
+  华南:['广东','广州','深圳','东莞','佛山','珠海','汕头','广西','南宁','桂林','海南','海口','三亚'],
+  西南:['重庆','四川','成都','绵阳','贵州','贵阳','云南','昆明','大理','西藏','拉萨'],
+  西北:['陕西','西安','咸阳','甘肃','兰州','青海','西宁','宁夏','银川','新疆','乌鲁木齐']
+}
+const _ADJ_REGIONS={华北:['东北','华东','华中'],东北:['华北'],华东:['华北','华中','华南'],华中:['华北','华东','华南','西南','西北'],华南:['华东','华中','西南'],西南:['华中','华南','西北'],西北:['华中','西南','华北']}
+function _getRegion(city){if(!city)return null;const c=city.trim();for(const[r,cs]of Object.entries(_REGION_MAP)){if(cs.some(x=>c.includes(x)||x.includes(c.slice(0,2))))return r}return null}
+function _distScore(shipFrom,userCity){if(!shipFrom||!userCity)return 2;const s=shipFrom.trim(),u=userCity.trim();if(s.includes(u.slice(0,2))||u.includes(s.slice(0,2)))return 0;const rS=_getRegion(s),rU=_getRegion(u);if(!rS||!rU)return 2;if(rS===rU)return 1;if((_ADJ_REGIONS[rS]||[]).includes(rU))return 2;return 3}
+function _ldProcure(){try{return JSON.parse(localStorage.getItem(K_PROCURE)||'[]')}catch(_){return[]}}
+function _svProcure(items){localStorage.setItem(K_PROCURE,JSON.stringify(items))}
+function _getProcureLoc(){return localStorage.getItem(K_PROCURE_LOC)||''}
+let _procureSortField='savedAt',_procureSortDir='desc',_procureFilter='all'
+let _procureCompare=new Set()
+function initProcurePage(){
+  _initBookmarklet()
+  const loc=_getProcureLoc()
+  const locEl=document.getElementById('procure-loc-val');if(locEl)locEl.textContent=loc||'未设置'
+  const locInp=document.getElementById('procure-loc-input');if(locInp&&loc)locInp.value=loc
+  renderProcureList()
+}
+function _initBookmarklet(){
+  const link=document.getElementById('procure-bm-link');if(!link)return
+  const code=`javascript:(function(){var n='',d={url:location.href,source:location.hostname.replace(/^www\\./,'')};var el=document.querySelector('[itemprop="name"]')||document.querySelector('#productTitle')||document.querySelector('.sku-name')||document.querySelector('.product-title')||document.querySelector('h1');if(el)n=el.innerText.trim().slice(0,150);if(!n)n=document.title.slice(0,150);d.name=n;var pm=document.body.innerText.match(/[\\u00a5\\uffe5]\\s*([\\d,]+\\.?\\d*)/);if(pm)d.price=parseFloat(pm[1].replace(/,/g,''));var ds=document.querySelector('meta[name="description"]');if(ds)d.desc=ds.content.slice(0,200);var s=JSON.stringify(d);function cp(){navigator.clipboard.writeText(s).then(function(){alert('\\u2705 \\u5546\\u54c1\\u4fe1\\u606f\\u5df2\\u590d\\u5236\\uff01\\n\\u8fd4\\u56de\\u535a\\u58eb\\u5de5\\u4f5c\\u53f0 \\u2192 \\u91c7\\u8d2d\\u6e05\\u5355 \\u2192 \\u7c98\\u8d34\\u5bfc\\u5165')}).catch(fb)}function fb(){var t=document.createElement('textarea');t.value=s;document.body.appendChild(t);t.select();try{document.execCommand('copy');alert('\\u2705 \\u5df2\\u590d\\u5236\\uff01')}catch(e){prompt('\\u590d\\u5236\\uff1a',s)}document.body.removeChild(t)}navigator.clipboard?cp():fb()})();`
+  link.href=code
+}
+function saveProcureLoc(){const v=document.getElementById('procure-loc-input')?.value.trim();if(!v){toast('请输入城市名','error');return}localStorage.setItem(K_PROCURE_LOC,v);const el=document.getElementById('procure-loc-val');if(el)el.textContent=v;toast('📍 位置已保存');renderProcureList()}
+function switchProcureAddMode(mode){document.querySelectorAll('.procure-add-tab').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));document.querySelectorAll('.procure-add-pane').forEach(p=>p.style.display=p.dataset.mode===mode?'':'none')}
+function switchProcureFilter(filter){_procureFilter=filter;document.querySelectorAll('.procure-filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));renderProcureList()}
+async function extractProductURL(){
+  const urlEl=document.getElementById('procure-url-input'),url=urlEl?.value.trim()
+  if(!url||!url.startsWith('http')){toast('请输入有效的商品URL','error');return}
+  const btn=document.getElementById('procure-extract-btn'),tip=document.getElementById('procure-extract-tip')
+  btn.disabled=true;btn.textContent='⏳';tip.textContent='读取页面中…'
+  try{
+    let pageText=''
+    try{const jr=await Promise.race([fetch('https://r.jina.ai/'+url,{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),new Promise((_,r)=>setTimeout(()=>r('timeout'),8000))]);if(jr.ok)pageText=(await jr.text()).slice(0,3000)}catch(_){}
+    const host=new URL(url).hostname.replace(/^www\./,'')
+    const prompt=`商品页面（来源：${host}）：\n\n${pageText||'（获取失败）'}\n\n提取商品信息，返回JSON（不确定填空或0）：\n{"name":"","brand":"","price":0,"platform":"${host}","rating":0,"sales":0,"userFeedback":"","deliveryDays":0,"shipFrom":"","category":""}\n只返回JSON。`
+    tip.textContent='AI解析中…'
+    const raw=await _callAI(prompt,600)
+    let info={};const s=raw.indexOf('{'),e=raw.lastIndexOf('}');if(s!==-1&&e>s)try{info=JSON.parse(raw.slice(s,e+1))}catch(_){}
+    _fillProcureForm({name:info.name||'',brand:info.brand||'',price:info.price||'',platform:host,rating:info.rating||'',sales:info.sales||'',userFeedback:info.userFeedback||'',deliveryDays:info.deliveryDays||'',shipFrom:info.shipFrom||'',category:info.category||'',url,notes:''})
+    switchProcureAddMode('manual');tip.textContent='✅ 已提取，请确认后保存'
+  }catch(e){tip.textContent='提取失败，可手动填写'}
+  btn.disabled=false;btn.textContent='🔍 提取'
+}
+function importProcurePaste(){
+  const raw=document.getElementById('procure-paste-input')?.value.trim();if(!raw){toast('请粘贴书签工具复制的内容','error');return}
+  try{const d=JSON.parse(raw);_fillProcureForm({name:d.name||d.title||'',brand:'',price:d.price||'',platform:d.source||'',rating:'',sales:'',userFeedback:d.desc||'',deliveryDays:'',shipFrom:'',category:'',url:d.url||'',notes:''});switchProcureAddMode('manual');document.getElementById('procure-paste-input').value='';toast('✅ 已填入，请确认后保存')}
+  catch(_){toast('格式错误','error')}
+}
+function _fillProcureForm(d){['name','brand','price','platform','rating','sales','userFeedback','deliveryDays','shipFrom','category','url','notes'].forEach(f=>{const el=document.getElementById('pf-'+f);if(el)el.value=d[f]??''})}
+function saveProcureItem(){
+  const name=document.getElementById('pf-name')?.value.trim();if(!name){toast('请填写商品名称','error');return}
+  const shipFrom=document.getElementById('pf-shipFrom')?.value.trim()||''
+  const items=_ldProcure()
+  items.unshift({id:uid(),name,brand:document.getElementById('pf-brand')?.value.trim()||'',price:parseFloat(document.getElementById('pf-price')?.value)||0,currency:'CNY',platform:document.getElementById('pf-platform')?.value.trim()||'',rating:parseFloat(document.getElementById('pf-rating')?.value)||0,sales:parseInt(document.getElementById('pf-sales')?.value)||0,userFeedback:document.getElementById('pf-userFeedback')?.value.trim()||'',deliveryDays:parseInt(document.getElementById('pf-deliveryDays')?.value)||0,shipFrom,distScore:_distScore(shipFrom,_getProcureLoc()),category:document.getElementById('pf-category')?.value.trim()||'',url:document.getElementById('pf-url')?.value.trim()||'',notes:document.getElementById('pf-notes')?.value.trim()||'',status:'eval',savedAt:today()})
+  _svProcure(items);_clearProcureForm();renderProcureList();toast('📦 已添加到采购清单')
+}
+function _clearProcureForm(){['name','brand','price','platform','rating','sales','userFeedback','deliveryDays','shipFrom','category','url','notes'].forEach(f=>{const el=document.getElementById('pf-'+f);if(el)el.value=''});const ui=document.getElementById('procure-url-input');if(ui)ui.value='';const tip=document.getElementById('procure-extract-tip');if(tip)tip.textContent=''}
+function deleteProcureItem(id){if(!confirm('确认删除？'))return;_svProcure(_ldProcure().filter(x=>x.id!==id));_procureCompare.delete(id);renderProcureList()}
+function updateProcureStatus(id,status){const items=_ldProcure(),item=items.find(x=>x.id===id);if(item){item.status=status;_svProcure(items);renderProcureList()}}
+function toggleProcureCompare(id){if(_procureCompare.has(id))_procureCompare.delete(id);else if(_procureCompare.size<4)_procureCompare.add(id);else{toast('最多选4个对比');return};renderProcureList();_renderProcureCompare()}
+function _renderProcureCompare(){
+  const panel=document.getElementById('procure-compare-panel');if(!panel)return
+  const ids=[..._procureCompare];if(!ids.length){panel.style.display='none';return}
+  const allItems=_ldProcure(),sel=ids.map(id=>allItems.find(x=>x.id===id)).filter(Boolean)
+  const dL=['同城🏠','同区域','邻省🚚','跨区✈'],sM={eval:'待评估',pick:'已选定',done:'已采购',drop:'已拒绝'}
+  const rows=[['价格',x=>x.price?`¥${x.price.toLocaleString()}`:'—'],['品牌',x=>x.brand||'—'],['评分',x=>x.rating?'★'.repeat(Math.round(x.rating))+'☆'.repeat(5-Math.round(x.rating))+` (${x.rating})`:'—'],['销量',x=>x.sales?x.sales.toLocaleString()+'件':'—'],['货期',x=>x.deliveryDays?x.deliveryDays+'天':'—'],['发货地',x=>x.shipFrom||'—'],['运距',x=>dL[x.distScore]||'—'],['平台',x=>x.platform||'—'],['类别',x=>x.category||'—'],['状态',x=>sM[x.status]||x.status],['备注',x=>x.notes?x.notes.slice(0,40):'—']]
+  panel.style.display=''
+  panel.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:600">📊 对比（${sel.length}款）</div><button class="btn btn-ghost btn-sm" onclick="_procureCompare.clear();renderProcureList();_renderProcureCompare()">清空</button></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><tr style="border-bottom:2px solid var(--border)"><th style="padding:6px 8px;font-size:11px;color:var(--text2);text-align:left;background:var(--surface2)">字段</th>${sel.map(x=>`<th style="padding:6px 8px;font-size:12px;font-weight:600;color:var(--primary);max-width:100px;word-break:break-all">${escHtml(x.name.slice(0,25))}</th>`).join('')}</tr>${rows.map(([l,fn])=>`<tr><td style="padding:5px 8px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;background:var(--surface2)">${l}</td>${sel.map(x=>`<td style="padding:5px 8px;font-size:12px">${escHtml(String(fn(x)))}</td>`).join('')}</tr>`).join('')}</table></div>`
+}
+function sortProcureBy(field){if(_procureSortField===field)_procureSortDir=_procureSortDir==='asc'?'desc':'asc';else{_procureSortField=field;_procureSortDir=['price','deliveryDays','distScore'].includes(field)?'asc':'desc'};renderProcureList()}
+function renderProcureList(){
+  const el=document.getElementById('procure-list');if(!el)return
+  const userCity=_getProcureLoc();let items=_ldProcure()
+  items.forEach(x=>{x.distScore=_distScore(x.shipFrom,userCity)})
+  if(_procureFilter!=='all')items=items.filter(x=>x.status===_procureFilter)
+  const cntEl=document.getElementById('procure-count');if(cntEl)cntEl.textContent=items.length+'条'
+  if(!items.length){el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:16px;text-align:center">暂无采购记录 · 使用左侧功能添加</div>';return}
+  items.sort((a,b)=>{let va=a[_procureSortField]??0,vb=b[_procureSortField]??0;if(typeof va==='string'){va=va.toLowerCase();vb=(vb||'').toLowerCase()};const c=va<vb?-1:va>vb?1:0;return _procureSortDir==='asc'?c:-c})
+  const dL=['同城','同区','邻省','跨区'],sM={eval:'待评估',pick:'已选定',done:'已采购',drop:'已拒绝'}
+  const thC=f=>`class="${_procureSortField===f?'procure-sort-'+_procureSortDir:''}"`
+  const rows=items.map(item=>{
+    const inCmp=_procureCompare.has(item.id),stars=item.rating?'★'.repeat(Math.round(item.rating))+'☆'.repeat(5-Math.round(item.rating)):''
+    const safeUrl=item.url&&item.url.startsWith('http')?escHtml(item.url):'#'
+    const distHtml=userCity&&item.shipFrom?`<br><span style="font-size:10px;color:var(--text2)">${dL[item.distScore]||''}</span>`:''
+    return`<tr><td><input type="checkbox" ${inCmp?'checked':''} onchange="toggleProcureCompare('${item.id}')" style="cursor:pointer" title="加入对比"></td>
+      <td style="max-width:160px"><div style="font-size:12px;font-weight:600;line-height:1.3;margin-bottom:2px">${escHtml(item.name.slice(0,50))}</div>${item.brand?`<div style="font-size:11px;color:var(--text2)">${escHtml(item.brand)}</div>`:''}${item.category?`<span style="font-size:10px;background:var(--primary-soft);color:var(--primary);padding:1px 6px;border-radius:8px">${escHtml(item.category)}</span>`:''}${item.notes?`<div style="font-size:10px;color:var(--text2);margin-top:2px">${escHtml(item.notes.slice(0,40))}</div>`:''}</td>
+      <td style="font-size:13px;font-weight:700;color:var(--primary);white-space:nowrap">${item.price?`¥${item.price.toLocaleString()}`:'—'}</td>
+      <td><div class="procure-stars">${stars||'—'}</div>${item.sales?`<div style="font-size:10px;color:var(--text2)">${item.sales.toLocaleString()}件</div>`:''}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:110px;line-height:1.4">${item.userFeedback?escHtml(item.userFeedback.slice(0,50)):'—'}</td>
+      <td style="font-size:12px;white-space:nowrap">${item.deliveryDays?item.deliveryDays+'天':'—'}</td>
+      <td style="font-size:11px">${item.shipFrom?escHtml(item.shipFrom):'—'}${distHtml}</td>
+      <td><select style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text)" onchange="updateProcureStatus('${item.id}',this.value)">${Object.entries(sM).map(([v,l])=>`<option value="${v}"${item.status===v?' selected':''}>${l}</option>`).join('')}</select></td>
+      <td style="white-space:nowrap">${safeUrl!=='#'?`<a href="${safeUrl}" target="_blank" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px">🔗</a>`:''}<button onclick="deleteProcureItem('${item.id}')" class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px;color:var(--red)">×</button></td>
+    </tr>`
+  }).join('')
+  el.innerHTML=`<div style="overflow-x:auto"><table class="procure-table"><thead><tr><th style="width:20px"></th><th ${thC('name')} onclick="sortProcureBy('name')" style="min-width:120px">商品</th><th ${thC('price')} onclick="sortProcureBy('price')">价格</th><th ${thC('rating')} onclick="sortProcureBy('rating')">评分/销量</th><th>用户反馈</th><th ${thC('deliveryDays')} onclick="sortProcureBy('deliveryDays')">货期</th><th ${thC('distScore')} onclick="sortProcureBy('distScore')">发货地</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`
+}
+function exportProcureCSV(){
+  const items=_ldProcure();if(!items.length){toast('暂无数据','error');return}
+  const hd=['商品名称','品牌/厂家','价格(元)','平台','评分(0-5)','销量','用户反馈','货期(天)','发货地','运距','类别','状态','备注','链接','添加时间']
+  const dL=['同城','同区域','邻省','跨区域'],sM={eval:'待评估',pick:'已选定',done:'已采购',drop:'已拒绝'}
+  const rows=items.map(x=>[x.name,x.brand,x.price||'',x.platform,x.rating||'',x.sales||'',x.userFeedback,x.deliveryDays||'',x.shipFrom,dL[x.distScore]||'',x.category,sM[x.status]||x.status,x.notes,x.url,x.savedAt])
+  const csv=[hd,...rows].map(row=>row.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n')
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`采购清单_${today()}.csv`;a.click()
+  toast('📊 已导出 CSV（Excel可直接打开）')
+}
+async function searchProcureAI(){
+  const req=document.getElementById('procure-search-input')?.value.trim();if(!req){toast('请描述采购需求','error');return}
+  const btn=document.getElementById('procure-search-btn'),resultEl=document.getElementById('procure-ai-results')
+  btn.disabled=true;btn.textContent='⏳ 搜索中…'
+  resultEl.innerHTML='<div style="font-size:12px;color:var(--text2);padding:12px">AI 正在全网推荐中……</div>'
+  const prompt=`科研采购专家。需求：「${req}」\n推荐5款具体产品（含品牌型号），返回JSON数组：\n[{"name":"品牌+型号","brand":"品牌","category":"类别","priceRange":"价格范围","keySpecs":"核心参数（分号分隔）","pros":"推荐理由30字","searchQuery":"搜索关键词","platform":"推荐平台"}]\n只返回JSON。`
+  try{
+    const raw=await _callAI(prompt,1200);const suggs=_extractJSONArray(raw);if(!suggs||!suggs.length)throw new Error('fail')
+    resultEl.innerHTML=suggs.map(item=>{
+      const q=encodeURIComponent(item.searchQuery||item.name||'')
+      const pData=JSON.stringify({name:item.name||'',brand:item.brand||'',category:item.category||'',notes:item.keySpecs||'',userFeedback:item.pros||'',platform:item.platform||''})
+      return`<div class="procure-ai-card"><div style="display:flex;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;margin-bottom:3px">${escHtml(item.name||'')}</div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">${escHtml(item.keySpecs||'')}</div><div style="font-size:11px;margin-bottom:2px">${escHtml(item.pros||'')}</div><span style="font-size:12px;font-weight:600;color:var(--primary)">${escHtml(item.priceRange||'')}</span></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button onclick="window.open('https://search.jd.com/Search?keyword=${encodeURIComponent(q)}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">京东🔍</button><button onclick="window.open('https://s.taobao.com/search?q=${encodeURIComponent(q)}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">淘宝🔍</button><button onclick="_prefillFromAI(this)" data-item='${escHtml(pData)}' class="btn btn-primary btn-sm" style="font-size:10px">+ 加入清单</button></div></div></div>`
+    }).join('')
+  }catch(e){resultEl.innerHTML='<div style="font-size:12px;color:var(--text2);padding:12px">搜索失败，请检查AI配置后重试</div>'}
+  btn.disabled=false;btn.textContent='🔍 AI 搜索推荐'
+}
+function _prefillFromAI(btn){
+  try{const item=JSON.parse(btn.dataset.item);_fillProcureForm({name:item.name||'',brand:item.brand||'',price:'',platform:item.platform||'',rating:'',sales:'',userFeedback:item.userFeedback||'',deliveryDays:'',shipFrom:'',category:item.category||'',url:'',notes:item.notes||''});switchProcureAddMode('manual');document.getElementById('procure-add-section')?.scrollIntoView({behavior:'smooth',block:'start'});toast('已预填，请完善后保存')}catch(_){}
+}
+</script>
 
 <!-- ── Floating Timer Bar ── -->
 <div id="scan-timer-bar">
