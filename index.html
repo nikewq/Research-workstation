@@ -14,8 +14,98 @@
   --orange:#f59e0b; --orange-soft:rgba(245,158,11,.15);
   --red:#ef4444; --red-soft:rgba(239,68,68,.15);
   --blue:#3b82f6; --blue-soft:rgba(59,130,246,.15);
-  --radius:8px; --radius-lg:12px;
+  --radius:8px; --radius-lg:12px; --danger:#ef4444;
 }
+/* ── Theme Overrides ── */
+:root[data-theme="wuxia"]{
+  --bg:#0e0600;--surface:#1a0a00;--surface2:#241200;--border:#4a1c00;
+  --text:#f0e0c0;--text2:#b08050;
+  --primary:#c0392b;--primary-soft:rgba(192,57,43,.15);--primary-bg:rgba(192,57,43,.08);
+  --green:#b5811a;--green-soft:rgba(181,129,26,.15);
+  --orange:#d4600a;--orange-soft:rgba(212,96,10,.15);
+  --red:#c0392b;--red-soft:rgba(192,57,43,.15);
+  --blue:#8b6914;--blue-soft:rgba(139,105,20,.15);
+}
+:root[data-theme="kawaii"]{
+  --bg:#fff0f6;--surface:#fff8fb;--surface2:#ffe4f0;--border:#ffc0d9;
+  --text:#3d1a2e;--text2:#9e6680;
+  --primary:#e91e8c;--primary-soft:rgba(233,30,140,.12);--primary-bg:rgba(233,30,140,.06);
+  --green:#10b981;--green-soft:rgba(16,185,129,.12);
+  --orange:#f97316;--orange-soft:rgba(249,115,22,.12);
+  --red:#ef4444;--red-soft:rgba(239,68,68,.12);
+  --blue:#818cf8;--blue-soft:rgba(129,140,248,.12);
+}
+:root[data-theme="neutral"]{
+  --bg:#f4f6f8;--surface:#ffffff;--surface2:#edf0f2;--border:#d1d9e0;
+  --text:#1a2332;--text2:#6b7a8d;
+  --primary:#0d9488;--primary-soft:rgba(13,148,136,.12);--primary-bg:rgba(13,148,136,.06);
+  --green:#059669;--green-soft:rgba(5,150,105,.12);
+  --orange:#f59e0b;--orange-soft:rgba(245,158,11,.12);
+  --red:#ef4444;--red-soft:rgba(239,68,68,.12);
+  --blue:#3b82f6;--blue-soft:rgba(59,130,246,.12);
+}
+:root[data-theme="queen"]{
+  --bg:#0c0814;--surface:#130f1c;--surface2:#1c1528;--border:#2e2440;
+  --text:#f5e8c8;--text2:#9e8a6e;
+  --primary:#d4af37;--primary-soft:rgba(212,175,55,.15);--primary-bg:rgba(212,175,55,.08);
+  --green:#c9a630;--green-soft:rgba(201,166,48,.15);
+  --orange:#c8863a;--orange-soft:rgba(200,134,58,.15);
+  --red:#c0392b;--red-soft:rgba(192,57,43,.15);
+  --blue:#9b7ae8;--blue-soft:rgba(155,122,232,.15);
+}
+:root[data-theme="aurora"]{
+  --bg:#030d18;--surface:#071624;--surface2:#0c2035;--border:#163252;
+  --text:#e0f4ff;--text2:#7ab3d0;
+  --primary:#06b6d4;--primary-soft:rgba(6,182,212,.15);--primary-bg:rgba(6,182,212,.08);
+  --green:#10b981;--green-soft:rgba(16,185,129,.15);
+  --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
+  --red:#f43f5e;--red-soft:rgba(244,63,94,.15);
+  --blue:#06b6d4;--blue-soft:rgba(6,182,212,.15);
+}
+:root[data-theme="pku"]{
+  --bg:#06080f;--surface:#0c0f1e;--surface2:#12162c;--border:#1e2542;
+  --text:#f0e8d0;--text2:#9e9060;
+  --primary:#c9a227;--primary-soft:rgba(201,162,39,.15);--primary-bg:rgba(201,162,39,.08);
+  --green:#c9a227;--green-soft:rgba(201,162,39,.12);
+  --orange:#d4773a;--orange-soft:rgba(212,119,58,.15);
+  --red:#8b1a1a;--red-soft:rgba(139,26,26,.15);
+  --blue:#1e3a7a;--blue-soft:rgba(30,58,122,.15);
+}
+:root[data-theme="thu"]{
+  --bg:#080810;--surface:#0f0f1c;--surface2:#161628;--border:#252540;
+  --text:#e8e0f8;--text2:#8878b0;
+  --primary:#9b30e8;--primary-soft:rgba(155,48,232,.15);--primary-bg:rgba(155,48,232,.08);
+  --green:#059669;--green-soft:rgba(5,150,105,.15);
+  --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
+  --red:#ef4444;--red-soft:rgba(239,68,68,.15);
+  --blue:#6366f1;--blue-soft:rgba(99,102,241,.15);
+}
+:root[data-theme="fdu"]{
+  --bg:#020c1b;--surface:#061425;--surface2:#0a1f36;--border:#103054;
+  --text:#d8e8f8;--text2:#6888b0;
+  --primary:#3d7de2;--primary-soft:rgba(61,125,226,.15);--primary-bg:rgba(61,125,226,.08);
+  --green:#059669;--green-soft:rgba(5,150,105,.15);
+  --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
+  --red:#e74c3c;--red-soft:rgba(231,76,60,.15);
+  --blue:#3d7de2;--blue-soft:rgba(61,125,226,.15);
+}
+:root[data-theme="zju"]{
+  --bg:#020a14;--surface:#061020;--surface2:#0c1a30;--border:#102844;
+  --text:#e8e0c8;--text2:#907a4e;
+  --primary:#c6a940;--primary-soft:rgba(198,169,64,.15);--primary-bg:rgba(198,169,64,.08);
+  --green:#1a9e5a;--green-soft:rgba(26,158,90,.15);
+  --orange:#d4773a;--orange-soft:rgba(212,119,58,.15);
+  --red:#c0392b;--red-soft:rgba(192,57,43,.15);
+  --blue:#1a6bb5;--blue-soft:rgba(26,107,181,.15);
+}
+/* ── Theme Picker Cards ── */
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:12px}
+.theme-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;background:var(--surface)}
+.theme-card:hover{border-color:var(--primary);transform:translateY(-1px)}
+.theme-card.active{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.theme-swatch{width:30px;height:30px;border-radius:7px;flex-shrink:0}
+.theme-card-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.theme-card-desc{font-size:11px;color:var(--text2)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;font-size:14px;min-height:100vh;display:flex}
 
@@ -852,6 +942,11 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <button class="btn btn-ghost" onclick="clearAISettings()" id="ai-clear-btn" style="display:none">清除</button>
       <span id="ai-test-tip" style="font-size:12px;color:var(--text2)"></span>
     </div>
+  </div>
+  <div class="settings-section">
+    <h3>🎨 界面主题</h3>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:4px">选择你喜欢的配色风格，即时生效</div>
+    <div class="theme-grid" id="theme-picker-grid"></div>
   </div>
   <div class="settings-section">
     <h3>⚠️ 危险区域</h3>
@@ -2430,6 +2525,7 @@ function populateSettingsForm(){
   if(lbl) lbl.textContent=ROLE_DATE_LABEL[cfg.role||'phd']||'入学日期';
   renderProjSettings();renderAreaTagsSettings();
   _populateAISettings();
+  renderThemePicker();
 }
 function _populateAISettings(){
   try{
@@ -4036,8 +4132,39 @@ function delGanttTask(){
   sv(K.gantt,projects); closeModal('addGanttTaskModal'); renderGantt();
 }
 
+// ══════════════════════════════════════
+//  THEME SYSTEM
+// ══════════════════════════════════════
+const THEMES=[
+  {id:'default', name:'极夜·默认',  desc:'深紫夜空', bg:'#0d1117', primary:'#7c3aed'},
+  {id:'wuxia',   name:'武侠·朱砂',  desc:'侠气刀锋', bg:'#0e0600', primary:'#c0392b'},
+  {id:'kawaii',  name:'樱雪·少女',  desc:'粉樱软糯', bg:'#fff0f6', primary:'#e91e8c'},
+  {id:'neutral', name:'铸铁·极简',  desc:'清爽中性', bg:'#f4f6f8', primary:'#0d9488'},
+  {id:'queen',   name:'女王·黑金',  desc:'权杖加冕', bg:'#0c0814', primary:'#d4af37'},
+  {id:'aurora',  name:'极光·冰蓝',  desc:'极地星空', bg:'#030d18', primary:'#06b6d4'},
+  {id:'pku',     name:'燕园·燕红',  desc:'北京大学', bg:'#06080f', primary:'#c9a227'},
+  {id:'thu',     name:'清华·梅紫',  desc:'清华大学', bg:'#080810', primary:'#9b30e8'},
+  {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020c1b', primary:'#3d7de2'},
+  {id:'zju',     name:'浙大·蓝金',  desc:'浙江大学', bg:'#020a14', primary:'#c6a940'},
+];
+function applyTheme(id){
+  document.documentElement.dataset.theme=id==='default'?'':id;
+  localStorage.setItem('_theme',id);
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.theme===id));
+}
+function loadTheme(){
+  const id=localStorage.getItem('_theme')||'default';
+  document.documentElement.dataset.theme=id==='default'?'':id;
+}
+function renderThemePicker(){
+  const el=document.getElementById('theme-picker-grid');
+  if(!el) return;
+  const cur=localStorage.getItem('_theme')||'default';
+  el.innerHTML=THEMES.map(t=>`<div class="theme-card${t.id===cur?' active':''}" data-theme="${t.id}" onclick="applyTheme('${t.id}')"><div class="theme-swatch" style="background:linear-gradient(135deg,${t.bg} 40%,${t.primary})"></div><div><div class="theme-card-name">${t.name}</div><div class="theme-card-desc">${t.desc}</div></div></div>`).join('');
+}
+
 // 初次加载
-document.addEventListener('DOMContentLoaded',()=>setTimeout(loadWall,800))
+document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWall,800)})
 </script>
 
 <!-- ── Reflection Entry Modal ── -->
