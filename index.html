@@ -2947,18 +2947,37 @@ async function _callAI(prompt,maxTokens=800){
 }
 
 const _DISTRESS=['崩溃','绝望','想放弃','撑不住','不想做了','退学','抑郁','好难受','太累了','怎么办','帮帮我','救命','好痛苦','迷茫','绷不住','熬不住','坚持不下去','想哭','心态崩了','不知道该怎么']
+const _HEALTH_KW=['感冒','发烧','生病','头疼','头晕','咳嗽','喉咙','嗓子','肚子','难受','不舒服','身体不好','住院','看病','吃药','打针','发炎','扁桃体','鼻塞','流鼻涕','过敏','脚崴了','受伤','肌肉酸','腰疼','背疼']
+const _LONELY_KW=['好孤独','好孤单','没人','一个人','没朋友','心情不好','状态不好','好emo','emo了','低谷','焦虑','压力大','喘不过气','撑下去','撑不住']
+
 function _needsAI(tag,msg){
-  if(tag==='help') return true
-  if(tag==='vent'&&_DISTRESS.some(k=>msg.includes(k))) return true
+  if(tag==='help') return true          // 所有求助必回
+  if(tag==='vent') return true          // 所有吐槽必回
+  // 分享中包含健康/情绪/孤独关键词
+  if(_HEALTH_KW.some(k=>msg.includes(k))) return true
+  if(_DISTRESS.some(k=>msg.includes(k))) return true
+  if(_LONELY_KW.some(k=>msg.includes(k))) return true
   return false
 }
 
+// 根据帖子内容判断回复风格
+function _getReplyPrompt(msg,tag){
+  const isHealth=_HEALTH_KW.some(k=>msg.includes(k))
+  const isDistress=_DISTRESS.some(k=>msg.includes(k))||_LONELY_KW.some(k=>msg.includes(k))
+  if(isHealth)
+    return `你是一位温暖贴心的研究生同学。一位同学说：「${msg}」\n请用30-50字给出关心：体贴、鼓励好好休息恢复、可以有一点点幽默但要真诚暖心。直接开始，不称呼，不分段。`
+  if(isDistress||tag==='vent')
+    return `你是一位走出过科研低谷的前辈，温暖且有智慧。一位研究者说：「${msg}」\n请用40-60字回应：真实共鸣、一个具体小建议、像老友说话不说教，可以有一点幽默。直接开始，不称呼，不分段，不说"我理解你"。`
+  // help 或其他
+  return `你是一位走过科研低谷的前辈研究者，内心温暖而有智慧。一位研究者写道：「${msg}」\n请用50-80字给出回应：温暖真实、包含一个具体可操作的小建议、像老朋友说话（不说教）。直接开始，不称呼，不分段，不说"我理解你"。`
+}
+
 const _aiCache={}
-async function _callGroq(id,msg){
+async function _callGroq(id,msg,tag){
   if(_aiCache[id]) return _aiCache[id]
   const cfg=await _getActiveCfg()
   if(!cfg) return null
-  const prompt=`你是一位走过科研低谷、最终走出来的前辈研究者，内心温暖而有智慧。\n一位研究者写道：「${msg}」\n请用50-80字给出回应：温暖真实、包含一个具体可操作的小建议、像老朋友说话（不说教）、可以有一点幽默但不轻浮。直接开始，不要称呼，不要分段，不要说"我理解你"。`
+  const prompt=_getReplyPrompt(msg,tag)
   const reply=await _callAI(prompt,200)
   if(reply) _aiCache[id]=reply
   return reply
@@ -2966,7 +2985,7 @@ async function _callGroq(id,msg){
 
 async function _generateAndShow(item){
   const elId=`ai-${item._domId}`
-  const reply=await _callGroq(item._domId, item.msg)
+  const reply=await _callGroq(item._domId, item.msg, item.tag)
   const el=document.getElementById(elId)
   if(!el) return
   if(!reply){el.remove();return}
