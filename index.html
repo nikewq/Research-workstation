@@ -63,49 +63,54 @@
   --blue:#06b6d4;--blue-soft:rgba(6,182,212,.15);
 }
 :root[data-theme="pku"]{
-  --bg:#06080f;--surface:#0c0f1e;--surface2:#12162c;--border:#1e2542;
-  --text:#f0e8d0;--text2:#9e9060;
-  --primary:#c9a227;--primary-soft:rgba(201,162,39,.15);--primary-bg:rgba(201,162,39,.08);
-  --green:#c9a227;--green-soft:rgba(201,162,39,.12);
+  /* 燕红 ≈ Pantone 200C #B22234；燕园金作辅助 */
+  --bg:#08060e;--surface:#100e1c;--surface2:#181530;--border:#281e44;
+  --text:#f8e8e0;--text2:#c09080;
+  --primary:#b22234;--primary-soft:rgba(178,34,52,.15);--primary-bg:rgba(178,34,52,.08);
+  --green:#c9a227;--green-soft:rgba(201,162,39,.15);
   --orange:#d4773a;--orange-soft:rgba(212,119,58,.15);
-  --red:#8b1a1a;--red-soft:rgba(139,26,26,.15);
+  --red:#b22234;--red-soft:rgba(178,34,52,.15);
   --blue:#1e3a7a;--blue-soft:rgba(30,58,122,.15);
 }
 :root[data-theme="thu"]{
-  --bg:#080810;--surface:#0f0f1c;--surface2:#161628;--border:#252540;
-  --text:#e8e0f8;--text2:#8878b0;
-  --primary:#9b30e8;--primary-soft:rgba(155,48,232,.15);--primary-bg:rgba(155,48,232,.08);
+  /* 清华紫 ≈ Pantone 268C #5C1A7A */
+  --bg:#060410;--surface:#0d0820;--surface2:#140d30;--border:#221244;
+  --text:#e8dcf8;--text2:#9878c0;
+  --primary:#5c1a7a;--primary-soft:rgba(92,26,122,.15);--primary-bg:rgba(92,26,122,.08);
   --green:#059669;--green-soft:rgba(5,150,105,.15);
   --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
   --red:#ef4444;--red-soft:rgba(239,68,68,.15);
-  --blue:#6366f1;--blue-soft:rgba(99,102,241,.15);
+  --blue:#7c3aed;--blue-soft:rgba(124,58,237,.15);
 }
 :root[data-theme="fdu"]{
-  --bg:#020c1b;--surface:#061425;--surface2:#0a1f36;--border:#103054;
-  --text:#d8e8f8;--text2:#6888b0;
-  --primary:#3d7de2;--primary-soft:rgba(61,125,226,.15);--primary-bg:rgba(61,125,226,.08);
+  /* 复旦蓝 ≈ Pantone 286C #1B4FAB */
+  --bg:#020c1e;--surface:#061528;--surface2:#0a1e38;--border:#102e58;
+  --text:#d8e8f8;--text2:#5878b0;
+  --primary:#1b4fab;--primary-soft:rgba(27,79,171,.15);--primary-bg:rgba(27,79,171,.08);
   --green:#059669;--green-soft:rgba(5,150,105,.15);
   --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
   --red:#e74c3c;--red-soft:rgba(231,76,60,.15);
-  --blue:#3d7de2;--blue-soft:rgba(61,125,226,.15);
+  --blue:#1b4fab;--blue-soft:rgba(27,79,171,.15);
 }
 :root[data-theme="zju"]{
+  /* 浙大蓝 #003E7E + 浙大金 #C8A952 */
   --bg:#020a14;--surface:#061020;--surface2:#0c1a30;--border:#102844;
   --text:#e8e0c8;--text2:#907a4e;
-  --primary:#c6a940;--primary-soft:rgba(198,169,64,.15);--primary-bg:rgba(198,169,64,.08);
+  --primary:#c8a952;--primary-soft:rgba(200,169,82,.15);--primary-bg:rgba(200,169,82,.08);
   --green:#1a9e5a;--green-soft:rgba(26,158,90,.15);
   --orange:#d4773a;--orange-soft:rgba(212,119,58,.15);
   --red:#c0392b;--red-soft:rgba(192,57,43,.15);
-  --blue:#1a6bb5;--blue-soft:rgba(26,107,181,.15);
+  --blue:#003e7e;--blue-soft:rgba(0,62,126,.15);
 }
 :root[data-theme="sustech"]{
-  --bg:#020e1a;--surface:#061828;--surface2:#0b2238;--border:#103350;
-  --text:#d8eef8;--text2:#5a9ec0;
-  --primary:#1b75bb;--primary-soft:rgba(27,117,187,.15);--primary-bg:rgba(27,117,187,.08);
-  --green:#2a9d5c;--green-soft:rgba(42,157,92,.15);
-  --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
-  --red:#e74c3c;--red-soft:rgba(231,76,60,.15);
-  --blue:#1b75bb;--blue-soft:rgba(27,117,187,.15);
+  /* 南科大橙 Pantone 7578C ≈ #E8783C；天青 Pantone 2401C ≈ #64C4B8；墨绿 Pantone 7477C ≈ #1B6B5C */
+  --bg:#0d0a06;--surface:#1a1410;--surface2:#241e14;--border:#3d3020;
+  --text:#f5e8d0;--text2:#c09060;
+  --primary:#e8783c;--primary-soft:rgba(232,120,60,.15);--primary-bg:rgba(232,120,60,.08);
+  --green:#1b6b5c;--green-soft:rgba(27,107,92,.15);
+  --orange:#e8783c;--orange-soft:rgba(232,120,60,.15);
+  --red:#c0392b;--red-soft:rgba(192,57,43,.15);
+  --blue:#64c4b8;--blue-soft:rgba(100,196,184,.15);
 }
 /* ── Theme Picker Cards ── */
 .theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:12px}
@@ -4151,26 +4156,92 @@ const THEMES=[
   {id:'neutral', name:'铸铁·极简',  desc:'清爽中性', bg:'#f4f6f8', primary:'#0d9488'},
   {id:'queen',   name:'女王·黑金',  desc:'权杖加冕', bg:'#0c0814', primary:'#d4af37'},
   {id:'aurora',  name:'极光·冰蓝',  desc:'极地星空', bg:'#030d18', primary:'#06b6d4'},
-  {id:'pku',     name:'燕园·燕红',  desc:'北京大学', bg:'#06080f', primary:'#c9a227'},
-  {id:'thu',     name:'清华·梅紫',  desc:'清华大学', bg:'#080810', primary:'#9b30e8'},
-  {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020c1b', primary:'#3d7de2'},
-  {id:'zju',     name:'浙大·蓝金',  desc:'浙江大学', bg:'#020a14', primary:'#c6a940'},
-  {id:'sustech', name:'南科·海蓝',  desc:'南方科技大学', bg:'#020e1a', primary:'#1b75bb'},
+  {id:'pku',     name:'燕园·燕红',  desc:'北京大学', bg:'#08060e', primary:'#b22234'},
+  {id:'thu',     name:'清华·清紫',  desc:'清华大学', bg:'#060410', primary:'#5c1a7a'},
+  {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020c1e', primary:'#1b4fab'},
+  {id:'zju',     name:'浙大·蓝金',  desc:'浙江大学', bg:'#020a14', primary:'#c8a952'},
+  {id:'sustech', name:'南科·橙火',  desc:'南方科技大学', bg:'#0d0a06', primary:'#e8783c'},
 ];
+const _CSS_VARS=['--bg','--surface','--surface2','--border','--text','--text2','--primary','--primary-soft','--primary-bg','--green','--green-soft','--orange','--orange-soft','--red','--red-soft','--blue','--blue-soft'];
+let _pendingCustomVars=null;
 function applyTheme(id){
-  document.documentElement.dataset.theme=id==='default'?'':id;
+  if(id==='custom'){openCustomThemeModal();return;}
+  const root=document.documentElement;
+  _CSS_VARS.forEach(v=>root.style.removeProperty(v));
+  root.dataset.theme=id==='default'?'':id;
   localStorage.setItem('_theme',id);
   document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.theme===id));
 }
 function loadTheme(){
   const id=localStorage.getItem('_theme')||'default';
+  if(id==='custom'){
+    try{
+      const cd=JSON.parse(localStorage.getItem('_theme_custom')||'{}');
+      const root=document.documentElement;
+      root.dataset.theme='custom';
+      if(cd.vars) Object.entries(cd.vars).forEach(([k,v])=>root.style.setProperty(k,v));
+    }catch(e){ document.documentElement.dataset.theme=''; }
+    return;
+  }
   document.documentElement.dataset.theme=id==='default'?'':id;
+}
+function applyCustomTheme(vars,schoolName){
+  const root=document.documentElement;
+  _CSS_VARS.forEach(v=>root.style.removeProperty(v));
+  root.dataset.theme='custom';
+  Object.entries(vars).forEach(([k,v])=>root.style.setProperty(k,v));
+  localStorage.setItem('_theme','custom');
+  localStorage.setItem('_theme_custom',JSON.stringify({vars,schoolName}));
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.theme==='custom'));
 }
 function renderThemePicker(){
   const el=document.getElementById('theme-picker-grid');
   if(!el) return;
   const cur=localStorage.getItem('_theme')||'default';
-  el.innerHTML=THEMES.map(t=>`<div class="theme-card${t.id===cur?' active':''}" data-theme="${t.id}" onclick="applyTheme('${t.id}')"><div class="theme-swatch" style="background:linear-gradient(135deg,${t.bg} 40%,${t.primary})"></div><div><div class="theme-card-name">${t.name}</div><div class="theme-card-desc">${t.desc}</div></div></div>`).join('');
+  let cd={};
+  try{ cd=JSON.parse(localStorage.getItem('_theme_custom')||'{}'); }catch(e){}
+  const cp=cd.vars?.['--primary']||'#888', cb=cd.vars?.['--bg']||'#111';
+  const customCard=`<div class="theme-card${cur==='custom'?' active':''}" data-theme="custom" onclick="openCustomThemeModal()"><div class="theme-swatch" style="background:linear-gradient(135deg,${cb} 40%,${cp});border:1px dashed rgba(255,255,255,.2)"></div><div><div class="theme-card-name">${cd.schoolName||'其他学校'}</div><div class="theme-card-desc">${cur==='custom'?'✓ 当前主题':'AI 生成配色 ✨'}</div></div></div>`;
+  el.innerHTML=THEMES.map(t=>`<div class="theme-card${t.id===cur?' active':''}" data-theme="${t.id}" onclick="applyTheme('${t.id}')"><div class="theme-swatch" style="background:linear-gradient(135deg,${t.bg} 40%,${t.primary})"></div><div><div class="theme-card-name">${t.name}</div><div class="theme-card-desc">${t.desc}</div></div></div>`).join('')+customCard;
+}
+function openCustomThemeModal(){
+  const inp=document.getElementById('ct-school');
+  if(inp) inp.value='';
+  const prev=document.getElementById('ct-preview');
+  if(prev) prev.style.display='none';
+  const btn=document.getElementById('ct-gen-btn');
+  if(btn){btn.disabled=false;btn.textContent='✨ AI 生成配色';}
+  openModal('customThemeModal');
+}
+async function generateCustomTheme(){
+  const name=(document.getElementById('ct-school')?.value||'').trim();
+  if(!name){toast('请输入学校名称','error');return;}
+  const btn=document.getElementById('ct-gen-btn');
+  if(btn){btn.disabled=true;btn.textContent='生成中...';}
+  const prompt=`你是UI设计师。请为"${name}"生成暗色界面主题配色，使用该校官方VI标准色作为主色（--primary）。只返回JSON不含其他文字：{"--bg":"","--surface":"","--surface2":"","--border":"","--text":"","--text2":"","--primary":"","--primary-soft":"rgba(0,0,0,.15)","--primary-bg":"rgba(0,0,0,.08)","--green":"#059669","--green-soft":"rgba(5,150,105,.15)","--orange":"#f59e0b","--orange-soft":"rgba(245,158,11,.15)","--red":"#ef4444","--red-soft":"rgba(239,68,68,.15)","--blue":"#3b82f6","--blue-soft":"rgba(59,130,246,.15)"}`;
+  try{
+    const res=await _callAI(prompt,500);
+    const m=res.match(/\{[\s\S]+\}/);
+    if(!m) throw new Error('no json');
+    _pendingCustomVars={vars:JSON.parse(m[0]),schoolName:name};
+    _showCustomPreview();
+  }catch(e){toast('生成失败，请重试','error');}
+  if(btn){btn.disabled=false;btn.textContent='✨ AI 生成配色';}
+}
+function _showCustomPreview(){
+  if(!_pendingCustomVars) return;
+  const {vars}=_pendingCustomVars;
+  const el=document.getElementById('ct-preview');if(!el) return;
+  el.style.display='';
+  const swatches=Object.entries(vars).filter(([k])=>!k.includes('-soft')&&!k.includes('-bg')&&k!=='--text2').map(([k,v])=>`<div title="${k}" style="width:26px;height:26px;border-radius:5px;background:${v};border:1px solid rgba(128,128,128,.2);flex-shrink:0"></div>`).join('');
+  el.innerHTML=`<div style="font-size:12px;color:var(--text2);margin:12px 0 8px">配色预览（${_pendingCustomVars.schoolName}）</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${swatches}</div><div style="display:flex;gap:8px"><button class="btn btn-primary" style="flex:1" onclick="_applyCustomAndClose()">应用此主题</button><button class="btn btn-ghost" onclick="generateCustomTheme()">重新生成</button></div>`;
+}
+function _applyCustomAndClose(){
+  if(!_pendingCustomVars) return;
+  applyCustomTheme(_pendingCustomVars.vars,_pendingCustomVars.schoolName);
+  closeModal('customThemeModal');
+  renderThemePicker();
+  toast('主题已应用 ✨');
 }
 
 // 初次加载
@@ -4293,6 +4364,24 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWal
       <button class="btn btn-primary btn-sm" onclick="_pickTimeCustom()">确定</button>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="closeModal('scanTimerModal');_openPendingUrl()" style="font-size:11px;color:var(--text2)">不用了，直接打开</button>
+  </div>
+</div>
+
+<!-- ── Custom Theme Modal ── -->
+<div class="modal-overlay" id="customThemeModal" onclick="if(event.target===this)closeModal('customThemeModal')">
+  <div class="modal" style="max-width:480px;width:95%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-weight:700;font-size:15px">🏫 自定义学校主题</div>
+      <button onclick="closeModal('customThemeModal')" class="btn btn-ghost btn-sm" style="padding:4px 8px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
+      输入学校名称，AI 会根据官方 VI 色彩规范自动生成专属主题。
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="ct-school" placeholder="如：上海交通大学、中国人民大学、武汉大学..." style="flex:1" onkeydown="if(event.key==='Enter')generateCustomTheme()">
+      <button id="ct-gen-btn" class="btn btn-primary" onclick="generateCustomTheme()">✨ AI 生成配色</button>
+    </div>
+    <div id="ct-preview" style="display:none"></div>
   </div>
 </div>
 
