@@ -231,6 +231,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .wall-tag-share{background:#e8f7ee;color:#2a9d5c;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
 .wall-tag-help{background:#fff0e6;color:#e07b39;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
 .wall-tag-vent{background:#f0eeff;color:#6c5ce7;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;flex-shrink:0}
+.wall-pager{display:flex;gap:4px;justify-content:center;padding:12px 0 4px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border);margin-top:4px}
+.wall-pager-btn{padding:4px 11px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:11px;transition:.15s}
+.wall-pager-btn:hover{border-color:var(--primary);color:var(--primary)}
+.wall-pager-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:600}
+.wall-pager-ellipsis{color:var(--text2);font-size:11px;padding:0 2px;user-select:none}
 .ai-reply{background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(99,102,241,.05));border-left:2px solid #10b981;border-radius:0 6px 6px 0;padding:8px 10px;margin-top:7px;font-size:12px;line-height:1.65;color:var(--text)}
 .ai-reply-hd{font-size:10px;color:#10b981;font-weight:700;letter-spacing:.3px;margin-bottom:3px;display:flex;align-items:center;gap:4px}
 .ai-reply-hd span{opacity:.7;font-weight:400}
@@ -2997,15 +3002,18 @@ function _renderIdentity(){
   _renderMoodBar()
 }
 
-// 当前激活的 tab 和 发帖类型
+// 当前激活的 tab、发帖类型、分页
 let _wallCurrentTag='all'
 let _wallCurrentType='share'
+let _wallCurrentPage=1
+const _WALL_PAGE_SIZE=20
 
 function switchWallTab(btn){
   document.querySelectorAll('.wall-tab').forEach(b=>b.classList.remove('active'))
   btn.classList.add('active')
   _wallCurrentTag=btn.dataset.tag
-  loadWall()
+  _wallCurrentPage=1
+  loadWall(1)
 }
 
 function selectWallType(btn){
@@ -3129,6 +3137,8 @@ async function _callAI(prompt,maxTokens=800){
 const _DISTRESS=['崩溃','绝望','想放弃','撑不住','不想做了','退学','抑郁','好难受','太累了','怎么办','帮帮我','救命','好痛苦','迷茫','绷不住','熬不住','坚持不下去','想哭','心态崩了','不知道该怎么']
 const _HEALTH_KW=['感冒','发烧','生病','头疼','头晕','咳嗽','喉咙','嗓子','肚子','难受','不舒服','身体不好','住院','看病','吃药','打针','发炎','扁桃体','鼻塞','流鼻涕','过敏','脚崴了','受伤','肌肉酸','腰疼','背疼']
 const _LONELY_KW=['好孤独','好孤单','没人','一个人','没朋友','心情不好','状态不好','好emo','emo了','低谷','焦虑','压力大','喘不过气','撑下去','撑不住']
+// 求助意图关键词（适用于误选"分享"的求助帖）
+const _HELP_KW=['怎么','如何','请教','请问','有没有人','谁知道','能帮','帮我看','大佬','求推荐','求建议','求解','求助','困惑','出错了','报错','哪位','有没有遇到','有没有推荐','?','？']
 
 function _needsAI(tag,msg){
   if(tag==='help') return true          // 所有求助必回
@@ -3137,19 +3147,29 @@ function _needsAI(tag,msg){
   if(_HEALTH_KW.some(k=>msg.includes(k))) return true
   if(_DISTRESS.some(k=>msg.includes(k))) return true
   if(_LONELY_KW.some(k=>msg.includes(k))) return true
+  // 分享中含求助意图（误选标签场景）
+  if(_HELP_KW.some(k=>msg.includes(k))) return true
   return false
+}
+
+// 判断是否实质求助（标签为分享但内容含问题）
+function _isActualHelp(msg,tag){
+  return tag!=='help' && _HELP_KW.some(k=>msg.includes(k))
 }
 
 // 根据帖子内容判断回复风格
 function _getReplyPrompt(msg,tag){
   const isHealth=_HEALTH_KW.some(k=>msg.includes(k))
   const isDistress=_DISTRESS.some(k=>msg.includes(k))||_LONELY_KW.some(k=>msg.includes(k))
+  const isHelpIntent=tag==='help'||_isActualHelp(msg,tag)
   if(isHealth)
     return `你是一位温暖贴心的研究生同学。一位同学说：「${msg}」\n请用30-50字给出关心：体贴、鼓励好好休息恢复、可以有一点点幽默但要真诚暖心。直接开始，不称呼，不分段。`
   if(isDistress||tag==='vent')
     return `你是一位走出过科研低谷的前辈，温暖且有智慧。一位研究者说：「${msg}」\n请用40-60字回应：真实共鸣、一个具体小建议、像老友说话不说教，可以有一点幽默。直接开始，不称呼，不分段，不说"我理解你"。`
-  // help 或其他
-  return `你是一位走过科研低谷的前辈研究者，内心温暖而有智慧。一位研究者写道：「${msg}」\n请用50-80字给出回应：温暖真实、包含一个具体可操作的小建议、像老朋友说话（不说教）。直接开始，不称呼，不分段，不说"我理解你"。`
+  if(isHelpIntent)
+    return `你是一位走过科研低谷的前辈研究者，内心温暖而有智慧。一位研究者问道：「${msg}」\n请用50-80字给出实质性回应：直接针对问题给出具体建议或方向，语气像老朋友说话，不说教，不说"我理解你"。直接开始，不称呼，不分段。`
+  // 纯分享：简短鼓励
+  return `你是一位走过科研低谷的前辈。一位同学分享道：「${msg}」\n用20-35字给一句温暖的鼓励或共鸣，简短有温度，不说教。直接开始，不称呼，不分段。`
 }
 
 const _aiCache={}
@@ -3161,6 +3181,19 @@ async function _callGroq(id,msg,tag){
   const reply=await _callAI(prompt,200)
   if(reply) _aiCache[id]=reply
   return reply
+}
+
+function _renderWallPager(page,totalPages){
+  if(totalPages<=1) return ''
+  const btn=(p,label,active)=>`<button class="wall-pager-btn${active?' active':''}" onclick="loadWall(${p})">${label}</button>`
+  const parts=[]
+  if(page>1) parts.push(btn(page-1,'‹ 上页',false))
+  const start=Math.max(1,page-2), end=Math.min(totalPages,page+2)
+  if(start>1){parts.push(btn(1,'1',false));if(start>2)parts.push('<span class="wall-pager-ellipsis">…</span>')}
+  for(let i=start;i<=end;i++) parts.push(btn(i,i,i===page))
+  if(end<totalPages){if(end<totalPages-1)parts.push('<span class="wall-pager-ellipsis">…</span>');parts.push(btn(totalPages,totalPages,false))}
+  if(page<totalPages) parts.push(btn(page+1,'下页 ›',false))
+  return `<div class="wall-pager">${parts.join('')}</div>`
 }
 
 async function _generateAndShow(item){
@@ -3725,29 +3758,35 @@ async function fetchEntertain(cat, force=false){
   }
 }
 
-async function loadWall(){
+async function loadWall(page){
+  if(page!=null) _wallCurrentPage=page
+  const offset=(_wallCurrentPage-1)*_WALL_PAGE_SIZE
   try{
-    let url=`${_SB_URL}/rest/v1/wall?select=day,msg,nickname,avatar,tag,created_at&order=created_at.desc&limit=15`
+    let url=`${_SB_URL}/rest/v1/wall?select=day,msg,nickname,avatar,tag,created_at&order=created_at.desc&limit=${_WALL_PAGE_SIZE}&offset=${offset}`
     if(_wallCurrentTag && _wallCurrentTag!=='all') url+=`&tag=eq.${_wallCurrentTag}`
     const r=await fetch(url,{
-      headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}
+      headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY,'Prefer':'count=exact'}
     })
     if(!r.ok) return
+    // 从 Content-Range 获取总条数：格式 "0-19/147"
+    const cr=r.headers.get('Content-Range')||''
+    const total=parseInt(cr.split('/')[1])||0
+    const totalPages=Math.max(1,Math.ceil(total/_WALL_PAGE_SIZE))
     const data=await r.json()
     const el=document.getElementById('wall-list')
     if(!data.length){
-      el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px 0">这里还没有留言，成为第一个吧 🌱</div>'
+      el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px 0">这里还没有留言，成为第一个吧 🌱</div>'+_renderWallPager(_wallCurrentPage,totalPages)
       _renderIdentity()
       return
     }
-    el.innerHTML=data.map((d,i)=>_renderWallItem(d,i)).join('')
+    el.innerHTML=data.map((d,i)=>_renderWallItem(d,i)).join('')+_renderWallPager(_wallCurrentPage,totalPages)
     _renderIdentity()
-    // 顺序触发 AI 回复，优先最新帖，最多处理5条；已缓存的立即显示
+    // 顺序触发 AI 回复，优先最新帖，最多处理6条；已缓存的立即显示
     ;(async()=>{
       let n=0
       for(const d of data){
         if(!_needsAI(d.tag,d.msg)) continue
-        if(n++>=5) break
+        if(n++>=6) break
         await _generateAndShow(d)
       }
     })()
@@ -3775,7 +3814,8 @@ async function submitWall(){
       tip.textContent='✅ 已发布'
       tip.style.display='block'
       setTimeout(()=>{tip.style.display='none'},2000)
-      loadWall()
+      _wallCurrentPage=1  // 回到第1页看自己的帖子
+      loadWall(1)
     } else {
       let errMsg='发布失败'
       try{
