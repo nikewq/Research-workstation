@@ -4986,7 +4986,7 @@ async function extractProductURL(){
     let pageText=''
     try{const jr=await Promise.race([fetch('https://r.jina.ai/'+url,{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),new Promise((_,r)=>setTimeout(()=>r('timeout'),8000))]);if(jr.ok)pageText=(await jr.text()).slice(0,3000)}catch(_){}
     const host=new URL(url).hostname.replace(/^www\./,'')
-    const prompt=`商品页面（来源：${host}）：\n\n${pageText||'（获取失败）'}\n\n提取商品信息，返回JSON（不确定填空或0）：\n{"name":"","brand":"","price":0,"platform":"${host}","rating":0,"sales":0,"userFeedback":"","deliveryDays":0,"shipFrom":"","category":""}\n只返回JSON。`
+    const prompt=`商品页面（来源：${host}）：\n\n${pageText||'（获取失败）'}\n\n提取商品信息，返回JSON（不确定的字段填空字符串或0）：\n{"name":"商品全名","brand":"品牌","price":数字价格不含单位,"platform":"${host}","rating":评分0到5的小数例如4.8,"sales":月销量整数例如1200,"userFeedback":"用户评价摘要1到2句","deliveryDays":货期天数整数,"shipFrom":"发货地城市省份例如广东深圳","category":"品类"}\n重点：rating从商家评分/店铺评分/用户评分中提取；sales从月销/近30天销量中提取；shipFrom从发货地/卖家所在地中提取。只返回JSON，不要其他文字。`
     tip.textContent='AI解析中…'
     const raw=await _callAI(prompt,600)
     let info={};const s=raw.indexOf('{'),e=raw.lastIndexOf('}');if(s!==-1&&e>s)try{info=JSON.parse(raw.slice(s,e+1))}catch(_){}
@@ -5064,19 +5064,23 @@ async function searchProcureAI(){
   const btn=document.getElementById('procure-search-btn'),resultEl=document.getElementById('procure-ai-results')
   btn.disabled=true;btn.textContent='⏳ 搜索中…'
   resultEl.innerHTML='<div style="font-size:12px;color:var(--text2);padding:12px">AI 正在全网推荐中……</div>'
-  const prompt=`科研采购专家。需求：「${req}」\n推荐5款具体产品（含品牌型号），返回JSON数组：\n[{"name":"品牌+型号","brand":"品牌","category":"类别","priceRange":"价格范围","keySpecs":"核心参数（分号分隔）","pros":"推荐理由30字","searchQuery":"搜索关键词","platform":"推荐平台"}]\n只返回JSON。`
+  const prompt=`你是科研采购专家。需求：「${req}」\n推荐5款具体产品（含品牌+完整型号），返回JSON数组，字段说明：\nname=品牌+型号全称, brand=品牌, category=类别, priceRange=参考价格范围(如"¥3000-5000"), keySpecs=核心参数用分号分隔, pros=推荐理由不超过30字, searchQuery=最佳搜索关键词(用于京东/淘宝直接搜索), platform=主要采购平台(京东/淘宝/1688/官网), shipFrom=主要发货地(如"广东深圳"，不确定填""), rating=口碑评分0-5(根据市场口碑估计), sales=月均销量(整数，不确定填0), deliveryDays=货期天数(整数)\n只返回JSON数组，不要任何解释。`
   try{
-    const raw=await _callAI(prompt,1200);const suggs=_extractJSONArray(raw);if(!suggs||!suggs.length)throw new Error('fail')
+    const raw=await _callAI(prompt,1400);const suggs=_extractJSONArray(raw);if(!suggs||!suggs.length)throw new Error('fail')
     resultEl.innerHTML=suggs.map(item=>{
-      const q=encodeURIComponent(item.searchQuery||item.name||'')
-      const pData=JSON.stringify({name:item.name||'',brand:item.brand||'',category:item.category||'',notes:item.keySpecs||'',userFeedback:item.pros||'',platform:item.platform||''})
-      return`<div class="procure-ai-card"><div style="display:flex;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;margin-bottom:3px">${escHtml(item.name||'')}</div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">${escHtml(item.keySpecs||'')}</div><div style="font-size:11px;margin-bottom:2px">${escHtml(item.pros||'')}</div><span style="font-size:12px;font-weight:600;color:var(--primary)">${escHtml(item.priceRange||'')}</span></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button onclick="window.open('https://search.jd.com/Search?keyword=${encodeURIComponent(q)}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">京东🔍</button><button onclick="window.open('https://s.taobao.com/search?q=${encodeURIComponent(q)}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">淘宝🔍</button><button onclick="_prefillFromAI(this)" data-item='${escHtml(pData)}' class="btn btn-primary btn-sm" style="font-size:10px">+ 加入清单</button></div></div></div>`
+      const q=item.searchQuery||item.name||''
+      const stars=item.rating?'★'.repeat(Math.round(item.rating))+'☆'.repeat(5-Math.round(item.rating)):''
+      const pData=JSON.stringify({name:item.name||'',brand:item.brand||'',category:item.category||'',notes:item.keySpecs||'',userFeedback:item.pros||'',platform:item.platform||'',rating:item.rating||'',sales:item.sales||'',shipFrom:item.shipFrom||'',deliveryDays:item.deliveryDays||''})
+      const jdUrl='https://search.jd.com/Search?keyword='+encodeURIComponent(q)
+      const tbUrl='https://s.taobao.com/search?q='+encodeURIComponent(q)
+      const g1688='https://s.1688.com/selloffer/offer_search.htm?keywords='+encodeURIComponent(q)
+      return`<div class="procure-ai-card"><div style="display:flex;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;margin-bottom:3px">${escHtml(item.name||'')}</div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">${escHtml(item.keySpecs||'')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:3px">${stars?`<span class="procure-stars" style="font-size:11px">${stars}</span>`:''}${item.sales?`<span style="font-size:10px;color:var(--text2)">月销${item.sales}件</span>`:''}${item.shipFrom?`<span style="font-size:10px;color:var(--text2)">📍${escHtml(item.shipFrom)}</span>`:''}${item.deliveryDays?`<span style="font-size:10px;color:var(--text2)">货期${item.deliveryDays}天</span>`:''}</div><div style="font-size:11px;margin-bottom:2px">${escHtml(item.pros||'')}</div><span style="font-size:12px;font-weight:600;color:var(--primary)">${escHtml(item.priceRange||'')}</span></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button onclick="window.open('${jdUrl}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">京东🔍</button><button onclick="window.open('${tbUrl}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">淘宝🔍</button><button onclick="window.open('${g1688}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">1688🔍</button><button onclick="_prefillFromAI(this)" data-item='${escHtml(pData)}' class="btn btn-primary btn-sm" style="font-size:10px">+ 加入清单</button></div></div></div>`
     }).join('')
   }catch(e){resultEl.innerHTML='<div style="font-size:12px;color:var(--text2);padding:12px">搜索失败，请检查AI配置后重试</div>'}
   btn.disabled=false;btn.textContent='🔍 AI 搜索推荐'
 }
 function _prefillFromAI(btn){
-  try{const item=JSON.parse(btn.dataset.item);_fillProcureForm({name:item.name||'',brand:item.brand||'',price:'',platform:item.platform||'',rating:'',sales:'',userFeedback:item.userFeedback||'',deliveryDays:'',shipFrom:'',category:item.category||'',url:'',notes:item.notes||''});switchProcureAddMode('manual');document.getElementById('procure-add-section')?.scrollIntoView({behavior:'smooth',block:'start'});toast('已预填，请完善后保存')}catch(_){}
+  try{const item=JSON.parse(btn.dataset.item);_fillProcureForm({name:item.name||'',brand:item.brand||'',price:item.price||'',platform:item.platform||'',rating:item.rating||'',sales:item.sales||'',userFeedback:item.userFeedback||'',deliveryDays:item.deliveryDays||'',shipFrom:item.shipFrom||'',category:item.category||'',url:item.url||'',notes:item.notes||''});switchProcureAddMode('manual');document.getElementById('procure-add-section')?.scrollIntoView({behavior:'smooth',block:'start'});toast('已预填，请完善后保存')}catch(_){}
 }
 </script>
 
