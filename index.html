@@ -1370,16 +1370,22 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
         </div>
         <!-- 对比页导入 -->
         <div class="procure-add-pane" data-mode="cmp" style="display:none">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;line-height:1.8">
-            在京东/淘宝/拼多多平台自带的<strong style="color:var(--primary)">商品对比页</strong>选好商品，复制地址栏 URL 粘贴到下方。<br>
-            例：<code style="font-size:10px;background:var(--surface);padding:1px 5px;border-radius:4px;user-select:all">https://item.jd.com/compare/ID1-ID2-ID3.html</code><br>
-            AI 将自动提取所有对比商品，批量加入清单并自动勾选到对比面板。
+          <!-- 推荐路径：书签工具 -->
+          <div style="background:var(--primary-soft,rgba(var(--primary-rgb,99,102,241),.08));border:1px solid var(--primary);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:600;color:var(--primary);margin-bottom:5px">⭐ 推荐方式：书签工具（最可靠）</div>
+            <div style="font-size:11px;color:var(--text2);line-height:1.9">
+              ① 确保已将 <strong style="color:var(--primary)">「📦 保存到采购清单」</strong> 拖入浏览器书签栏<br>
+              ② 在京东对比页选好商品后，点击该书签<br>
+              ③ 弹出「已复制 X 款对比商品！」后，切换到 <strong>📋 粘贴导入</strong> Tab 粘贴
+            </div>
           </div>
+          <!-- 备用路径：URL -->
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600">备用方式：粘贴对比页 URL（京东反爬较强，可能失败）</div>
           <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input id="procure-cmp-url-input" class="procure-input" placeholder="粘贴平台对比页 URL（京东 item.jd.com/compare/… 等）" style="flex:1;width:auto">
-            <button class="btn btn-primary btn-sm" id="procure-cmp-import-btn" onclick="importComparePageURL()" style="flex-shrink:0">🆚 批量导入</button>
+            <input id="procure-cmp-url-input" class="procure-input" placeholder="https://item.jd.com/compare/ID1-ID2-ID3.html" style="flex:1;width:auto">
+            <button class="btn btn-ghost btn-sm" id="procure-cmp-import-btn" onclick="importComparePageURL()" style="flex-shrink:0">🆚 尝试导入</button>
           </div>
-          <div id="procure-cmp-import-tip" style="font-size:11px;color:var(--text2);line-height:1.6"></div>
+          <div id="procure-cmp-import-tip" style="font-size:11px;color:var(--text2);line-height:1.8"></div>
         </div>
       </div>
 
@@ -5019,7 +5025,10 @@ function initProcurePage(){
 }
 function _initBookmarklet(){
   const link=document.getElementById('procure-bm-link');if(!link)return
-  const code=`javascript:(function(){var n='',d={url:location.href,source:location.hostname.replace(/^www\\./,'')};var el=document.querySelector('[itemprop="name"]')||document.querySelector('#productTitle')||document.querySelector('.sku-name')||document.querySelector('.product-title')||document.querySelector('h1');if(el)n=el.innerText.trim().slice(0,150);if(!n)n=document.title.slice(0,150);d.name=n;var pm=document.body.innerText.match(/[\\u00a5\\uffe5]\\s*([\\d,]+\\.?\\d*)/);if(pm)d.price=parseFloat(pm[1].replace(/,/g,''));var ds=document.querySelector('meta[name="description"]');if(ds)d.desc=ds.content.slice(0,200);var s=JSON.stringify(d);function cp(){navigator.clipboard.writeText(s).then(function(){alert('\\u2705 \\u5546\\u54c1\\u4fe1\\u606f\\u5df2\\u590d\\u5236\\uff01\\n\\u8fd4\\u56de\\u535a\\u58eb\\u5de5\\u4f5c\\u53f0 \\u2192 \\u91c7\\u8d2d\\u6e05\\u5355 \\u2192 \\u7c98\\u8d34\\u5bfc\\u5165')}).catch(fb)}function fb(){var t=document.createElement('textarea');t.value=s;document.body.appendChild(t);t.select();try{document.execCommand('copy');alert('\\u2705 \\u5df2\\u590d\\u5236\\uff01')}catch(e){prompt('\\u590d\\u5236\\uff1a',s)}document.body.removeChild(t)}navigator.clipboard?cp():fb()})();`
+  // 书签支持两种模式：
+  // 1. 京东/淘宝/拼多多 对比页 → 批量提取多款商品 → 复制 JSON 数组
+  // 2. 普通商品详情页 → 单品提取 → 复制 JSON 对象
+  const code=`javascript:(function(){var url=location.href,host=location.hostname.replace(/^www\\./,'');var results=[];var isJDCmp=/item\\.jd\\.com\\/compare\\//.test(url);if(isJDCmp){var m=url.match(/compare\\/([0-9]+(?:-[0-9]+)+)\\.html/i);if(m){var ids=m[1].split('-').filter(function(x){return x.length>=6});ids.forEach(function(id,i){var name='';var nSelectors=['.sku-name','.goods-name','[class*="compare"] .name','[class*="compare"] h3','[class*="compare"] .title','.J-compare-name','.compare-item .name'];for(var si=0;si<nSelectors.length;si++){var els=document.querySelectorAll(nSelectors[si]);if(els[i]){name=els[i].innerText.trim().slice(0,150);break;}}if(!name){var allH=document.querySelectorAll('h3,h4,.name,.title');if(allH[i])name=allH[i].innerText.trim().slice(0,150);}if(!name)name='\\u4eac\\u4e1c\\u5546\\u54c1'+id;var price=0;var pSelectors=['.price-box .price','[class*="compare"] .price','.compare-price','.J_jdPrice','.price'];for(var pi=0;pi<pSelectors.length;pi++){var pels=document.querySelectorAll(pSelectors[pi]);if(pels[i]){var pm=pels[i].innerText.match(/[0-9]+\\.?[0-9]*/);if(pm){price=parseFloat(pm[0]);break;}}}results.push({url:'https://item.jd.com/'+id+'.html',source:'jd.com',name:name,price:price,_batch:true});});}}if(!results.length){var n='',d={url:url,source:host};var el=document.querySelector('[itemprop="name"]')||document.querySelector('#productTitle')||document.querySelector('.sku-name')||document.querySelector('.product-title')||document.querySelector('h1');if(el)n=el.innerText.trim().slice(0,150);if(!n)n=document.title.slice(0,150);d.name=n;var pm=document.body.innerText.match(/[\\u00a5\\uffe5]\\s*([\\d,]+\\.?\\d*)/);if(pm)d.price=parseFloat(pm[1].replace(/,/g,''));var ds=document.querySelector('meta[name="description"]');if(ds)d.desc=ds.content.slice(0,200);results=[d];}var isBatch=results.length>1||(results[0]&&results[0]._batch);if(isBatch)results.forEach(function(r){delete r._batch;});var s=isBatch?JSON.stringify(results):JSON.stringify(results[0]);var msg=isBatch?'\\u2705 \\u5df2\\u590d\\u5236 '+results.length+' \\u6b3e\\u5bf9\\u6bd4\\u5546\\u54c1\\uff01\\n\\u8fd4\\u56de\\u535a\\u58eb\\u5de5\\u4f5c\\u53f0 \\u2192 \\u91c7\\u8d2d\\u6e05\\u5355 \\u2192 \\u7c98\\u8d34\\u5bfc\\u5165':'\\u2705 \\u5546\\u54c1\\u4fe1\\u606f\\u5df2\\u590d\\u5236\\uff01\\n\\u8fd4\\u56de\\u535a\\u58eb\\u5de5\\u4f5c\\u53f0 \\u2192 \\u91c7\\u8d2d\\u6e05\\u5355 \\u2192 \\u7c98\\u8d34\\u5bfc\\u5165';function cp(){navigator.clipboard.writeText(s).then(function(){alert(msg)}).catch(fb)}function fb(){var t=document.createElement('textarea');t.value=s;document.body.appendChild(t);t.select();try{document.execCommand('copy');alert(msg)}catch(e){prompt('\\u590d\\u5236\\uff1a',s)}document.body.removeChild(t)}navigator.clipboard?cp():fb()})();`
   link.href=code
 }
 function saveProcureLoc(){const v=document.getElementById('procure-loc-input')?.value.trim();if(!v){toast('请输入城市名','error');return}localStorage.setItem(K_PROCURE_LOC,v);const el=document.getElementById('procure-loc-val');if(el)el.textContent=v;toast('📍 位置已保存');renderProcureList()}
@@ -5103,8 +5112,19 @@ async function importComparePageURL(){
     const succeeded=fetchResults.map((r,i)=>({ok:r.status==='fulfilled'&&r.value,text:r.status==='fulfilled'?r.value:null,url:productUrls[i]})).filter(x=>x.ok)
 
     if(!succeeded.length){
-      tip.innerHTML='<span style="color:var(--red)">所有商品页面读取失败（可能被反爬拦截）。请使用「URL提取」逐个添加或手动填写。</span>'
-      btn.disabled=false;btn.textContent='🆚 批量导入';return
+      // 京东反爬：预建空条目，并给出可点链接让用户逐一用书签工具填写
+      const userCity=_getProcureLoc()
+      const stubItems=productUrls.map((pUrl,i)=>({id:uid(),name:`京东商品 ${i+1}（待补充）`,brand:'',price:0,currency:'CNY',platform:'jd.com',rating:0,sales:0,userFeedback:'',deliveryDays:0,shipFrom:'',distScore:2,category:'',url:pUrl,notes:'',status:'eval',savedAt:today()}))
+      _svProcure([...stubItems,..._ldProcure()])
+      _procureCompare.clear()
+      stubItems.slice(0,4).forEach(x=>_procureCompare.add(x.id))
+      renderProcureList();_renderProcureCompare()
+      const links=productUrls.map((u,i)=>`<a href="${escHtml(u)}" target="_blank" style="color:var(--primary);font-size:11px;display:block;margin-top:2px">商品${i+1}：${escHtml(u.split('/').pop().replace('.html',''))}</a>`).join('')
+      tip.innerHTML=`<div style="color:var(--red);margin-bottom:6px">⚠️ 京东反爬拦截，无法自动获取商品信息。</div>
+<div style="margin-bottom:6px">已预建 <strong>${stubItems.length} 个空条目</strong>（见下方清单）。<br>请按以下步骤逐一补充信息：</div>
+<div style="background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:6px;line-height:1.8;font-size:11px">① 点击下方链接访问商品页<br>② 点击书签栏「📦 保存到采购清单」<br>③ 切换到「📋 粘贴导入」粘贴<br>④ 保存后替换对应空条目</div>
+${links}`
+      btn.disabled=false;btn.textContent='🆚 尝试导入';return
     }
 
     tip.innerHTML=`✅ 成功读取 ${succeeded.length}/${productUrls.length} 页，AI 逐一解析中…`
@@ -5143,8 +5163,31 @@ async function _saveCmpProducts(products,host,sourceUrl,tip){
 }
 function importProcurePaste(){
   const raw=document.getElementById('procure-paste-input')?.value.trim();if(!raw){toast('请粘贴书签工具复制的内容','error');return}
-  try{const d=JSON.parse(raw);_fillProcureForm({name:d.name||d.title||'',brand:'',price:d.price||'',platform:d.source||'',rating:'',sales:'',userFeedback:d.desc||'',deliveryDays:'',shipFrom:'',category:'',url:d.url||'',notes:''});switchProcureAddMode('manual');document.getElementById('procure-paste-input').value='';toast('✅ 已填入，请确认后保存')}
-  catch(_){toast('格式错误','error')}
+  try{
+    const parsed=JSON.parse(raw)
+    if(Array.isArray(parsed)&&parsed.length>0){
+      // 批量导入（对比页书签工具复制）
+      const userCity=_getProcureLoc()
+      const newItems=parsed.map(d=>{
+        const shipFrom=d.shipFrom||''
+        return{id:uid(),name:(d.name||d.title||'未知商品').slice(0,120),brand:d.brand||'',price:parseFloat(d.price)||0,currency:'CNY',platform:d.source||d.platform||'',rating:parseFloat(d.rating)||0,sales:parseInt(d.sales)||0,userFeedback:d.desc||d.userFeedback||'',deliveryDays:parseInt(d.deliveryDays)||0,shipFrom,distScore:_distScore(shipFrom,userCity),category:d.category||'',url:d.url||'',notes:d.notes||'',status:'eval',savedAt:today()}
+      })
+      _svProcure([...newItems,..._ldProcure()])
+      _procureCompare.clear()
+      newItems.slice(0,4).forEach(x=>_procureCompare.add(x.id))
+      document.getElementById('procure-paste-input').value=''
+      renderProcureList();_renderProcureCompare()
+      toast(`✅ 已批量导入 ${newItems.length} 款商品，已自动勾选对比`)
+      setTimeout(()=>document.getElementById('procure-compare-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'}),300)
+    } else {
+      // 单品导入
+      const d=parsed
+      _fillProcureForm({name:d.name||d.title||'',brand:'',price:d.price||'',platform:d.source||'',rating:'',sales:'',userFeedback:d.desc||'',deliveryDays:'',shipFrom:'',category:'',url:d.url||'',notes:''})
+      switchProcureAddMode('manual')
+      document.getElementById('procure-paste-input').value=''
+      toast('✅ 已填入，请确认后保存')
+    }
+  }catch(_){toast('格式错误，请确认内容来自书签工具','error')}
 }
 function _fillProcureForm(d){['name','brand','price','platform','rating','sales','userFeedback','deliveryDays','shipFrom','category','url','notes'].forEach(f=>{const el=document.getElementById('pf-'+f);if(el)el.value=d[f]??''})}
 function saveProcureItem(){
