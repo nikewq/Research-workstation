@@ -63,44 +63,44 @@
   --blue:#06b6d4;--blue-soft:rgba(6,182,212,.15);
 }
 :root[data-theme="pku"]{
-  /* 燕红 ≈ Pantone 200C #B22234；燕园金作辅助 */
-  --bg:#08060e;--surface:#100e1c;--surface2:#181530;--border:#281e44;
-  --text:#f8e8e0;--text2:#c09080;
-  --primary:#b22234;--primary-soft:rgba(178,34,52,.15);--primary-bg:rgba(178,34,52,.08);
+  /* 北大红 RGB(139,0,18)=#8B0012；辅助燕园金 */
+  --bg:#0a0406;--surface:#130810;--surface2:#1c0e1a;--border:#2e1424;
+  --text:#f5e6e0;--text2:#c08878;
+  --primary:#8b0012;--primary-soft:rgba(139,0,18,.15);--primary-bg:rgba(139,0,18,.08);
   --green:#c9a227;--green-soft:rgba(201,162,39,.15);
   --orange:#d4773a;--orange-soft:rgba(212,119,58,.15);
-  --red:#b22234;--red-soft:rgba(178,34,52,.15);
+  --red:#8b0012;--red-soft:rgba(139,0,18,.15);
   --blue:#1e3a7a;--blue-soft:rgba(30,58,122,.15);
 }
 :root[data-theme="thu"]{
-  /* 清华紫 ≈ Pantone 268C #5C1A7A */
-  --bg:#060410;--surface:#0d0820;--surface2:#140d30;--border:#221244;
-  --text:#e8dcf8;--text2:#9878c0;
-  --primary:#5c1a7a;--primary-soft:rgba(92,26,122,.15);--primary-bg:rgba(92,26,122,.08);
+  /* 清华紫 RGB(102,8,116)=#660874；Pantone 268C 官方实测 */
+  --bg:#060210;--surface:#0c0620;--surface2:#130930;--border:#200e44;
+  --text:#ecdcf8;--text2:#a868c8;
+  --primary:#660874;--primary-soft:rgba(102,8,116,.15);--primary-bg:rgba(102,8,116,.08);
   --green:#059669;--green-soft:rgba(5,150,105,.15);
   --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
   --red:#ef4444;--red-soft:rgba(239,68,68,.15);
   --blue:#7c3aed;--blue-soft:rgba(124,58,237,.15);
 }
 :root[data-theme="fdu"]{
-  /* 复旦蓝 ≈ Pantone 286C #1B4FAB */
-  --bg:#020c1e;--surface:#061528;--surface2:#0a1e38;--border:#102e58;
-  --text:#d8e8f8;--text2:#5878b0;
-  --primary:#1b4fab;--primary-soft:rgba(27,79,171,.15);--primary-bg:rgba(27,79,171,.08);
+  /* 复旦蓝 RGB(14,65,156)=#0E419C；Pantone 286C 官方实测 */
+  --bg:#020b1c;--surface:#051426;--surface2:#091c36;--border:#0d2c56;
+  --text:#d6e6f8;--text2:#4a72b8;
+  --primary:#0e419c;--primary-soft:rgba(14,65,156,.15);--primary-bg:rgba(14,65,156,.08);
   --green:#059669;--green-soft:rgba(5,150,105,.15);
   --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
   --red:#e74c3c;--red-soft:rgba(231,76,60,.15);
-  --blue:#1b4fab;--blue-soft:rgba(27,79,171,.15);
+  --blue:#0e419c;--blue-soft:rgba(14,65,156,.15);
 }
 :root[data-theme="zju"]{
-  /* 浙大蓝 #003E7E + 浙大金 #C8A952 */
+  /* 浙大蓝 RGB(0,63,136)=#003F88；浙大金 #C8A952 作主色（深色背景更易辨识） */
   --bg:#020a14;--surface:#061020;--surface2:#0c1a30;--border:#102844;
   --text:#e8e0c8;--text2:#907a4e;
   --primary:#c8a952;--primary-soft:rgba(200,169,82,.15);--primary-bg:rgba(200,169,82,.08);
   --green:#1a9e5a;--green-soft:rgba(26,158,90,.15);
   --orange:#d4773a;--orange-soft:rgba(212,119,58,.15);
   --red:#c0392b;--red-soft:rgba(192,57,43,.15);
-  --blue:#003e7e;--blue-soft:rgba(0,62,126,.15);
+  --blue:#003f88;--blue-soft:rgba(0,63,136,.15);
 }
 :root[data-theme="sustech"]{
   /* 南科大橙 #E8783C(Pantone 7578C) · 天青 #64C4B8(Pantone 2401C) · 墨绿 #1B6B5C(Pantone 7477C) */
@@ -4155,29 +4155,29 @@ function delGanttTask(){
 // 已核验高校配色数据库（主色 + 配色提示）
 const SCHOOL_COLORS_DB={
   // ── 985 高校 ──
-  '北京大学':        {p:'#b22234',hint:'燕红 Pantone 200C'},
-  '清华大学':        {p:'#5c1a7a',hint:'清华紫 Pantone 268C'},
+  '北京大学':        {p:'#8b0012',hint:'北大红 RGB(139,0,18) 官方实测'},
+  '清华大学':        {p:'#660874',hint:'清华紫 RGB(102,8,116) Pantone 268C 官方实测'},
   '中国人民大学':    {p:'#b22234',hint:'人大红'},
   '北京航空航天大学':{p:'#003a7a',hint:'航天蓝'},
   '北京理工大学':    {p:'#1b3a8c',hint:'理工蓝'},
   '中国农业大学':    {p:'#007b43',hint:'农大绿'},
   '北京师范大学':    {p:'#006634',hint:'师大绿'},
-  '南开大学':        {p:'#005a9e',hint:'南开蓝 Pantone 287C'},
+  '南开大学':        {p:'#7e0c6e',hint:'南开紫（青莲紫）RGB(126,12,110) 官方实测，非蓝色'},
   '天津大学':        {p:'#1b3a8c',hint:'天大蓝'},
   '大连理工大学':    {p:'#003a7a',hint:'工大蓝'},
   '吉林大学':        {p:'#003087',hint:'吉大蓝'},
   '哈尔滨工业大学':  {p:'#003a7a',hint:'哈工大航天蓝'},
-  '复旦大学':        {p:'#1b4fab',hint:'复旦蓝 Pantone 286C'},
+  '复旦大学':        {p:'#0e419c',hint:'复旦蓝 RGB(14,65,156) Pantone 286C 官方实测'},
   '同济大学':        {p:'#1b4fab',hint:'同济蓝'},
   '上海交通大学':    {p:'#b5121b',hint:'交大红'},
   '华东师范大学':    {p:'#c41230',hint:'华师大红'},
   '南京大学':        {p:'#1b3a8c',hint:'南大蓝'},
   '东南大学':        {p:'#1b3a8c',hint:'东大蓝'},
-  '浙江大学':        {p:'#003e7e',hint:'浙大蓝，辅助浙大金 #c8a952'},
+  '浙江大学':        {p:'#003f88',hint:'浙大蓝 RGB(0,63,136) 官方实测，辅助浙大金 #c8a952'},
   '中国科学技术大学':{p:'#cc1b1b',hint:'中科大红'},
   '厦门大学':        {p:'#003087',hint:'厦大蓝'},
   '山东大学':        {p:'#cc1b1b',hint:'山大红'},
-  '武汉大学':        {p:'#bf1b2c',hint:'珞珈红'},
+  '武汉大学':        {p:'#002554',green:'#115740',hint:'珞珈蓝 RGB(0,37,84) + 珞珈绿 RGB(17,87,64) 官方实测'},
   '华中科技大学':    {p:'#c00c18',hint:'华科红'},
   '湖南大学':        {p:'#007b43',hint:'湖大绿'},
   '中南大学':        {p:'#c41230',hint:'中南红'},
@@ -4269,9 +4269,9 @@ const THEMES=[
   {id:'neutral', name:'铸铁·极简',  desc:'清爽中性', bg:'#f4f6f8', primary:'#0d9488'},
   {id:'queen',   name:'女王·黑金',  desc:'权杖加冕', bg:'#0c0814', primary:'#d4af37'},
   {id:'aurora',  name:'极光·冰蓝',  desc:'极地星空', bg:'#030d18', primary:'#06b6d4'},
-  {id:'pku',     name:'燕园·燕红',  desc:'北京大学', bg:'#08060e', primary:'#b22234'},
-  {id:'thu',     name:'清华·清紫',  desc:'清华大学', bg:'#060410', primary:'#5c1a7a'},
-  {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020c1e', primary:'#1b4fab'},
+  {id:'pku',     name:'燕园·燕红',  desc:'北京大学', bg:'#0a0406', primary:'#8b0012'},
+  {id:'thu',     name:'清华·清紫',  desc:'清华大学', bg:'#060210', primary:'#660874'},
+  {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020b1c', primary:'#0e419c'},
   {id:'zju',     name:'浙大·蓝金',  desc:'浙江大学', bg:'#020a14', primary:'#c8a952'},
   {id:'sustech', name:'南科·橙火',  desc:'南方科技大学', bg:'#0d0a06', primary:'#e8783c'},
 ];
