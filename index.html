@@ -482,6 +482,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="nav-item" data-page="intel"><span class="nav-icon">📡</span>摸鱼侦察局</div>
     <div class="nav-group">设置</div>
     <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
+    <div class="nav-item" onclick="openThemeModal()"><span class="nav-icon">🎨</span>界面主题</div>
     <div class="nav-item" onclick="openSyncModal()"><span class="nav-icon">☁️</span>云同步</div>
     <div class="nav-item" id="exportBtn"><span class="nav-icon">💾</span>导出数据</div>
     <div class="nav-item" id="importBtn"><span class="nav-icon">📥</span>导入数据</div>
@@ -4204,6 +4205,7 @@ function renderThemePicker(){
   const customCard=`<div class="theme-card${cur==='custom'?' active':''}" data-theme="custom" onclick="openCustomThemeModal()"><div class="theme-swatch" style="background:linear-gradient(135deg,${cb} 40%,${cp});border:1px dashed rgba(255,255,255,.2)"></div><div><div class="theme-card-name">${cd.schoolName||'其他学校'}</div><div class="theme-card-desc">${cur==='custom'?'✓ 当前主题':'AI 生成配色 ✨'}</div></div></div>`;
   el.innerHTML=THEMES.map(t=>`<div class="theme-card${t.id===cur?' active':''}" data-theme="${t.id}" onclick="applyTheme('${t.id}')"><div class="theme-swatch" style="background:linear-gradient(135deg,${t.bg} 40%,${t.primary})"></div><div><div class="theme-card-name">${t.name}</div><div class="theme-card-desc">${t.desc}</div></div></div>`).join('')+customCard;
 }
+function openThemeModal(){renderThemePicker();openModal('themeModal');}
 function openCustomThemeModal(){
   const inp=document.getElementById('ct-school');
   if(inp) inp.value='';
@@ -4364,6 +4366,18 @@ document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWal
       <button class="btn btn-primary btn-sm" onclick="_pickTimeCustom()">确定</button>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="closeModal('scanTimerModal');_openPendingUrl()" style="font-size:11px;color:var(--text2)">不用了，直接打开</button>
+  </div>
+</div>
+
+<!-- ── Theme Picker Modal ── -->
+<div class="modal-overlay" id="themeModal" onclick="if(event.target===this)closeModal('themeModal')">
+  <div class="modal" style="max-width:620px;width:95%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-weight:700;font-size:15px">🎨 界面主题</div>
+      <button onclick="closeModal('themeModal')" class="btn btn-ghost btn-sm" style="padding:4px 8px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:4px">选择你喜欢的配色风格，即时生效</div>
+    <div class="theme-grid" id="theme-picker-grid"></div>
   </div>
 </div>
 
