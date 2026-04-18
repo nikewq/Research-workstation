@@ -3586,20 +3586,28 @@ const _ENTERTAIN_KEY = cat => `_entertain_${cat}_${today()}`
 
 const _entertainMeta = {
   tv:    {label:'剧集',   emoji:'📺', color:'#e11d48',
-          rankUrl:'https://movie.douban.com/chart',
-          prompt:'近期在爱奇艺/优酷/腾讯视频/B站正规上线、内容健康向上、不涉及违禁内容的国产或海外剧集',
-          sites:[['豆瓣剧集榜','https://movie.douban.com/chart'],['B站番剧','https://www.bilibili.com/'],['爱奇艺热播','https://www.iqiyi.com/']]},
+          rankUrl:'https://movie.douban.com/tv/',
+          notTypes:['电影','动漫','动画','小说','书'],
+          fallbackUrl: t=>`https://movie.douban.com/subject_search?search_text=${encodeURIComponent(t)}&cat=1002`,
+          prompt:'近期在爱奇艺/优酷/腾讯视频/B站正规上线的国产或海外连续剧/剧集（必须是剧集，严禁推荐电影）',
+          sites:[['豆瓣剧集榜','https://movie.douban.com/tv/'],['B站追剧','https://www.bilibili.com/'],['爱奇艺热播','https://www.iqiyi.com/']]},
   movie: {label:'电影',   emoji:'🎬', color:'#7c3aed',
           rankUrl:'https://movie.douban.com/chart',
-          prompt:'国内院线正规上映或口碑佳作，内容合规无违禁',
+          notTypes:['剧集','电视剧','连续剧','动漫','小说','书'],
+          fallbackUrl: t=>`https://movie.douban.com/subject_search?search_text=${encodeURIComponent(t)}&cat=1002`,
+          prompt:'国内院线正规上映或口碑佳作的电影（必须是电影，严禁推荐剧集/动漫）',
           sites:[['豆瓣电影榜','https://movie.douban.com/chart'],['猫眼票房','https://www.maoyan.com/'],['腾讯视频','https://v.qq.com/']]},
   novel: {label:'小说',   emoji:'📚', color:'#0ea5e9',
-          rankUrl:'https://book.douban.com/chart',
-          prompt:'在起点/番茄/微信读书等正规平台上架、内容合规的优质小说',
+          rankUrl:'https://book.douban.com/',
+          notTypes:['电影','剧集','电视剧','动漫','动画'],
+          fallbackUrl: t=>`https://search.douban.com/book/subject_search?search_text=${encodeURIComponent(t)}`,
+          prompt:'在起点/番茄/微信读书等正规平台上架的优质网络小说或文学作品（必须是小说/书籍，严禁推荐电影/剧集）',
           sites:[['豆瓣读书','https://book.douban.com/'],['番茄小说','https://fanqienovel.com/'],['微信读书','https://weread.qq.com/']]},
   anime: {label:'动漫',   emoji:'✨', color:'#f59e0b',
-          rankUrl:'https://movie.douban.com/chart',
-          prompt:'B站/爱奇艺正规引进或国产、内容合规无违禁的动漫/番剧',
+          rankUrl:'https://www.bilibili.com/anime/',
+          notTypes:['真人电影','真人剧集','剧集','电视剧','小说','书'],
+          fallbackUrl: t=>`https://movie.douban.com/subject_search?search_text=${encodeURIComponent(t)}&cat=1002`,
+          prompt:'B站/爱奇艺正规引进或国产的动漫/番剧（必须是动漫/动画，严禁推荐真人剧集或电影）',
           sites:[['B站番剧','https://www.bilibili.com/anime/'],['豆瓣动画','https://movie.douban.com/tag/#/?sort=S&range=8,10&tags=%E5%8A%A8%E7%94%BB'],['爱奇艺动漫','https://www.iqiyi.com/']]}
 }
 
@@ -3645,7 +3653,7 @@ function switchEntertainTab(cat, btn){
   if(cached){
     try{
       const items=JSON.parse(cached)
-      listEl.innerHTML=items.map(_renderEntertainCard).join('')
+      listEl.innerHTML=items.map(item=>_renderEntertainCard(item,cat)).join('')
       tip.textContent=`📦 今日已缓存 ${items.length} 条`
       fetchBtn.style.display='none'; rfBtn.style.display=''
       return
@@ -3666,16 +3674,17 @@ function _updateEntertainQuickLinks(cat){
   ).join('')
 }
 
-function _renderEntertainCard(item){
-  const meta=_entertainMeta[_entertainCat]||{emoji:'🎯',color:'#8b949e',label:''}
+function _renderEntertainCard(item, cat){
+  const meta=_entertainMeta[cat||_entertainCat]||{emoji:'🎯',color:'#8b949e',label:''}
   const color=meta.color
   const scoreHtml=item.score?`<span style="font-size:11px;background:${color}22;color:${color};padding:1px 7px;border-radius:10px;margin-left:4px">${escHtml(item.score)}</span>`:''
-  const tagHtml=`<span style="font-size:11px;font-weight:600;background:${color}22;color:${color};padding:1px 7px;border-radius:10px">${item.emoji||meta.emoji} ${escHtml(item.type||meta.label)}</span>`
+  const tagHtml=`<span style="font-size:11px;font-weight:600;background:${color}22;color:${color};padding:1px 7px;border-radius:10px">${meta.emoji} ${escHtml(meta.label)}</span>`
   const safeUrl=_sanitizeEntertainUrl(item.url)
-  const linkUrl=safeUrl||`https://movie.douban.com/subject_search?search_text=${encodeURIComponent(item.title)}&cat=1002`
+  const fallback=meta.fallbackUrl?meta.fallbackUrl(item.title||''):`https://movie.douban.com/subject_search?search_text=${encodeURIComponent(item.title)}&cat=1002`
+  const linkUrl=safeUrl||fallback
   return `<div class="card" style="margin-bottom:10px;border-left:3px solid ${color}">
     <div style="display:flex;gap:8px;align-items:flex-start">
-      <span style="font-size:22px;flex-shrink:0">${item.emoji||meta.emoji}</span>
+      <span style="font-size:22px;flex-shrink:0">${meta.emoji}</span>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap">${tagHtml}${scoreHtml}</div>
         <div style="font-size:13px;font-weight:600;margin-bottom:4px;line-height:1.4">${escHtml(item.title)}</div>
@@ -3727,15 +3736,18 @@ async function fetchEntertain(cat, force=false){
 
   const today_=today()
   const safeRule=`安全合规：只推荐中国大陆正规平台合法上映/播出/出版作品，无违禁内容，URL仅限 douban.com/bilibili.com/iqiyi.com/youku.com/v.qq.com/mgtv.com/maoyan.com/fanqienovel.com/qidian.com/weread.qq.com，其他填空字符串。`
-  const jsonRule=`直接返回JSON数组，不要说明文字：[{"title":"","type":"${meta.label}","score":"豆瓣X.X或空","reason":"一句口语化推荐语","emoji":"","url":""}]`
+  // 类型锁定规则：明确禁止返回其他类型
+  const notTypesStr=(meta.notTypes||[]).map(t=>`"${t}"`).join('/')
+  const typeLockRule=`【类型严格锁定】本次只能推荐"${meta.label}"，type字段必须固定填"${meta.label}"。${notTypesStr?`严禁将${notTypesStr}混入结果，否则整个回答无效。`:''}`
+  const jsonRule=`直接返回JSON数组，不要任何说明文字。格式：[{"title":"作品名","type":"${meta.label}","score":"豆瓣X.X或空","reason":"一句口语化推荐语（30字内）","url":""}]`
 
   let prompt
   if(rawContent){
-    prompt=`今天是${today_}，以下是从豆瓣热榜实时抓取的内容：\n\n${rawContent}\n\n请根据热榜数据，选出5部当前排名最高、最受欢迎的${meta.label}（${meta.prompt}）。优先选热度高、讨论度大的。${safeRule}`
+    prompt=`今天是${today_}，以下是实时抓取的内容：\n\n${rawContent}\n\n请从中筛选5部当前排名最高的${meta.label}（${meta.prompt}）。优先选热度高、讨论度大的。${safeRule}\n${typeLockRule}`
   } else {
-    prompt=`今天是${today_}，请推荐5部当前最受欢迎、实时热度最高的${meta.label}（${meta.prompt}）。要有实际热度（近期播放量/票房/讨论量高），不要只推经典旧作。${safeRule}`
+    prompt=`今天是${today_}，请推荐5部当前最受欢迎的${meta.label}（${meta.prompt}）。要有实际热度，不要只推经典旧作。${safeRule}\n${typeLockRule}`
   }
-  if(customReq) prompt+=`\n\n用户特别要求（优先满足）：${customReq}`
+  if(customReq) prompt+=`\n\n用户特别要求（优先满足，但类型必须仍是"${meta.label}"）：${customReq}`
   prompt+='\n\n'+jsonRule
 
   try{
@@ -3743,12 +3755,19 @@ async function fetchEntertain(cat, force=false){
     if(!raw) throw new Error('AI 未返回内容')
     const items=_extractJSONArray(raw)
     if(!items||items.length===0) throw new Error('JSON 解析失败: '+raw.slice(0,100))
+    // 过滤类型不符的项（type 字段含有 notTypes 中的词则剔除）
+    const notTypes=meta.notTypes||[]
+    const filtered=items.filter(item=>{
+      const t=(item.type||'').trim()
+      return !notTypes.some(bad=>t.includes(bad))
+    })
+    const finalItems=filtered.length>=2?filtered:items  // 过滤后太少则保留原始（防止误判）
     // 无自定义要求时才缓存
-    if(!customReq) localStorage.setItem(_ENTERTAIN_KEY(cat), JSON.stringify(items))
+    if(!customReq) localStorage.setItem(_ENTERTAIN_KEY(cat), JSON.stringify(finalItems))
     loadEl.style.display='none'
-    listEl.innerHTML=items.map(_renderEntertainCard).join('')
+    listEl.innerHTML=finalItems.map(item=>_renderEntertainCard(item,cat)).join('')
     const src=rawContent?'📡 实时热榜':'🤖 AI推荐'
-    tip.textContent=`✅ ${src} · ${items.length} 部${customReq?' · 按「'+customReq+'」筛选':''}`
+    tip.textContent=`✅ ${src} · ${finalItems.length} 部${customReq?' · 按「'+customReq+'」筛选':''}`
     rfBtn.style.display=''
   }catch(e){
     console.error('[fetchEntertain]', e)
