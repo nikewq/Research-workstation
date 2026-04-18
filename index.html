@@ -4210,15 +4210,21 @@ function openCustomThemeModal(){
   openModal('customThemeModal');
 }
 async function _searchSchoolColors(name){
-  try{
-    const q=encodeURIComponent(`${name} 官方VI色彩标准 PANTONE 标准色`);
-    const r=await fetch(`https://s.jina.ai/${q}`,{signal:AbortSignal.timeout(8000)});
-    if(!r.ok) return null;
-    const t=await r.text();
-    // 截取前 2000 字，重点保留含颜色信息的行
-    const lines=t.split('\n').filter(l=>/pantone|#[0-9a-f]{3,6}|rgb|色|color/i.test(l));
-    return lines.slice(0,30).join('\n')||t.slice(0,1500);
-  }catch(e){ return null; }
+  const get=async(url,ms=9000)=>{
+    try{
+      const r=await fetch('https://r.jina.ai/'+url,{signal:AbortSignal.timeout(ms)});
+      const t=r.ok?await r.text():'';
+      return t.length>200?t:null;
+    }catch(e){return null;}
+  };
+  const enc=encodeURIComponent(name);
+  // 优先抓百度百科（对国内高校颜色信息最全）
+  let raw=await get('https://baike.baidu.com/item/'+enc);
+  // 备用：必应搜索
+  if(!raw) raw=await get('https://cn.bing.com/search?q='+enc+encodeURIComponent('+官方标准色+VI+PANTONE'));
+  if(!raw) return null;
+  const lines=raw.split('\n').filter(l=>/pantone|#[0-9a-f]{3,6}|rgb\(|颜色|标准色|品牌色|主色|辅助色/i.test(l));
+  return lines.length>2?lines.slice(0,25).join('\n'):raw.slice(0,1500);
 }
 async function generateCustomTheme(){
   const name=(document.getElementById('ct-school')?.value||'').trim();
