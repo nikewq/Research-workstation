@@ -959,11 +959,6 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     </div>
   </div>
   <div class="settings-section">
-    <h3>🎨 界面主题</h3>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:4px">选择你喜欢的配色风格，即时生效</div>
-    <div class="theme-grid" id="theme-picker-grid"></div>
-  </div>
-  <div class="settings-section">
     <h3>⚠️ 危险区域</h3>
     <button class="btn btn-danger" onclick="resetAll()">🗑 清除所有数据（重新设置）</button>
   </div>
@@ -2540,7 +2535,6 @@ function populateSettingsForm(){
   if(lbl) lbl.textContent=ROLE_DATE_LABEL[cfg.role||'phd']||'入学日期';
   renderProjSettings();renderAreaTagsSettings();
   _populateAISettings();
-  renderThemePicker();
 }
 function _populateAISettings(){
   try{
