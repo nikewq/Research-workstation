@@ -103,13 +103,14 @@
   --blue:#003e7e;--blue-soft:rgba(0,62,126,.15);
 }
 :root[data-theme="sustech"]{
-  /* 南科大橙 Pantone 7578C ≈ #E8783C；天青 Pantone 2401C ≈ #64C4B8；墨绿 Pantone 7477C ≈ #1B6B5C */
-  --bg:#0d0a06;--surface:#1a1410;--surface2:#241e14;--border:#3d3020;
-  --text:#f5e8d0;--text2:#c09060;
+  /* 南科大橙 #E8783C(Pantone 7578C) · 天青 #64C4B8(Pantone 2401C) · 墨绿 #1B6B5C(Pantone 7477C) */
+  /* 护眼深暖色：背景沿橙系降至近黑，避免蓝光疲劳 */
+  --bg:#0f0b08;--surface:#1a1410;--surface2:#231c14;--border:#3a2c1e;
+  --text:#f3e6ce;--text2:#bf9060;
   --primary:#e8783c;--primary-soft:rgba(232,120,60,.15);--primary-bg:rgba(232,120,60,.08);
-  --green:#1b6b5c;--green-soft:rgba(27,107,92,.15);
+  --green:#3daa8a;--green-soft:rgba(61,170,138,.15);
   --orange:#e8783c;--orange-soft:rgba(232,120,60,.15);
-  --red:#c0392b;--red-soft:rgba(192,57,43,.15);
+  --red:#d45a4a;--red-soft:rgba(212,90,74,.15);
   --blue:#64c4b8;--blue-soft:rgba(100,196,184,.15);
 }
 /* ── Theme Picker Cards ── */
@@ -4151,7 +4152,7 @@ const SCHOOL_COLORS_DB={
   '复旦大学':      {p:'#1b4fab',hint:'复旦蓝 Pantone 286C'},
   '浙江大学':      {p:'#003e7e',hint:'浙大蓝，辅助浙大金 #c8a952'},
   '上海交通大学':  {p:'#b5121b',hint:'交大红'},
-  '南方科技大学':  {p:'#e8783c',hint:'南科大橙 Pantone 7578C，天青 #64c4b8，墨绿 #1b6b5c'},
+  '南方科技大学':  {p:'#e8783c',blue:'#64c4b8',green:'#3daa8a',hint:'南科大橙 Pantone 7578C + 天青 #64c4b8(Pantone 2401C) + 墨绿 →深色UI适配 #3daa8a'},
   '武汉大学':      {p:'#bf1b2c',hint:'珞珈红'},
   '中山大学':      {p:'#007b43',hint:'中大绿'},
   '同济大学':      {p:'#1b4fab',hint:'同济蓝'},
@@ -4264,7 +4265,9 @@ async function generateCustomTheme(){
   if(dbHit){
     if(btn) btn.textContent='🎨 生成主题...';
     setPrev(`已找到 ${dbHit.key} 官方标准色（${dbHit.hint}），正在生成主题...`);
-    const prompt=`你是专业UI设计师，请为"${name}"生成暗色界面主题。\n主色（--primary）必须严格使用：${dbHit.p}（${dbHit.hint}）。\n背景深色系，只返回JSON不含其他文字：\n{"--bg":"","--surface":"","--surface2":"","--border":"","--text":"","--text2":"","--primary":"${dbHit.p}","--primary-soft":"${_toRgba(dbHit.p,.15)}","--primary-bg":"${_toRgba(dbHit.p,.08)}","--green":"#059669","--green-soft":"rgba(5,150,105,.15)","--orange":"#f59e0b","--orange-soft":"rgba(245,158,11,.15)","--red":"#ef4444","--red-soft":"rgba(239,68,68,.15)","--blue":"#3b82f6","--blue-soft":"rgba(59,130,246,.15)"}`;
+    const blueNote=dbHit.blue?`蓝色调用：${dbHit.blue}，`:'';
+    const greenNote=dbHit.green?`绿色调用：${dbHit.green}，`:'';
+    const prompt=`你是专业UI设计师，请为"${name}"生成护眼暗色界面主题。\n主色（--primary）严格使用：${dbHit.p}。${blueNote}${greenNote}\n（${dbHit.hint}）\n背景需深色暖调，护眼低蓝光，只返回JSON不含其他文字：\n{"--bg":"","--surface":"","--surface2":"","--border":"","--text":"","--text2":"","--primary":"${dbHit.p}","--primary-soft":"${_toRgba(dbHit.p,.15)}","--primary-bg":"${_toRgba(dbHit.p,.08)}","--green":"${dbHit.green||'#059669'}","--green-soft":"${_toRgba(dbHit.green||'#059669',.15)}","--orange":"${dbHit.p}","--orange-soft":"${_toRgba(dbHit.p,.15)}","--red":"#ef4444","--red-soft":"rgba(239,68,68,.15)","--blue":"${dbHit.blue||'#3b82f6'}","--blue-soft":"${_toRgba(dbHit.blue||'#3b82f6',.15)}"}`;
     try{
       const res=await _callAI(prompt,500);
       const m=res.match(/\{[\s\S]+?\}/);
@@ -4273,6 +4276,8 @@ async function generateCustomTheme(){
       vars['--primary']=dbHit.p; // 强制锁定主色不被AI改掉
       vars['--primary-soft']=_toRgba(dbHit.p,.15);
       vars['--primary-bg']=_toRgba(dbHit.p,.08);
+      if(dbHit.blue){vars['--blue']=dbHit.blue;vars['--blue-soft']=_toRgba(dbHit.blue,.15);}
+      if(dbHit.green){vars['--green']=dbHit.green;vars['--green-soft']=_toRgba(dbHit.green,.15);}
       _pendingCustomVars={vars,schoolName:name,source:'db',hint:dbHit.hint};
       _showCustomPreview();
     }catch(e){ setPrev('生成失败，请重试'); toast('生成失败','error'); }
