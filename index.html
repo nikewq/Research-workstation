@@ -5216,29 +5216,106 @@ function _ldCmp(){try{return JSON.parse(localStorage.getItem(K_PROCURE_CMP)||'[]
 function _svCmp(list){localStorage.setItem(K_PROCURE_CMP,JSON.stringify(list))}
 
 // 把 ids 对应商品导出为对比格式 CSV（转置：字段为行，商品为列）
-function _buildCmpCSV(items){
+// ── 生成双 Sheet Excel HTML（Sheet1：对比表+自动换行，Sheet2：数据分析）──
+function _buildCmpXLS(items){
   const dL=['同城','同区域','邻省','跨区域'],sM={eval:'待评估',pick:'已选定',done:'已采购',drop:'已拒绝'}
-  const fields=[
-    ['商品名称',x=>x.name||''],
-    ['品牌/厂家',x=>x.brand||''],
-    ['价格(元)',x=>x.price||''],
-    ['平台',x=>x.platform||''],
-    ['商家评分(0-5)',x=>x.rating||''],
-    ['月销量(件)',x=>x.sales||''],
-    ['发货地',x=>x.shipFrom||''],
-    ['运距估算',x=>dL[x.distScore]||''],
-    ['货期(天)',x=>x.deliveryDays||''],
-    ['用户反馈',x=>x.userFeedback||''],
-    ['类别',x=>x.category||''],
-    ['状态',x=>sM[x.status]||x.status||''],
-    ['备注/参数',x=>x.notes||''],
-    ['商品链接',x=>x.url||''],
-    ['录入时间',x=>x.savedAt||''],
+  const xe=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  const cell=(v,bg='',bold=false,color='',nowrap=false,align='left')=>`<td style="background:${bg||'#fff'};color:${color||'#222'};font-weight:${bold?'600':'400'};white-space:${nowrap?'nowrap':'pre-wrap'};word-wrap:break-word;mso-wrap-text:Wrapped;vertical-align:top;padding:5px 8px;border:1px solid #c8d0d9;font-size:11px;font-family:Arial,sans-serif;text-align:${align}">${xe(v)}</td>`
+  const hcell=(v,bg='#1F3864',color='#fff',nowrap=true)=>`<th style="background:${bg};color:${color};font-weight:700;padding:5px 10px;border:1px solid #0f1e3a;${nowrap?'white-space:nowrap;':'white-space:pre-wrap;'}font-size:11px;font-family:Arial,sans-serif;text-align:left">${xe(v)}</th>`
+
+  // ── Sheet 1 ──
+  const s1fields=[
+    ['商品名称',x=>x.name||''],['品牌/厂家',x=>x.brand||''],
+    ['价格(元)',x=>x.price?`¥${Number(x.price).toLocaleString()}`:'—'],
+    ['商家评分',x=>x.rating?`${x.rating}/5`:'—'],['月销量(件)',x=>x.sales?String(x.sales):'—'],
+    ['发货地',x=>x.shipFrom||'—'],['运距估算',x=>dL[x.distScore]||'—'],
+    ['货期(天)',x=>x.deliveryDays?String(x.deliveryDays)+'天':'—'],
+    ['用户反馈',x=>x.userFeedback||'—'],['类别',x=>x.category||'—'],
+    ['备注/参数',x=>x.notes||'—'],['商品链接',x=>x.url||'—'],
+    ['平台',x=>x.platform||'—'],['状态',x=>sM[x.status]||'—'],['录入时间',x=>x.savedAt||'—']
   ]
-  // 横向对比格式：第一列为字段名，后续列为各商品
-  const header=['字段',...items.map(x=>x.name.slice(0,30))]
-  const rows=fields.map(([label,fn])=>[label,...items.map(fn)])
-  return[header,...rows].map(row=>row.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n')
+  let s1=`<table border="1" cellspacing="0" style="border-collapse:collapse;table-layout:fixed">`
+  s1+=`<tr>${hcell('字段')}${items.map((it,i)=>hcell(it.name.slice(0,25),i%2===0?'#1F3864':'#2F5496')).join('')}</tr>`
+  s1fields.forEach(([label,fn],idx)=>{
+    const rowBg=idx%2===0?'#EBF3FB':'#F8FBFF'
+    s1+=`<tr>${cell(label,rowBg,true,'#1F3864',true)}`
+    items.forEach(it=>{ s1+=cell(String(fn(it)),idx%2===0?'#F2F8FF':'#FFFFFF') })
+    s1+=`</tr>`
+  })
+  s1+=`</table>`
+
+  // ── Sheet 2：数值分析 ──
+  const getN=key=>items.map(x=>parseFloat(x[key])||0)
+  const normalize=(vals,loBetter)=>{
+    const pos=vals.filter(v=>v>0);if(!pos.length)return vals.map(()=>0)
+    const mn=Math.min(...pos),mx=Math.max(...pos);if(mn===mx)return vals.map(v=>v>0?7:0)
+    return vals.map(v=>v===0?0:Math.round(((loBetter?mx-v:v-mn)/(mx-mn))*10))
+  }
+  const prices=getN('price'),ratings=getN('rating'),sales=getN('sales'),delivery=getN('deliveryDays'),dist=getN('distScore')
+  const ps=normalize(prices,true),rs=normalize(ratings,false),ss=normalize(sales,false),ds=normalize(delivery,true),xs=normalize(dist,true)
+  // 综合得分（加权）
+  const composite=items.map((_,i)=>+(ps[i]*.30+rs[i]*.25+ss[i]*.20+ds[i]*.15+xs[i]*.10).toFixed(2))
+  const maxC=Math.max(...composite)
+  const bar=(n,ch='█')=>ch.repeat(Math.max(0,n))+'░'.repeat(Math.max(0,10-n))+` ${n}/10`
+  const bestOf=(vals,loBetter)=>{const pos=vals.filter(v=>v>0);if(!pos.length)return -1;const t=loBetter?Math.min(...pos):Math.max(...pos);return vals.indexOf(t)}
+  const worstOf=(vals,loBetter)=>bestOf(vals,!loBetter)
+
+  // 指标表
+  const metrics=[
+    {label:'💰 价格(元)',vals:prices,lo:true,fmt:v=>v?'¥'+v.toLocaleString():'—'},
+    {label:'⭐ 商家评分',vals:ratings,lo:false,fmt:v=>v?v+'/5':'—'},
+    {label:'📦 月销量(件)',vals:sales,lo:false,fmt:v=>v?v.toLocaleString():'—'},
+    {label:'🚚 货期(天)',vals:delivery,lo:true,fmt:v=>v?v+'天':'—'},
+    {label:'📍 运距',vals:dist,lo:true,fmt:(_,i)=>dL[items[i].distScore]||'—'},
+  ]
+  let mTable=`<table border="1" cellspacing="0" style="border-collapse:collapse;margin-bottom:14px">`
+  mTable+=`<tr>${hcell('指标')}${items.map(it=>hcell(it.name.slice(0,18))).join('')}${hcell('最优选','#375623','#fff')}</tr>`
+  metrics.forEach(m=>{
+    const bi=bestOf(m.vals,m.lo),wi=worstOf(m.vals,m.lo)
+    mTable+=`<tr>${cell(m.label,'#EBF3FB',true,'#1F3864',true)}`
+    m.vals.forEach((v,i)=>{
+      const best=i===bi&&v>0,worst=i===wi&&v>0&&bi!==wi
+      mTable+=cell(m.fmt(v,i),best?'#E2EFDA':worst?'#FCE4D6':'#fff',best,best?'#375623':worst?'#9C3B00':'')
+    })
+    const bn=bi>=0&&m.vals[bi]>0?items[bi].name.slice(0,18):'—'
+    mTable+=cell(bn,'#E2EFDA',true,'#375623')
+    mTable+=`</tr>`
+  })
+  mTable+=`</table>`
+
+  // 数据条表
+  let barTable=`<table border="1" cellspacing="0" style="border-collapse:collapse;margin-bottom:14px">`
+  barTable+=`<tr>${hcell('商品')}${hcell('💰 价格优势')}${hcell('⭐ 口碑评分')}${hcell('📦 销量热度')}${hcell('🚚 发货速度')}${hcell('🏆 综合推荐指数')}</tr>`
+  items.forEach((it,i)=>{
+    const isBest=composite[i]===maxC
+    barTable+=`<tr>${cell(it.name.slice(0,18),isBest?'#E2EFDA':'#fff',isBest,'#375623',true)}`
+    barTable+=cell(bar(ps[i]),'#F0F8FF',false,'#1F3864')
+    barTable+=cell(bar(rs[i]),'#FFF8EE',false,'#8B4513')
+    barTable+=cell(bar(ss[i]),'#F0FFF4',false,'#006400')
+    barTable+=cell(bar(ds[i]),'#FFF0F8',false,'#8B0046')
+    barTable+=cell(bar(Math.round(composite[i]))+(isBest?' 🏆 综合最优':''),isBest?'#E2EFDA':'#fff',isBest,isBest?'#375623':'#333')
+    barTable+=`</tr>`
+  })
+  barTable+=`</table>`
+
+  // 快速结论
+  const cheapI=prices.map((v,i)=>({v,i})).filter(x=>x.v>0).sort((a,b)=>a.v-b.v)[0]?.i??0
+  const topRI=ratings.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v)[0]?.i??0
+  const bestI=composite.indexOf(maxC)
+  let conc=`<table border="1" cellspacing="0" style="border-collapse:collapse">`
+  conc+=`<tr>${hcell('维度')}${hcell('推荐选择')}${hcell('关键数据')}</tr>`
+  conc+=`<tr>${cell('💰 最低价',    '#FFF3E0',true)}${cell(items[cheapI]?.name.slice(0,20)||'—','#FFF3E0',true,'#B45309')}${cell(prices[cheapI]?'¥'+prices[cheapI].toLocaleString():'—','#FFF3E0')}</tr>`
+  conc+=`<tr>${cell('⭐ 口碑最佳',  '#E8F5E9',true)}${cell(items[topRI]?.name.slice(0,20)||'—','#E8F5E9',true,'#2D6A4F')}${cell(ratings[topRI]?'评分 '+ratings[topRI]+'/5':'—','#E8F5E9')}</tr>`
+  conc+=`<tr>${cell('🏆 综合推荐',  '#E3F2FD',true,'#1565C0')}${cell(items[bestI]?.name.slice(0,20)||'—','#E3F2FD',true,'#1565C0')}${cell('综合得分 '+maxC+'/10','#E3F2FD',true,'#1565C0')}</tr>`
+  conc+=`</table>`
+
+  const date=new Date().toLocaleDateString('zh-CN')
+  let s2=`<table border="0" cellspacing="0"><tr><td colspan="${items.length+2}" style="font-size:15px;font-weight:700;color:#1F3864;padding:8px 4px 4px;font-family:Arial;border-bottom:2px solid #4472C4">📊 采购对比数据分析</td></tr><tr><td colspan="${items.length+2}" style="font-size:11px;color:#666;padding:3px 4px 10px;font-family:Arial">商品：${items.map(x=>x.name.slice(0,12)).join(' · ')} · 生成：${date}</td></tr></table>`
+  s2+=`<table border="0" cellspacing="0"><tr><td style="font-size:12px;font-weight:700;color:#1F3864;padding:8px 0 4px;font-family:Arial">一、各指标对比（绿色=最优 红色=最差）</td></tr></table>\n`+mTable
+  s2+=`<table border="0" cellspacing="0"><tr><td style="font-size:12px;font-weight:700;color:#1F3864;padding:8px 0 4px;font-family:Arial">二、数据可视化（数据条，满10格=最优）</td></tr></table>\n`+barTable
+  s2+=`<table border="0" cellspacing="0"><tr><td style="font-size:12px;font-weight:700;color:#1F3864;padding:8px 0 4px;font-family:Arial">三、快速结论</td></tr></table>\n`+conc
+
+  return`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv=Content-Type content="text/html; charset=utf-8"><meta name=ProgId content=Excel.Sheet><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>商品对比</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet><x:ExcelWorksheet><x:Name>数据分析</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><style>td,th{mso-wrap-text:Wrapped}</style></head><body>${s1}<br clear="all">${s2}</body></html>`
 }
 
 // 保存当前对比到记录（弹框输入名称）
@@ -5260,10 +5337,10 @@ function saveProcureComparison(){
 function exportCmpDirect(ids){
   const allItems=_ldProcure(),sel=ids.map(id=>allItems.find(x=>x.id===id)).filter(Boolean)
   if(!sel.length){toast('无商品','error');return}
-  const csv=_buildCmpCSV(sel)
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`采购对比_${today()}.csv`;a.click()
-  toast('📊 对比表已下载（Excel可直接打开）')
+  const xls=_buildCmpXLS(sel)
+  const blob=new Blob([xls],{type:'application/vnd.ms-excel;charset=utf-8'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`采购对比_${today()}.xls`;a.click()
+  toast('📊 对比表已下载（含数据分析Sheet）')
 }
 
 // 渲染对比记录列表
@@ -5301,10 +5378,10 @@ function viewCmp(id){
 // 下载某条对比记录
 function downloadCmp(id){
   const entry=_ldCmp().find(x=>x.id===id);if(!entry)return
-  const csv=_buildCmpCSV(entry.items)
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${entry.name.replace(/[/\\?:*"<>|]/g,'_')}_${entry.savedAt}.csv`;a.click()
-  toast('📊 对比表已下载（Excel可直接打开）')
+  const xls=_buildCmpXLS(entry.items)
+  const blob=new Blob([xls],{type:'application/vnd.ms-excel;charset=utf-8'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${entry.name.replace(/[/\\?:*"<>|]/g,'_')}_${entry.savedAt}.xls`;a.click()
+  toast('📊 对比表已下载（含数据分析Sheet）')
 }
 
 // 删除某条对比记录
