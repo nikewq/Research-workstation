@@ -1329,6 +1329,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
           <button class="procure-add-tab active" data-mode="url" onclick="switchProcureAddMode('url',this)">🔗 URL提取</button>
           <button class="procure-add-tab" data-mode="manual" onclick="switchProcureAddMode('manual',this)">✏️ 手动填写</button>
           <button class="procure-add-tab" data-mode="paste" onclick="switchProcureAddMode('paste',this)">📋 粘贴导入</button>
+          <button class="procure-add-tab" data-mode="cmp" onclick="switchProcureAddMode('cmp',this)">🆚 对比页导入</button>
         </div>
         <!-- URL提取 -->
         <div class="procure-add-pane" data-mode="url">
@@ -1366,6 +1367,19 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
           </div>
           <textarea id="procure-paste-input" rows="3" placeholder="粘贴书签工具复制的数据…" style="width:100%;resize:none;font-size:11px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);box-sizing:border-box;margin-bottom:8px;font-family:monospace"></textarea>
           <button class="btn btn-primary btn-sm" onclick="importProcurePaste()">📥 导入</button>
+        </div>
+        <!-- 对比页导入 -->
+        <div class="procure-add-pane" data-mode="cmp" style="display:none">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;line-height:1.8">
+            在京东/淘宝/拼多多平台自带的<strong style="color:var(--primary)">商品对比页</strong>选好商品，复制地址栏 URL 粘贴到下方。<br>
+            例：<code style="font-size:10px;background:var(--surface);padding:1px 5px;border-radius:4px;user-select:all">https://item.jd.com/compare/ID1-ID2-ID3.html</code><br>
+            AI 将自动提取所有对比商品，批量加入清单并自动勾选到对比面板。
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input id="procure-cmp-url-input" class="procure-input" placeholder="粘贴平台对比页 URL（京东 item.jd.com/compare/… 等）" style="flex:1;width:auto">
+            <button class="btn btn-primary btn-sm" id="procure-cmp-import-btn" onclick="importComparePageURL()" style="flex-shrink:0">🆚 批量导入</button>
+          </div>
+          <div id="procure-cmp-import-tip" style="font-size:11px;color:var(--text2);line-height:1.6"></div>
         </div>
       </div>
 
@@ -5028,6 +5042,46 @@ async function extractProductURL(){
     switchProcureAddMode('manual');tip.textContent='✅ 已提取，请确认后保存'
   }catch(e){tip.textContent='提取失败，可手动填写'}
   btn.disabled=false;btn.textContent='🔍 提取'
+}
+async function importComparePageURL(){
+  const urlEl=document.getElementById('procure-cmp-url-input'),url=urlEl?.value.trim()
+  if(!url||!url.startsWith('http')){toast('请输入有效的对比页 URL','error');return}
+  const btn=document.getElementById('procure-cmp-import-btn'),tip=document.getElementById('procure-cmp-import-tip')
+  btn.disabled=true;btn.textContent='⏳';tip.innerHTML='正在读取对比页面…'
+  try{
+    let pageText=''
+    try{
+      const jr=await Promise.race([
+        fetch('https://r.jina.ai/'+url,{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),
+        new Promise((_,r)=>setTimeout(()=>r('timeout'),12000))
+      ])
+      if(jr&&jr.ok)pageText=(await jr.text()).slice(0,5000)
+    }catch(_){}
+    if(!pageText){tip.innerHTML='<span style="color:var(--red)">页面读取失败，请确认链接可以正常访问</span>';return}
+    tip.innerHTML='AI 正在解析商品信息…'
+    const host=new URL(url).hostname.replace(/^www\./,'')
+    const prompt=`以下是一个商品对比页面的内容（来源：${host}）：\n\n${pageText}\n\n请提取页面中所有被对比的商品，每个商品作为独立对象，返回JSON数组：\n[{"name":"商品全名含品牌型号","brand":"品牌","price":数字价格(0表示未知),"platform":"${host}","rating":评分0-5小数(0表示未知),"sales":月销量整数(0表示未知),"shipFrom":"发货地省市","deliveryDays":货期天数整数(0表示未知),"userFeedback":"主要卖点或用户评价摘要","category":"商品类别","notes":"核心规格参数用分号分隔","url":"该商品的直链（如能识别）"}]\n重要：必须识别并分别返回页面中每一款被对比的商品，不要合并。只返回JSON数组。`
+    const raw=await _callAI(prompt,2000)
+    const products=_extractJSONArray(raw)
+    if(!products||!products.length){tip.innerHTML='<span style="color:var(--red)">未能识别商品，请确认是商品对比页面</span>';return}
+    // 批量写入清单并自动勾选
+    const userCity=_getProcureLoc()
+    const newItems=products.map(p=>{
+      const shipFrom=p.shipFrom||''
+      return{id:uid(),name:p.name||'未知商品',brand:p.brand||'',price:parseFloat(p.price)||0,currency:'CNY',platform:p.platform||host,rating:parseFloat(p.rating)||0,sales:parseInt(p.sales)||0,userFeedback:p.userFeedback||'',deliveryDays:parseInt(p.deliveryDays)||0,shipFrom,distScore:_distScore(shipFrom,userCity),category:p.category||'',url:p.url||url,notes:p.notes||'',status:'eval',savedAt:today()}
+    })
+    const existing=_ldProcure()
+    _svProcure([...newItems,...existing])
+    // 自动勾选进对比面板（最多4款）
+    _procureCompare.clear()
+    newItems.slice(0,4).forEach(x=>_procureCompare.add(x.id))
+    renderProcureList()
+    _renderProcureCompare()
+    tip.innerHTML=`<span style="color:var(--primary)">✅ 已导入 ${newItems.length} 款商品，已自动选中对比。可直接「保存对比」或「下载」。</span>`
+    // 滚动到对比面板
+    setTimeout(()=>document.getElementById('procure-compare-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'}),300)
+  }catch(e){tip.innerHTML='<span style="color:var(--red)">解析失败：'+escHtml(String(e))+'</span>'}
+  btn.disabled=false;btn.textContent='🆚 批量导入'
 }
 function importProcurePaste(){
   const raw=document.getElementById('procure-paste-input')?.value.trim();if(!raw){toast('请粘贴书签工具复制的内容','error');return}
