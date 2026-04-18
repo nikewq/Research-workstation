@@ -1333,7 +1333,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
         <!-- URL提取 -->
         <div class="procure-add-pane" data-mode="url">
           <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input id="procure-url-input" class="procure-input" placeholder="粘贴商品页面URL（京东/淘宝/1688/厂商官网均可）" style="flex:1;width:auto">
+            <input id="procure-url-input" class="procure-input" placeholder="粘贴商品页面URL（京东/淘宝/拼多多/1688/厂商官网均可）" style="flex:1;width:auto">
             <button class="btn btn-primary btn-sm" id="procure-extract-btn" onclick="extractProductURL()" style="flex-shrink:0">🔍 提取</button>
           </div>
           <div id="procure-extract-tip" style="font-size:11px;color:var(--text2)"></div>
@@ -1345,7 +1345,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
             <input id="pf-brand" class="procure-input" placeholder="品牌/厂家">
             <input id="pf-category" class="procure-input" placeholder="类别（仪器/试剂/耗材…）">
             <input id="pf-price" type="number" class="procure-input" placeholder="价格（元）">
-            <input id="pf-platform" class="procure-input" placeholder="平台（京东/淘宝/1688…）">
+            <input id="pf-platform" class="procure-input" placeholder="平台（京东/淘宝/拼多多/1688…）">
             <input id="pf-rating" type="number" step="0.1" min="0" max="5" class="procure-input" placeholder="评分（0-5）">
             <input id="pf-sales" type="number" class="procure-input" placeholder="销量">
             <input id="pf-deliveryDays" type="number" class="procure-input" placeholder="货期（天）">
@@ -5213,7 +5213,8 @@ async function searchProcureAI(){
       const jdUrl='https://search.jd.com/Search?keyword='+encodeURIComponent(q)
       const tbUrl='https://s.taobao.com/search?q='+encodeURIComponent(q)
       const g1688='https://s.1688.com/selloffer/offer_search.htm?keywords='+encodeURIComponent(q)
-      return`<div class="procure-ai-card"><div style="display:flex;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;margin-bottom:3px">${escHtml(item.name||'')}</div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">${escHtml(item.keySpecs||'')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:3px">${stars?`<span class="procure-stars" style="font-size:11px">${stars}</span>`:''}${item.sales?`<span style="font-size:10px;color:var(--text2)">月销${item.sales}件</span>`:''}${item.shipFrom?`<span style="font-size:10px;color:var(--text2)">📍${escHtml(item.shipFrom)}</span>`:''}${item.deliveryDays?`<span style="font-size:10px;color:var(--text2)">货期${item.deliveryDays}天</span>`:''}</div><div style="font-size:11px;margin-bottom:2px">${escHtml(item.pros||'')}</div><span style="font-size:12px;font-weight:600;color:var(--primary)">${escHtml(item.priceRange||'')}</span></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button onclick="window.open('${jdUrl}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">京东🔍</button><button onclick="window.open('${tbUrl}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">淘宝🔍</button><button onclick="window.open('${g1688}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">1688🔍</button><button onclick="_prefillFromAI(this)" data-item='${escHtml(pData)}' class="btn btn-primary btn-sm" style="font-size:10px">+ 加入清单</button></div></div></div>`
+      const pddUrl='https://www.pinduoduo.com/search.html?q='+encodeURIComponent(q)
+      return`<div class="procure-ai-card"><div style="display:flex;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;margin-bottom:3px">${escHtml(item.name||'')}</div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">${escHtml(item.keySpecs||'')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:3px">${stars?`<span class="procure-stars" style="font-size:11px">${stars}</span>`:''}${item.sales?`<span style="font-size:10px;color:var(--text2)">月销${item.sales}件</span>`:''}${item.shipFrom?`<span style="font-size:10px;color:var(--text2)">📍${escHtml(item.shipFrom)}</span>`:''}${item.deliveryDays?`<span style="font-size:10px;color:var(--text2)">货期${item.deliveryDays}天</span>`:''}</div><div style="font-size:11px;margin-bottom:2px">${escHtml(item.pros||'')}</div><span style="font-size:12px;font-weight:600;color:var(--primary)">${escHtml(item.priceRange||'')}</span></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button onclick="window.open('${jdUrl}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">京东🔍</button><button onclick="window.open('${tbUrl}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">淘宝🔍</button><button onclick="window.open('${pddUrl}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">拼多多🔍</button><button onclick="window.open('${g1688}','_blank')" class="btn btn-ghost btn-sm" style="font-size:10px">1688🔍</button><button onclick="_prefillFromAI(this)" data-item='${escHtml(pData)}' class="btn btn-primary btn-sm" style="font-size:10px">+ 加入清单</button></div></div></div>`
     }).join('')
   }catch(e){resultEl.innerHTML='<div style="font-size:12px;color:var(--text2);padding:12px">搜索失败，请检查AI配置后重试</div>'}
   btn.disabled=false;btn.textContent='🔍 AI 搜索推荐'
