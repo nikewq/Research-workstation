@@ -98,6 +98,15 @@
   --red:#c0392b;--red-soft:rgba(192,57,43,.15);
   --blue:#1a6bb5;--blue-soft:rgba(26,107,181,.15);
 }
+:root[data-theme="sustech"]{
+  --bg:#020e1a;--surface:#061828;--surface2:#0b2238;--border:#103350;
+  --text:#d8eef8;--text2:#5a9ec0;
+  --primary:#1b75bb;--primary-soft:rgba(27,117,187,.15);--primary-bg:rgba(27,117,187,.08);
+  --green:#2a9d5c;--green-soft:rgba(42,157,92,.15);
+  --orange:#f59e0b;--orange-soft:rgba(245,158,11,.15);
+  --red:#e74c3c;--red-soft:rgba(231,76,60,.15);
+  --blue:#1b75bb;--blue-soft:rgba(27,117,187,.15);
+}
 /* ── Theme Picker Cards ── */
 .theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:12px}
 .theme-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;background:var(--surface)}
@@ -4146,6 +4155,7 @@ const THEMES=[
   {id:'thu',     name:'清华·梅紫',  desc:'清华大学', bg:'#080810', primary:'#9b30e8'},
   {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020c1b', primary:'#3d7de2'},
   {id:'zju',     name:'浙大·蓝金',  desc:'浙江大学', bg:'#020a14', primary:'#c6a940'},
+  {id:'sustech', name:'南科·海蓝',  desc:'南方科技大学', bg:'#020e1a', primary:'#1b75bb'},
 ];
 function applyTheme(id){
   document.documentElement.dataset.theme=id==='default'?'':id;
