@@ -6015,6 +6015,7 @@ function openPaperReader(id){
   if(!p){toast('找不到论文','warn');return}
   _prmPaper=p
   _prmChatHistory=[]
+  _prmViewMode='auto'
   const modal=document.getElementById('paper-reader-modal')
   modal.classList.add('open')
   // 填充头部
@@ -6034,43 +6035,47 @@ function openPaperReader(id){
   document.getElementById('prm-chat-input').value=''
   // 切换到笔记 tab
   prm_switchTab('notes',document.querySelector('.prm-stab'))
-  // 加载阅读器
+  // 加载阅读器（默认摘要，不自动嵌入 PDF）
   _prmLoadViewer()
   document.body.style.overflow='hidden'
+  // 注册 history state，使浏览器「返回」关闭 modal 而非离开 app
+  history.pushState({prmOpen:true},'')
 }
 
 function closePaperReader(){
+  prm_saveNotes()
+  // 清空 iframe，防止页面留在历史记录
+  const iframe=document.getElementById('prm-iframe')
+  iframe.src='about:blank'
   document.getElementById('paper-reader-modal').classList.remove('open')
-  document.getElementById('prm-iframe').src=''
   document.body.style.overflow=''
-  prm_saveNotes() // 自动保存
+  // 如果 history state 是我们推入的，pop 掉（避免点 × 后再按返回再触发 popstate）
+  if(history.state&&history.state.prmOpen)history.back()
 }
 
+// 拦截浏览器返回键：关闭 modal 而非离开 app
+window.addEventListener('popstate',function(e){
+  if(document.getElementById('paper-reader-modal').classList.contains('open')){
+    prm_saveNotes()
+    document.getElementById('prm-iframe').src='about:blank'
+    document.getElementById('paper-reader-modal').classList.remove('open')
+    document.body.style.overflow=''
+  }
+})
+
 function _prmLoadViewer(){
-  const p=_prmPaper
-  if(!p)return
-  const iframe=document.getElementById('prm-iframe')
-  const fallback=document.getElementById('prm-viewer-fallback')
-  const label=document.getElementById('prm-viewer-label')
+  const p=_prmPaper;if(!p)return
+  const hasAr5iv=!!p.arxiv_id
+  const hasPdf=!!p.pdf_url
   const ar5ivBtn=document.getElementById('prm-ar5iv-btn')
   const pdfEmbedBtn=document.getElementById('prm-pdf-embed-btn')
   const abstractBtn=document.getElementById('prm-abstract-btn')
-
-  // 确定最佳阅读策略
-  const hasAr5iv=!!p.arxiv_id
-  const hasPdf=!!p.pdf_url
-
-  // 显示可用视图按钮
-  ar5ivBtn.style.display=hasAr5iv?'':'none'
-  pdfEmbedBtn.style.display=hasPdf?'':'none'
-  abstractBtn.style.display='inline-block'
-
-  if(_prmViewMode==='auto'){
-    if(hasAr5iv)_prmViewMode='ar5iv'
-    else if(hasPdf)_prmViewMode='pdf'
-    else _prmViewMode='abstract'
-  }
-  prm_switchView(_prmViewMode)
+  // PDF 不再自动嵌入，只提供外链按钮；ar5iv 可选加载
+  ar5ivBtn.style.display=hasAr5iv?'inline-block':'none'
+  pdfEmbedBtn.style.display='none'   // 永久隐藏 PDF 嵌入按钮（Chrome 会拦截）
+  abstractBtn.style.display='none'   // 默认就是摘要视图，无需额外按钮
+  // 始终默认摘要视图（安全、无拦截）
+  prm_switchView('abstract')
 }
 
 function prm_switchView(mode){
@@ -6081,26 +6086,37 @@ function prm_switchView(mode){
   const label=document.getElementById('prm-viewer-label')
 
   if(mode==='ar5iv'&&p.arxiv_id){
-    iframe.style.display='flex'
+    // ar5iv：HTML 渲染版，通常允许 iframe 嵌入
+    iframe.style.display='block'
     fallback.style.display='none'
     iframe.src=`https://ar5iv.labs.arxiv.org/html/${p.arxiv_id}`
-    label.textContent='ar5iv HTML 渲染版（arXiv论文HTML格式，加载较慢）'
-  }else if(mode==='pdf'&&p.pdf_url){
-    iframe.style.display='flex'
-    fallback.style.display='none'
-    iframe.src=p.pdf_url
-    label.textContent='PDF嵌入（部分论文可能因安全策略无法显示，可切换视图）'
+    label.textContent='ar5iv HTML 版（渲染 arXiv LaTeX 为网页，加载约 5-15 秒）'
+    document.getElementById('prm-abstract-btn').style.display='inline-block'
+    document.getElementById('prm-ar5iv-btn').style.display='none'
+    // 超时检测：15s 后若 iframe 无内容则 fallback
+    const _t=setTimeout(()=>{
+      try{
+        if(!iframe.contentDocument?.body?.textContent?.trim()){
+          prm_switchView('abstract')
+          label.textContent='ar5iv 加载超时，已切换为摘要视图'
+        }
+      }catch{}
+    },15000)
+    iframe.onload=()=>clearTimeout(_t)
   }else{
-    // 摘要 fallback
+    // 摘要视图（默认、安全）
     iframe.style.display='none'
+    iframe.src='about:blank'
     fallback.style.display='block'
-    label.textContent='摘要视图'
+    document.getElementById('prm-abstract-btn').style.display='none'
+    document.getElementById('prm-ar5iv-btn').style.display=p.arxiv_id?'inline-block':'none'
+    label.textContent=p.arxiv_id?'摘要视图 · 点击「加载 HTML 版」可嵌入阅读':'摘要视图'
     document.getElementById('prm-fb-title').textContent=p.title
-    document.getElementById('prm-fb-meta').textContent=[p.venue,p.date,p.authors].filter(Boolean).join(' · ')
+    document.getElementById('prm-fb-meta').textContent=[p.venue,p.date,(p.authors||'').slice(0,80)].filter(Boolean).join(' · ')
     document.getElementById('prm-fb-abstract').textContent=p.abstract||'暂无摘要'
     const linksHtml=[
       p.url?`<a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 摘要页</a>`:'',
-      p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="border-color:#dc2626;color:#dc2626">📄 PDF</a>`:''
+      p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600">📄 在新标签页打开 PDF</a>`:''
     ].join('')
     document.getElementById('prm-fb-links').innerHTML=linksHtml
   }
@@ -6534,9 +6550,9 @@ function _prefillFromAI(btn){
     <div id="prm-viewer">
       <div style="display:flex;gap:6px;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;align-items:center;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text2)" id="prm-viewer-label">正在加载...</span>
-        <button id="prm-ar5iv-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('ar5iv')">📄 HTML版(ar5iv)</button>
+        <button id="prm-ar5iv-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('ar5iv')">📄 加载 HTML 版(ar5iv)</button>
         <button id="prm-pdf-embed-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('pdf')">📑 PDF嵌入</button>
-        <button id="prm-abstract-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('abstract')">📝 摘要视图</button>
+        <button id="prm-abstract-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('abstract')">← 返回摘要</button>
       </div>
       <iframe id="prm-iframe" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" referrerpolicy="no-referrer"></iframe>
       <div id="prm-viewer-fallback">
