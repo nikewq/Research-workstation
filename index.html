@@ -549,9 +549,12 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .wr-projects-col{width:260px;min-width:200px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--surface2)}
 .wr-editor-col{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
 .wr-preview-col{width:42%;min-width:240px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--card)}
-.wr-doc-item{padding:8px 12px;cursor:pointer;font-size:12px;border-radius:6px;margin:1px 0;transition:background .12s;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-doc-item{padding:8px 12px;cursor:pointer;font-size:12px;border-radius:6px;margin:1px 0;transition:background .12s;color:var(--text)}
 .wr-doc-item:hover{background:var(--card)}
 .wr-doc-item.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+.wr-doc-del-btn{flex-shrink:0;background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity .15s,background .12s;color:var(--text2)}
+.wr-doc-item:hover .wr-doc-del-btn{opacity:1}
+.wr-doc-del-btn:hover{background:#fee2e2;color:#dc2626;opacity:1}
 .wr-ol-project{border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;background:var(--card);font-size:12px}
 .wr-ol-project:hover{border-color:var(--primary)}
 .wr-editor-toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--surface2)}
@@ -5824,9 +5827,12 @@ function renderWrDocsList(){
     return
   }
   el.innerHTML=docs.map(d=>`
-    <div class="wr-doc-item${_wrCurrentDocId===d.id?' active':''}" onclick="wrOpenDoc('${d.id}')" title="${escHtml(d.title||'无标题')}">
-      <div style="font-weight:${_wrCurrentDocId===d.id?'600':'400'}">${escHtml(d.title||'无标题')}</div>
-      <div style="font-size:10px;color:var(--text2);margin-top:1px">${d.updated||d.created||''}</div>
+    <div class="wr-doc-item${_wrCurrentDocId===d.id?' active':''}" onclick="wrOpenDoc('${d.id}')" title="${escHtml(d.title||'无标题')}" style="display:flex;align-items:center;gap:4px;padding-right:4px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:${_wrCurrentDocId===d.id?'600':'400'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(d.title||'无标题')}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:1px">${d.updated||d.created||''}</div>
+      </div>
+      <button class="wr-doc-del-btn" onclick="event.stopPropagation();wrDeleteDocById('${d.id}')" title="删除草稿">🗑</button>
     </div>`).join('')
 }
 
@@ -5928,6 +5934,28 @@ function wrDeleteDoc(){
   if(editorEl)editorEl.value=''
   if(previewEl)previewEl.innerHTML=''
   _wrUpdateCounts(null)
+  renderWrDocsList()
+  toast('草稿已删除','success')
+}
+
+// ── Delete doc by id (from list button) ──
+function wrDeleteDocById(id){
+  if(!confirm('确定删除此草稿？'))return
+  let docs=ld(WR_DOCS_KEY)||[]
+  docs=docs.filter(x=>x.id!==id)
+  sv(WR_DOCS_KEY,docs)
+  if(_wrCurrentDocId===id){
+    _wrCurrentDocId=null
+    const titleEl=document.getElementById('wr-doc-title')
+    const editorEl=document.getElementById('wr-editor')
+    const previewEl=document.getElementById('wr-preview-area')
+    if(titleEl)titleEl.value=''
+    if(editorEl)editorEl.value=''
+    if(previewEl)previewEl.innerHTML=''
+    _wrUpdateCounts(null)
+    // 自动打开剩余第一篇
+    if(docs.length>0)wrOpenDoc(docs[0].id)
+  }
   renderWrDocsList()
   toast('草稿已删除','success')
 }
