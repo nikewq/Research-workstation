@@ -433,6 +433,24 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .procure-filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .procure-bm-link{display:inline-block;padding:8px 16px;background:var(--primary);color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;cursor:grab;user-select:none}
 .procure-input{font-size:12px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%;box-sizing:border-box}
+/* ── Daily Papers ── */
+.dp-paper{background:var(--card);border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid var(--border);transition:box-shadow .15s}
+.dp-paper:hover{box-shadow:0 3px 12px rgba(0,0,0,.07)}
+.dp-title a{color:var(--primary);text-decoration:none;font-weight:600;font-size:14px}
+.dp-title a:hover{text-decoration:underline}
+.dp-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:12px;color:var(--text2);margin:4px 0}
+.dp-area-chip{padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;background:var(--primary-soft);color:var(--primary)}
+.dp-score{font-weight:700;color:#d97706;font-size:12px}
+.dp-links{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.dp-link{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:5px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);text-decoration:none;transition:all .1s;cursor:pointer}
+.dp-link:hover{border-color:var(--primary);color:var(--primary)}
+.dp-summary{background:var(--surface2);border-left:3px solid var(--primary);border-radius:0 6px 6px 0;padding:10px 12px;font-size:13px;line-height:1.7;margin-top:8px;display:none}
+.dp-summary.open{display:block}
+.dp-lib-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;border-radius:6px;padding:8px}
+.dp-lib-row:hover{background:var(--surface2)}
+.dp-read-panel{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px}
+.dp-tag-sel{cursor:pointer;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:500;border:1.5px solid var(--primary);color:var(--primary);background:transparent;transition:all .1s;display:inline-block;margin:3px}
+.dp-tag-sel.active{background:var(--primary);color:#fff}
 </style>
 </head>
 <body>
@@ -573,6 +591,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
     <div class="nav-item" data-page="intel"><span class="nav-icon">📡</span>摸鱼侦察局</div>
     <div class="nav-item" data-page="procure"><span class="nav-icon">🛒</span>采购清单</div>
+    <div class="nav-item" data-page="papers"><span class="nav-icon">📚</span>文献库</div>
     <div class="nav-group">设置</div>
     <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
     <div class="nav-item" onclick="openThemeModal()"><span class="nav-icon">🎨</span>界面主题</div>
@@ -885,8 +904,8 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
   <!-- ── 智能技能 ── -->
   <div style="font-weight:700;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">⚡ 智能技能</div>
-  <div style="margin-bottom:24px">
-    <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(124,58,237,0.08) 100%);border:1px solid var(--primary);border-radius:12px;padding:16px;cursor:pointer;transition:all .15s;max-width:560px" onclick="openDailyBrief()" onmouseenter="this.style.borderColor='#a78bfa'" onmouseleave="this.style.borderColor='var(--primary)'">
+  <div style="margin-bottom:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;max-width:860px">
+    <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(124,58,237,0.08) 100%);border:1px solid var(--primary);border-radius:12px;padding:16px;cursor:pointer;transition:all .15s" onclick="openDailyBrief()" onmouseenter="this.style.borderColor='#a78bfa'" onmouseleave="this.style.borderColor='var(--primary)'">
       <div style="display:flex;align-items:flex-start;gap:12px">
         <div style="font-size:28px;line-height:1;flex-shrink:0">📋</div>
         <div style="flex:1">
@@ -894,7 +913,19 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
             <span style="font-weight:700;font-size:14px;color:var(--primary)">今日工作简报</span>
             <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(16,185,129,0.15);color:#10b981">▶ 点击运行</span>
           </div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.6">自动采集今日任务、番茄钟、习惯完成情况，可粘贴 Claude Code / OpenClaw / 终端日志，AI 生成可编辑工作简报，一键保存到今日反思 / 飞书 / Notion / Obsidian / 本地文件</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">自动采集今日任务、番茄钟、习惯完成情况，AI 生成可编辑工作简报，一键保存到本地</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(37,99,235,0.08) 100%);border:1px solid #2563eb44;border-radius:12px;padding:16px;cursor:pointer;transition:all .15s" onclick="openDailyPapers()" onmouseenter="this.style.borderColor='#2563eb'" onmouseleave="this.style.borderColor='#2563eb44'">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:28px;line-height:1;flex-shrink:0">📚</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+            <span style="font-weight:700;font-size:14px;color:#2563eb">每日文献</span>
+            <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(37,99,235,0.12);color:#2563eb">▶ 点击运行</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">按研究方向从 arXiv + Semantic Scholar 获取最新论文，AI 评分摘要，下载格式化 HTML，保存到文献库</div>
         </div>
       </div>
     </div>
@@ -1279,6 +1310,47 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   </div>
 </div>
 
+<!-- ── Papers Library ── -->
+<div class="page" id="page-papers">
+  <div class="page-title">📚 文献库</div>
+  <div class="page-subtitle">保存的文献，AI 辅助阅读</div>
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+    <input id="papers-search" placeholder="搜索标题、作者、摘要..." style="flex:1;min-width:200px;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card)" oninput="renderPapersPage()">
+    <div id="papers-area-filters" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    <button class="btn btn-primary btn-sm" onclick="openDailyPapers()">+ 获取今日论文</button>
+  </div>
+  <div id="papers-count" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
+  <div id="papers-list"></div>
+  <div id="papers-reading-panel" style="display:none" class="dp-read-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700" id="rp-title"></div>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('papers-reading-panel').style.display='none'">×</button>
+    </div>
+    <div id="rp-meta" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+    <div id="rp-links" class="dp-links" style="margin-bottom:10px"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">摘要</div>
+    <div id="rp-abstract" style="font-size:13px;color:var(--text);line-height:1.7;background:var(--surface2);border-radius:6px;padding:10px;margin-bottom:10px;max-height:120px;overflow-y:auto"></div>
+    <div id="rp-summary" style="margin-bottom:12px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🤖 AI 辅助阅读</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文解决了什么问题？创新点是什么？')">💡 核心贡献</button>
+        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文和我的研究有什么联系？能否启发我的工作？')">🔗 与我相关</button>
+        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文有什么局限性？未来工作方向是什么？')">🔭 局限与展望</button>
+        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('帮我生成这篇论文的 BibTeX 引用')">📎 BibTeX</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="rp-ask-input" placeholder="输入问题，AI 回答..." style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--card)" onkeydown="if(event.key==='Enter')aiAskPaper()" >
+        <button class="btn btn-primary btn-sm" onclick="aiAskPaper()">问</button>
+      </div>
+      <div id="rp-ai-answer" style="margin-top:10px;font-size:13px;line-height:1.7;display:none;background:var(--surface2);border-radius:6px;padding:10px;border-left:3px solid var(--primary)"></div>
+    </div>
+  </div>
+  <div id="papers-empty" style="display:none;text-align:center;padding:40px 0;color:var(--text2);font-size:14px">
+    暂无保存的文献<br><span style="font-size:12px">点击上方「获取今日论文」开始</span>
+  </div>
+</div>
+
 <!-- ── Procure ── -->
 <div class="page" id="page-procure">
   <div class="page-title">采购清单 🛒</div>
@@ -1473,6 +1545,45 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       <button class="btn btn-ghost btn-sm" onclick="closeModal('noteSettingsModal')">取消</button>
       <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:11px;color:var(--text2)" onclick="_clearNoteSettings()">清除设置</button>
     </div>
+  </div>
+</div>
+
+<!-- ── Daily Papers Modal ── -->
+<div class="modal-overlay" id="dailyPapersModal" onclick="if(event.target===this)closeModal('dailyPapersModal')">
+  <div class="modal-box" style="max-width:720px;width:95%;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:700">📚 每日文献获取</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('dailyPapersModal')">✕</button>
+    </div>
+    <!-- 研究方向选择 -->
+    <div class="card mb-12" style="padding:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">研究方向（点击选择/取消）</div>
+      <div id="dp-areas" style="display:flex;flex-wrap:wrap;gap:0"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="dp-custom-area" placeholder="添加自定义方向或英文关键词..." style="flex:1;min-width:180px;padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)" onkeydown="if(event.key==='Enter')addDpCustomArea()">
+        <button class="btn btn-ghost btn-sm" onclick="addDpCustomArea()">+ 添加</button>
+        <label style="font-size:12px;color:var(--text2)">每方向最多
+          <select id="dp-max" style="border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px">
+            <option value="8">8篇</option>
+            <option value="15" selected>15篇</option>
+            <option value="25">25篇</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <!-- 获取按钮 + 状态 -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-primary" id="dp-fetch-btn" onclick="fetchDailyPapers()">🔍 获取今日论文</button>
+      <div id="dp-status" style="font-size:12px;color:var(--text2)">选择研究方向后点击获取</div>
+    </div>
+    <!-- 操作栏 -->
+    <div id="dp-action-bar" style="display:none;padding:10px 0 12px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:12px;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sm" style="font-size:12px" onclick="downloadPapersHTML()">💾 下载为 HTML</button>
+      <button class="btn btn-sm" style="font-size:12px;background:var(--primary-soft);color:var(--primary)" onclick="savePapersToLib()">📚 保存到文献库</button>
+      <div style="font-size:11px;color:var(--text2);margin-left:4px" id="dp-save-status"></div>
+    </div>
+    <!-- 结果区 -->
+    <div id="dp-results"></div>
   </div>
 </div>
 
@@ -1750,6 +1861,7 @@ function switchPage(name) {
   if (name==='intel') initIntelPage();
   if (name==='gantt') renderGantt();
   if (name==='procure') initProcurePage();
+  if (name==='papers') renderPapersPage();
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
 
@@ -5210,6 +5322,412 @@ function _renderProcureCompare(){
   panel.style.display=''
   panel.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><div style="font-size:12px;font-weight:600">📊 对比（${sel.length}款）</div><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="saveProcureComparison()">💾 保存对比</button><button class="btn btn-ghost btn-sm" onclick="exportCmpDirect([..._procureCompare])">⬇️ 直接下载</button><button class="btn btn-ghost btn-sm" onclick="_procureCompare.clear();renderProcureList();_renderProcureCompare()">清空</button></div></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><tr style="border-bottom:2px solid var(--border)"><th style="padding:6px 8px;font-size:11px;color:var(--text2);text-align:left;background:var(--surface2)">字段</th>${sel.map(x=>`<th style="padding:6px 8px;font-size:12px;font-weight:600;color:var(--primary);max-width:100px;word-break:break-all">${escHtml(x.name.slice(0,25))}</th>`).join('')}</tr>${rows.map(([l,fn])=>`<tr><td style="padding:5px 8px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;background:var(--surface2)">${l}</td>${sel.map(x=>`<td style="padding:5px 8px;font-size:12px">${escHtml(String(fn(x)))}</td>`).join('')}</tr>`).join('')}</table></div>`
 }
+// ══════════════════════════════════════
+//  DAILY PAPERS
+// ══════════════════════════════════════
+const K_PAPERS='_phd_papers_lib'
+function _ldPapLib(){try{return JSON.parse(localStorage.getItem(K_PAPERS))||[]}catch{return[]}}
+function _svPapLib(a){localStorage.setItem(K_PAPERS,JSON.stringify(a))}
+
+// 研究方向 → 英文搜索词
+const _AREA_EN={
+  '因果表征学习':'causal representation learning',
+  '因果推断':'causal inference',
+  'OOD泛化':'out-of-distribution generalization domain generalization',
+  'OOD图像修复':'out-of-distribution image restoration degradation',
+  '域泛化':'domain generalization',
+  '图像修复':'image restoration blind super resolution',
+  '扩散模型':'diffusion model score matching generative',
+  '图神经网络':'graph neural network GNN',
+  '推荐系统':'recommendation system collaborative filtering',
+  '对比学习':'contrastive learning self-supervised',
+  '联邦学习':'federated learning privacy',
+  '强化学习':'reinforcement learning policy gradient',
+  '自然语言处理':'natural language processing transformer',
+  '大语言模型':'large language model LLM instruction tuning',
+  '计算机视觉':'computer vision object detection segmentation',
+  '多模态':'multimodal vision language cross-modal',
+  '不变学习':'invariant learning IRM invariant risk minimization',
+}
+function _areaToEn(a){return _AREA_EN[a]||a}
+
+// 打开 modal
+function openDailyPapers(){
+  const cfg=getCfg(),areas=cfg.areas||[]
+  const areasEl=document.getElementById('dp-areas')
+  if(areasEl){
+    areasEl.innerHTML=areas.map(a=>`<span class="dp-tag-sel" data-area="${escHtml(a)}" onclick="this.classList.toggle('active')">${escHtml(a)}</span>`).join('')
+  }
+  document.getElementById('dp-results').innerHTML=''
+  document.getElementById('dp-status').textContent='选择研究方向后点击获取'
+  const ab=document.getElementById('dp-action-bar')
+  if(ab)ab.style.display='none'
+  window._dpCurrentPapers=null
+  openModal('dailyPapersModal')
+}
+
+// 添加自定义方向
+function addDpCustomArea(){
+  const inp=document.getElementById('dp-custom-area')
+  const val=inp?.value.trim();if(!val)return
+  const areasEl=document.getElementById('dp-areas')
+  if(!areasEl)return
+  const sp=document.createElement('span')
+  sp.className='dp-tag-sel active'
+  sp.dataset.area=val
+  sp.textContent=val
+  sp.onclick=function(){this.classList.toggle('active')}
+  areasEl.appendChild(sp)
+  inp.value=''
+}
+
+// 获取选中的方向
+function _getDpAreas(){
+  return[...(document.querySelectorAll('#dp-areas .dp-tag-sel.active')||[])].map(el=>el.dataset.area)
+}
+
+// Semantic Scholar 搜索
+async function _fetchS2(query,limit=15){
+  const url=`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&fields=paperId,title,authors,abstract,year,venue,externalIds,openAccessPdf,publicationDate&limit=${limit}&sort=publicationDate:desc`
+  const r=await fetch(url,{headers:{'x-api-key':''}})
+  if(!r.ok)throw new Error('S2 fetch failed '+r.status)
+  const d=await r.json()
+  return(d.data||[]).map(p=>{
+    const aid=p.externalIds?.ArXiv||''
+    return{
+      id:'s2_'+p.paperId,
+      arxiv_id:aid,
+      title:p.title||'',
+      authors:(p.authors||[]).map(a=>a.name).slice(0,5).join(', '),
+      abstract:p.abstract||'',
+      url:aid?`https://arxiv.org/abs/${aid}`:`https://www.semanticscholar.org/paper/${p.paperId}`,
+      pdf_url:p.openAccessPdf?.url||(aid?`https://arxiv.org/pdf/${aid}`:''),
+      code_url:'',
+      date:p.publicationDate||String(p.year||''),
+      venue:p.venue||'arXiv',
+      figure:'',score:0,summary:'',area:''
+    }
+  })
+}
+
+// arXiv fallback
+async function _fetchArxiv(query,limit=15){
+  const url=`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&sortBy=submittedDate&sortOrder=descending&max_results=${limit}`
+  const r=await fetch(url)
+  if(!r.ok)throw new Error('arXiv fetch failed')
+  const txt=await r.text()
+  const xml=new DOMParser().parseFromString(txt,'text/xml')
+  return[...xml.querySelectorAll('entry')].map(e=>{
+    const idRaw=e.querySelector('id')?.textContent?.trim()||''
+    const aid=idRaw.replace(/https?:\/\/arxiv\.org\/abs\//,'')
+    return{
+      id:'ax_'+aid.replace(/[\./]/g,'_'),
+      arxiv_id:aid,
+      title:e.querySelector('title')?.textContent?.trim().replace(/\s+/g,' ')||'',
+      authors:[...e.querySelectorAll('author name')].map(a=>a.textContent.trim()).slice(0,5).join(', '),
+      abstract:e.querySelector('summary')?.textContent?.trim().replace(/\s+/g,' ')||'',
+      url:`https://arxiv.org/abs/${aid}`,
+      pdf_url:`https://arxiv.org/pdf/${aid}`,
+      code_url:'',
+      date:e.querySelector('published')?.textContent?.slice(0,10)||'',
+      venue:'arXiv',figure:'',score:0,summary:'',area:''
+    }
+  })
+}
+
+// 主获取函数
+async function fetchDailyPapers(){
+  // 若无选中方向，自动全选
+  const tags=[...document.querySelectorAll('#dp-areas .dp-tag-sel')]
+  if(!tags.some(t=>t.classList.contains('active'))){tags.forEach(t=>t.classList.add('active'))}
+  const areas=_getDpAreas()
+  if(!areas.length){toast('请先在「个人设置」添加研究方向','warn');return}
+  const maxPerArea=parseInt(document.getElementById('dp-max')?.value||'15')
+  const statusEl=document.getElementById('dp-status')
+  const resultsEl=document.getElementById('dp-results')
+  const fetchBtn=document.getElementById('dp-fetch-btn')
+  const ab=document.getElementById('dp-action-bar')
+  if(fetchBtn)fetchBtn.disabled=true
+  if(resultsEl)resultsEl.innerHTML=''
+  if(ab)ab.style.display='none'
+  let allPapers=[]
+  for(const area of areas){
+    const query=_areaToEn(area)
+    if(statusEl)statusEl.innerHTML=`<span class="spinner"></span> 获取「${escHtml(area)}」...`
+    try{
+      let papers
+      try{papers=await _fetchS2(query,Math.ceil(maxPerArea/areas.length)+5)}
+      catch{papers=await _fetchArxiv(query,Math.ceil(maxPerArea/areas.length)+5)}
+      papers.forEach(p=>{p.area=area})
+      allPapers.push(...papers)
+    }catch(e){console.warn('fetch area failed',area,e)}
+  }
+  // 去重
+  const seen=new Set()
+  allPapers=allPapers.filter(p=>{const k=p.arxiv_id||p.id;if(seen.has(k))return false;seen.add(k);return true})
+    .slice(0,maxPerArea*2)
+  if(!allPapers.length){
+    if(statusEl)statusEl.textContent='未获取到论文，请检查网络'
+    if(fetchBtn)fetchBtn.disabled=false
+    return
+  }
+  // AI 摘要与评分
+  if(statusEl)statusEl.innerHTML=`<span class="spinner"></span> AI 正在分析 ${allPapers.length} 篇...`
+  const batch=allPapers.slice(0,25)
+  const cfg=getCfg()
+  const summaryPrompt=`你是顶会论文速读助手。以下是 ${batch.length} 篇论文，用户研究方向：${areas.join('、')}。
+
+对每篇论文：
+1. score(1-30)：与研究方向的相关性评分，越高越相关
+2. summary：4-5条中文摘要，格式"- **字段**: 内容"，字段为：解决的问题/研究方法/创新点/主要结果/数据集
+
+返回 JSON 数组，每项：{"id":"...","score":数字,"summary":"..."}
+只返回 JSON。
+
+论文：
+${batch.map((p,i)=>`${i}.{"id":"${p.id}","title":"${(p.title||'').slice(0,80)}","abstract":"${(p.abstract||'').slice(0,250)}"}`).join('\n')}`
+  try{
+    const aiResp=await _callAI(summaryPrompt,3200)
+    if(aiResp){
+      const summaries=_extractJSONArray(aiResp)
+      if(Array.isArray(summaries)){
+        summaries.forEach(s=>{
+          const paper=allPapers.find(p=>p.id===s.id)
+          if(paper){paper.score=Number(s.score)||15;paper.summary=s.summary||''}
+        })
+      }
+    }
+  }catch(e){console.warn('AI summarize failed',e)}
+  // 排序
+  allPapers.sort((a,b)=>(b.score||0)-(a.score||0))
+  window._dpCurrentPapers=allPapers
+  _renderDpResults(allPapers)
+  if(statusEl)statusEl.innerHTML=`✅ <strong>${allPapers.length}</strong> 篇，AI 评分排序完成`
+  if(ab)ab.style.display='flex'
+  if(fetchBtn)fetchBtn.disabled=false
+}
+
+// 渲染 modal 内结果
+function _renderDpResults(papers){
+  const el=document.getElementById('dp-results');if(!el)return
+  const md2h=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul style="padding-left:0;list-style:none">$1</ul>')
+  el.innerHTML=papers.map((p,i)=>`
+    <div class="dp-paper">
+      <div class="dp-title"><a href="${escHtml(p.url)}" target="_blank">${escHtml(p.title)}</a></div>
+      <div class="dp-meta">
+        <span class="dp-area-chip">${escHtml(p.area)}</span>
+        <span>${escHtml(p.venue||'arXiv')}</span>
+        <span>·</span>
+        <span>${escHtml(p.date||'')}</span>
+        <span>·</span>
+        <span class="dp-score">⭐ ${p.score||0}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${escHtml((p.authors||'').slice(0,80))}</div>
+      <div class="dp-links">
+        <a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 Abstract</a>
+        ${p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="border-color:#dc2626;color:#dc2626">📄 PDF</a>`:''}
+        ${p.code_url?`<a class="dp-link" href="${escHtml(p.code_url)}" target="_blank" style="border-color:#16a34a;color:#16a34a">💻 Code</a>`:''}
+      </div>
+      ${p.summary?`<div class="dp-summary open">${md2h(p.summary)}</div>`:''}
+    </div>`).join('')
+}
+
+// 下载为 HTML（同样式）
+function downloadPapersHTML(){
+  const papers=window._dpCurrentPapers;if(!papers?.length){toast('没有可下载的论文','warn');return}
+  const date=today()
+  const papersJSON=JSON.stringify(papers)
+  const html=`<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>每日论文 — ${date}</title>
+<style>
+:root{--bg:#f0f2f5;--card:#fff;--border:#e4e8f0;--text:#1a1a2e;--meta:#5c6b8a;--accent:#2563eb;--tag-bg:#eff6ff;--tag-fg:#1d4ed8;--score:#d97706;--link:#1d4ed8;--summary-bg:#f8fafc}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.page-header{background:#fff;border-bottom:1px solid var(--border);padding:18px 0;position:sticky;top:0;z-index:100;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.header-inner{max-width:900px;margin:0 auto;padding:0 20px}
+h1{font-size:20px;font-weight:700;margin-bottom:12px}
+#search{width:100%;padding:9px 14px;font-size:14px;border:1.5px solid var(--border);border-radius:8px;outline:none;background:#fafbff;transition:border-color .2s}
+#search:focus{border-color:var(--accent)}
+.filters{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.filter-btn{padding:4px 14px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;background:#fff;color:var(--meta);font-size:12px;transition:all .15s}
+.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.main{max-width:900px;margin:0 auto;padding:18px 20px}
+#count{color:var(--meta);font-size:12px;margin-bottom:12px}
+.paper{background:var(--card);border-radius:10px;padding:18px 20px;margin-bottom:12px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04);transition:box-shadow .2s}
+.paper:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.paper-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.paper-title a{color:var(--link);text-decoration:none}
+.paper-title a:hover{text-decoration:underline}
+.meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:12px;color:var(--meta);margin-bottom:5px}
+.area-tag{padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;background:var(--tag-bg);color:var(--tag-fg)}
+.score-badge{color:var(--score);font-weight:700;font-size:12px}
+.authors{font-size:12px;color:var(--meta);margin-bottom:5px}
+.links{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.link-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:5px;font-size:11px;font-weight:500;text-decoration:none;border:1px solid var(--border);background:#f8fafc;color:var(--meta);transition:all .15s}
+.link-btn:hover{border-color:var(--accent);color:var(--accent)}
+.link-btn.pdf{border-color:#dc2626;color:#dc2626}
+.link-btn.code{border-color:#16a34a;color:#16a34a}
+.summary{background:var(--summary-bg);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:10px 12px;font-size:13px;color:#334155;line-height:1.75}
+.summary ul{padding-left:0;list-style:none}
+.summary li::before{content:"▸ ";color:var(--accent);font-size:10px}
+</style>
+</head>
+<body>
+<div class="page-header">
+<div class="header-inner">
+<h1>📚 每日论文 — ${date}</h1>
+<input type="text" id="search" placeholder="搜索标题、作者、摘要..." oninput="filterPapers()">
+<div class="filters" id="filters"></div>
+</div>
+</div>
+<div class="main">
+<div id="count"></div>
+<div id="papers"></div>
+</div>
+<script>
+const PAPERS=${papersJSON};
+let activeArea="全部";
+function md2html(t){if(!t)return"";return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\\*\\*(.+?)\\*\\*/g,"<strong>$1</strong>").replace(/^- (.+)$/gm,"<li>$1</li>").replace(/(<li>[\\s\\S]*?<\\/li>)/g,"<ul style='padding-left:0;list-style:none'>$1</ul>")}
+function renderFilters(){const areas=["全部",...new Set(PAPERS.map(p=>p.area))];document.getElementById("filters").innerHTML=areas.map(a=>\`<button class="filter-btn\${a===activeArea?" active":""}" onclick="setArea('\${a.replace(/'/g,"\\'")}',this)">\${a}</button>\`).join("")}
+function setArea(a,btn){activeArea=a;document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");filterPapers()}
+function filterPapers(){const q=document.getElementById("search").value.toLowerCase();const f=PAPERS.filter(p=>(activeArea==="全部"||p.area===activeArea)&&(!q||[p.title,p.authors,p.abstract,p.summary,p.venue].some(x=>(x||"").toLowerCase().includes(q))));document.getElementById("count").textContent=\`显示 \${f.length} / \${PAPERS.length} 篇\`;document.getElementById("papers").innerHTML=f.map(p=>\`<div class="paper"><div class="paper-title"><a href="\${p.url}" target="_blank">\${p.title}</a></div><div class="meta-row"><span class="area-tag">\${p.area}</span><span>\${p.venue}</span><span>·</span><span>\${p.date||""}</span><span>·</span><span class="score-badge">⭐ \${p.score||0}</span></div><div class="authors">\${p.authors}</div><div class="links"><a class="link-btn" href="\${p.url}" target="_blank">🔗 Abstract</a>\${p.pdf_url?\`<a class="link-btn pdf" href="\${p.pdf_url}" target="_blank">📄 PDF</a>\`:""}\${p.code_url?\`<a class="link-btn code" href="\${p.code_url}" target="_blank">💻 Code</a>\`:""}</div>\${p.summary?\`<div class="summary">\${md2html(p.summary)}</div>\`:""}</div>\`).join("")}
+renderFilters();filterPapers();
+<\/script>
+</body></html>`
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${date}-daily-papers.html`;a.click()
+  toast('📄 已下载 HTML 文件')
+}
+
+// 保存到文献库
+function savePapersToLib(){
+  const papers=window._dpCurrentPapers;if(!papers?.length){toast('没有论文','warn');return}
+  const lib=_ldPapLib()
+  const existing=new Set(lib.map(p=>p.id))
+  const newPapers=papers.filter(p=>!existing.has(p.id))
+  _svPapLib([...newPapers,...lib].slice(0,500))
+  const saveStatus=document.getElementById('dp-save-status')
+  if(saveStatus)saveStatus.textContent=`✅ 已保存 ${newPapers.length} 篇（${papers.length-newPapers.length} 篇已存在）`
+  toast(`📚 已保存 ${newPapers.length} 篇到文献库`)
+}
+
+// 渲染文献库页面
+let _papActiveArea='全部'
+function renderPapersPage(){
+  const lib=_ldPapLib()
+  const countEl=document.getElementById('papers-count')
+  const listEl=document.getElementById('papers-list')
+  const emptyEl=document.getElementById('papers-empty')
+  const filtersEl=document.getElementById('papers-area-filters')
+  if(!listEl)return
+  if(!lib.length){
+    if(listEl)listEl.innerHTML=''
+    if(emptyEl)emptyEl.style.display='block'
+    if(countEl)countEl.textContent=''
+    if(filtersEl)filtersEl.innerHTML=''
+    return
+  }
+  if(emptyEl)emptyEl.style.display='none'
+  // 面积过滤
+  const areas=['全部',...new Set(lib.map(p=>p.area).filter(Boolean))]
+  if(filtersEl){
+    filtersEl.innerHTML=areas.map(a=>`<span class="dp-tag-sel${a===_papActiveArea?' active':''}" onclick="_setPapArea('${a.replace(/'/g,"\\'")}',this)" style="font-size:11px">${escHtml(a)}</span>`).join('')
+  }
+  const q=(document.getElementById('papers-search')?.value||'').toLowerCase()
+  let filtered=lib.filter(p=>(
+    (_papActiveArea==='全部'||p.area===_papActiveArea)&&
+    (!q||[p.title,p.authors,p.abstract,p.summary,p.venue].some(x=>(x||'').toLowerCase().includes(q)))
+  ))
+  if(countEl)countEl.textContent=`共 ${lib.length} 篇，显示 ${filtered.length} 篇`
+  listEl.innerHTML=filtered.map(p=>`
+    <div class="dp-lib-row" onclick="openReadingPanel(${JSON.stringify(JSON.stringify(p))})">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.title)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">${escHtml(p.area||'')} · ${escHtml(p.date||'')} · ${escHtml((p.authors||'').slice(0,40))}</div>
+      </div>
+      <span class="dp-score" style="flex-shrink:0;margin-left:8px">⭐${p.score||0}</span>
+    </div>`).join('')
+}
+
+function _setPapArea(a,el){
+  _papActiveArea=a
+  document.querySelectorAll('#papers-area-filters .dp-tag-sel').forEach(t=>{t.classList.remove('active')})
+  el.classList.add('active')
+  renderPapersPage()
+}
+
+// 打开阅读面板
+window._rpCurrent=null
+function openReadingPanel(pJson){
+  const p=JSON.parse(pJson)
+  window._rpCurrent=p
+  const panel=document.getElementById('papers-reading-panel')
+  if(!panel)return
+  document.getElementById('rp-title').textContent=p.title
+  document.getElementById('rp-meta').textContent=`${p.area||''} · ${p.venue||''} · ${p.date||''} · ${(p.authors||'').slice(0,60)}`
+  const linksEl=document.getElementById('rp-links')
+  if(linksEl)linksEl.innerHTML=`
+    <a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 Abstract</a>
+    ${p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="border-color:#dc2626;color:#dc2626">📄 PDF</a>`:''}
+    <span class="dp-link" onclick="delFromLib('${escHtml(p.id)}')" style="cursor:pointer;border-color:#ef4444;color:#ef4444">🗑 删除</span>`
+  document.getElementById('rp-abstract').textContent=p.abstract||'无摘要'
+  const md2h=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul style="padding-left:0;list-style:none">$1</ul>')
+  const summEl=document.getElementById('rp-summary')
+  if(summEl)summEl.innerHTML=p.summary?`<div class="dp-summary open">${md2h(p.summary)}</div>`:''
+  const ansEl=document.getElementById('rp-ai-answer')
+  if(ansEl){ansEl.style.display='none';ansEl.innerHTML=''}
+  document.getElementById('rp-ask-input').value=''
+  panel.style.display='block'
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'})
+}
+
+// 从库中删除
+function delFromLib(id){
+  const lib=_ldPapLib().filter(p=>p.id!==id)
+  _svPapLib(lib)
+  document.getElementById('papers-reading-panel').style.display='none'
+  renderPapersPage()
+  toast('已删除')
+}
+
+// AI 提问
+async function aiAskPaper(preset){
+  const p=window._rpCurrent;if(!p){toast('没有选中论文','warn');return}
+  const inp=document.getElementById('rp-ask-input')
+  const question=preset||inp?.value.trim()
+  if(!question){toast('请输入问题','warn');return}
+  const ansEl=document.getElementById('rp-ai-answer')
+  if(ansEl){ansEl.style.display='block';ansEl.innerHTML='<span class="spinner"></span> AI 思考中...'}
+  const cfg2=getCfg()
+  const prompt=`论文信息：
+标题：${p.title}
+作者：${p.authors}
+摘要：${p.abstract}
+${p.summary?'结构化摘要：\n'+p.summary:''}
+用户研究方向：${(cfg2.areas||[]).join('、')}
+
+用户问题：${question}
+
+请用中文简洁回答，如果涉及引用格式（BibTeX）请给出完整的引用。`
+  try{
+    const resp=await _callAI(prompt,800)
+    if(ansEl)ansEl.innerHTML=(resp||'AI 无回复').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+  }catch(e){
+    if(ansEl)ansEl.innerHTML='AI 调用失败：'+escHtml(String(e))
+  }
+  if(inp&&!preset)inp.value=''
+}
+
 // ── 对比记录存储 ──
 const K_PROCURE_CMP='_phd_procure_cmp'
 function _ldCmp(){try{return JSON.parse(localStorage.getItem(K_PROCURE_CMP)||'[]')}catch(_){return[]}}
