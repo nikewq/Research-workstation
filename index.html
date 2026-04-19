@@ -1279,6 +1279,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
               <option value="openrouter">OpenRouter 免费模型</option>
             </optgroup>
             <optgroup label="💳 付费 API">
+              <option value="claude">Claude (Anthropic) ✦</option>
               <option value="deepseek">DeepSeek</option>
               <option value="openai">OpenAI</option>
               <option value="moonshot">Kimi</option>
@@ -1511,6 +1512,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
             <option value="openrouter">OpenRouter 免费模型</option>
           </optgroup>
           <optgroup label="💳 付费 API">
+            <option value="claude">Claude (Anthropic) ✦</option>
             <option value="deepseek">DeepSeek</option>
             <option value="openai">OpenAI</option>
             <option value="moonshot">Moonshot Kimi</option>
@@ -3888,6 +3890,11 @@ const _AI_PROVIDERS={
             base:'http://localhost:1337/v1',                defModel:'',                         needsUrl:true,  needsKey:false, models:[]},
   custom:  {name:'自定义 URL',
             base:'',                                        defModel:'',                         needsUrl:true,  needsKey:true,  models:[]},
+  // ── Anthropic Claude（原生格式，非 OpenAI 兼容）────────
+  claude:  {name:'Claude (Anthropic)',
+            base:'https://api.anthropic.com',               defModel:'claude-sonnet-4-5',        needsUrl:true,  needsKey:true,
+            apiType:'anthropic',
+            models:['claude-opus-4','claude-sonnet-4-5','claude-haiku-4-5','claude-3-5-sonnet-20241022','claude-3-5-haiku-20241022','claude-3-opus-20240229']},
 }
 
 // 获取用户配置（localStorage → Supabase 演示 Key → Pollinations 免费兜底）
@@ -3917,12 +3924,34 @@ async function _getActiveCfg(){
 // 保持旧接口兼容（fetchIntel 用到）
 async function _getAIKey(){const c=await _getActiveCfg();return c?.key||null}
 
+// Anthropic 原生 API 调用
+async function _callAnthropic(base,key,model,prompt,maxTokens){
+  const apiBase=(base||'https://api.anthropic.com').replace(/\/+$/,'')
+  const r=await fetch(`${apiBase}/v1/messages`,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({model,max_tokens:maxTokens,temperature:0.4,messages:[{role:'user',content:prompt}]})
+  })
+  if(!r.ok) return null
+  const d=await r.json()
+  return d.content?.[0]?.text?.trim()||null
+}
+
 // 统一 AI 调用入口
 async function _callAI(prompt,maxTokens=800){
   const cfg=await _getActiveCfg()
   if(!cfg) return null
   const provDef=_AI_PROVIDERS[cfg.provider]||{}
   try{
+    // Anthropic 原生格式
+    if(provDef.apiType==='anthropic'||cfg.provider==='claude'){
+      return await _callAnthropic(cfg.base||provDef.base,cfg.key,cfg.model||provDef.defModel,prompt,maxTokens)
+    }
     // Gemini 独立格式
     if(cfg.provider==='gemini'){
       const r=await fetch(`${cfg.base}/models/${cfg.model}:generateContent?key=${cfg.key}`,{
@@ -6154,6 +6183,10 @@ async function _wrCallAI(prompt,maxTokens=2000){
   const{provider,key,model,base}=wcfg
   const provDef=_AI_PROVIDERS[provider]||{}
   try{
+    // Anthropic 原生格式
+    if(provDef.apiType==='anthropic'||provider==='claude'){
+      return await _callAnthropic(base||provDef.base,key,model||provDef.defModel,prompt,maxTokens)
+    }
     if(provider==='gemini'){
       const r=await fetch(`${base||provDef.base}/models/${model}:generateContent?key=${key}`,{
         method:'POST',headers:{'Content-Type':'application/json'},
@@ -6218,10 +6251,19 @@ function wrAiCfgProviderChange(){
   const provDef=_AI_PROVIDERS[prov]||{}
   const keyRow=document.getElementById('wr-ai-cfg-key-row')
   const urlRow=document.getElementById('wr-ai-cfg-url-row')
+  const urlInput=document.getElementById('wr-ai-cfg-url')
   const modelEl=document.getElementById('wr-ai-cfg-model')
+  const statusEl=document.getElementById('wr-ai-cfg-status')
   if(keyRow)keyRow.style.display=provDef.needsKey===false?'none':''
   if(urlRow)urlRow.style.display=(provDef.needsUrl||prov==='custom_url')?'':'none'
   if(modelEl&&!modelEl.value)modelEl.placeholder=provDef.defModel||'输入模型名'
+  // Claude 专属提示
+  if(prov==='claude'){
+    if(urlInput)urlInput.placeholder='留空直连 api.anthropic.com，或填代理 URL（如 https://your-proxy.com）'
+    if(statusEl)statusEl.innerHTML=`<span style="color:var(--text2)">Key 格式：<code style="background:var(--border);padding:1px 4px;border-radius:3px">sk-ant-...</code> · 获取：<a href="https://console.anthropic.com" target="_blank" style="color:var(--primary)">console.anthropic.com</a><br>⚠️ Claude Pro/Plus/Max 订阅 ≠ API Key，API 需单独开通计费</span>`
+  }else{
+    if(statusEl)statusEl.innerHTML=''
+  }
 }
 
 async function wrAiCfgTest(){
