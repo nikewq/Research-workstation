@@ -5453,11 +5453,45 @@ function _getDpAreas(){
   return[...(document.querySelectorAll('#dp-areas .dp-tag-sel.active')||[])].map(el=>el.dataset.area)
 }
 
-// Semantic Scholar 搜索
+// OpenAlex（主力：CORS 友好，免费，覆盖广）
+function _invertIdx(inv){
+  if(!inv)return''
+  const w=[];for(const[word,pos]of Object.entries(inv))pos.forEach(i=>{w[i]=word});return w.join(' ')
+}
+async function _fetchOpenAlex(query,limit=15){
+  const thisYear=new Date().getFullYear()
+  const url=`https://api.openalex.org/works?search=${encodeURIComponent(query)}&sort=publication_date:desc&filter=publication_year:${thisYear-1}|${thisYear}&per_page=${limit}&select=id,title,authorships,abstract_inverted_index,primary_location,best_oa_location,publication_date,open_access&mailto=phd-workstation@noreply.io`
+  const r=await fetch(url)
+  if(!r.ok)throw new Error('OpenAlex '+r.status)
+  const d=await r.json()
+  return(d.results||[]).map(p=>{
+    const oaUrl=p.best_oa_location?.pdf_url||p.open_access?.oa_url||''
+    const landingUrl=p.primary_location?.landing_page_url||''
+    const arxivMatch=(oaUrl||landingUrl).match(/arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d+)/i)
+    const aid=arxivMatch?arxivMatch[1]:''
+    const paperUrl=aid?`https://arxiv.org/abs/${aid}`:(landingUrl||`https://openalex.org/${p.id?.replace('https://openalex.org/','')||''}`)
+    const pdfUrl=aid?`https://arxiv.org/pdf/${aid}`:(oaUrl||'')
+    return{
+      id:'oa_'+(p.id||'').replace(/\W/g,'_'),
+      arxiv_id:aid,
+      title:p.title||'',
+      authors:(p.authorships||[]).slice(0,5).map(a=>a.author?.display_name||'').filter(Boolean).join(', '),
+      abstract:_invertIdx(p.abstract_inverted_index),
+      url:paperUrl,
+      pdf_url:pdfUrl,
+      code_url:'',
+      date:p.publication_date||'',
+      venue:p.primary_location?.source?.display_name||'',
+      figure:'',score:0,summary:'',area:''
+    }
+  }).filter(p=>p.title)
+}
+
+// Semantic Scholar（兜底，修正参数）
 async function _fetchS2(query,limit=15){
-  const url=`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&fields=paperId,title,authors,abstract,year,venue,externalIds,openAccessPdf,publicationDate&limit=${limit}&sort=publicationDate:desc`
-  const r=await fetch(url,{headers:{'x-api-key':''}})
-  if(!r.ok)throw new Error('S2 fetch failed '+r.status)
+  const url=`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&fields=paperId,title,authors,abstract,year,venue,externalIds,openAccessPdf,publicationDate&limit=${limit}`
+  const r=await fetch(url)
+  if(!r.ok)throw new Error('S2 '+r.status)
   const d=await r.json()
   return(d.data||[]).map(p=>{
     const aid=p.externalIds?.ArXiv||''
@@ -5473,31 +5507,6 @@ async function _fetchS2(query,limit=15){
       date:p.publicationDate||String(p.year||''),
       venue:p.venue||'arXiv',
       figure:'',score:0,summary:'',area:''
-    }
-  })
-}
-
-// arXiv fallback
-async function _fetchArxiv(query,limit=15){
-  const url=`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&sortBy=submittedDate&sortOrder=descending&max_results=${limit}`
-  const r=await fetch(url)
-  if(!r.ok)throw new Error('arXiv fetch failed')
-  const txt=await r.text()
-  const xml=new DOMParser().parseFromString(txt,'text/xml')
-  return[...xml.querySelectorAll('entry')].map(e=>{
-    const idRaw=e.querySelector('id')?.textContent?.trim()||''
-    const aid=idRaw.replace(/https?:\/\/arxiv\.org\/abs\//,'')
-    return{
-      id:'ax_'+aid.replace(/[\./]/g,'_'),
-      arxiv_id:aid,
-      title:e.querySelector('title')?.textContent?.trim().replace(/\s+/g,' ')||'',
-      authors:[...e.querySelectorAll('author name')].map(a=>a.textContent.trim()).slice(0,5).join(', '),
-      abstract:e.querySelector('summary')?.textContent?.trim().replace(/\s+/g,' ')||'',
-      url:`https://arxiv.org/abs/${aid}`,
-      pdf_url:`https://arxiv.org/pdf/${aid}`,
-      code_url:'',
-      date:e.querySelector('published')?.textContent?.slice(0,10)||'',
-      venue:'arXiv',figure:'',score:0,summary:'',area:''
     }
   })
 }
@@ -5522,9 +5531,14 @@ async function fetchDailyPapers(){
     const query=_areaToEn(area)
     if(statusEl)statusEl.innerHTML=`<span class="spinner"></span> 获取「${escHtml(area)}」...`
     try{
-      let papers
-      try{papers=await _fetchS2(query,Math.ceil(maxPerArea/areas.length)+5)}
-      catch{papers=await _fetchArxiv(query,Math.ceil(maxPerArea/areas.length)+5)}
+      let papers=[]
+      const perArea=Math.ceil(maxPerArea/areas.length)+5
+      try{papers=await _fetchOpenAlex(query,perArea)}
+      catch(e1){
+        console.warn('OpenAlex failed, trying S2',e1)
+        try{papers=await _fetchS2(query,perArea)}
+        catch(e2){console.warn('S2 also failed',e2)}
+      }
       papers.forEach(p=>{p.area=area})
       allPapers.push(...papers)
     }catch(e){console.warn('fetch area failed',area,e)}
