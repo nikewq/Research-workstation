@@ -544,6 +544,27 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .research-tab-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.10)}
 .research-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;color:var(--text2);font-size:13px;gap:10px;background:var(--surface2);border-radius:12px;border:1.5px dashed var(--border)}
 @media(max-width:860px){.research-layout{flex-direction:column}.research-resize-handle{display:none}.research-detail-col{margin-left:0;width:100%}}
+/* ── Writing Panel ── */
+.wr-layout{display:flex;gap:0;align-items:stretch;height:calc(100vh - 180px);overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+.wr-projects-col{width:260px;min-width:200px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--surface2)}
+.wr-editor-col{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.wr-preview-col{width:42%;min-width:240px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--card)}
+.wr-doc-item{padding:8px 12px;cursor:pointer;font-size:12px;border-radius:6px;margin:1px 0;transition:background .12s;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-doc-item:hover{background:var(--card)}
+.wr-doc-item.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+.wr-ol-project{border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;background:var(--card);font-size:12px}
+.wr-ol-project:hover{border-color:var(--primary)}
+.wr-editor-toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--surface2)}
+.wr-tb-btn{padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;transition:background .12s;line-height:1}
+.wr-tb-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+#wr-editor{font-family:'JetBrains Mono','Fira Mono',Consolas,monospace;flex:1;resize:none;padding:16px;font-size:13px;line-height:1.7;border:none;outline:none;background:var(--bg);color:var(--text);tab-size:2}
+#wr-preview-area{padding:16px;font-size:14px;line-height:1.8;overflow-y:auto;flex:1;color:var(--text)}
+#wr-preview-area h2{font-size:15px;font-weight:700;margin:18px 0 6px;padding-bottom:4px;border-bottom:1.5px solid var(--border);color:var(--text)}
+#wr-preview-area h3{font-size:13px;font-weight:700;margin:14px 0 4px;color:var(--text)}
+.wr-preview-section{font-size:15px;font-weight:700;margin:18px 0 6px;padding-bottom:4px;border-bottom:1.5px solid var(--border)}
+.wr-comment{color:var(--text2);font-style:italic;font-size:12px}
+.wr-math-block{display:block;overflow-x:auto;text-align:center;margin:12px 0;padding:8px;background:var(--surface2);border-radius:6px}
+@media(max-width:900px){.wr-preview-col{display:none}.wr-projects-col{width:200px}}
 </style>
 </head>
 <body>
@@ -948,6 +969,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
     <div class="research-tab-bar">
       <button class="research-tab-btn active" id="rtab-papers-btn" onclick="switchResearchTab('papers')">📚 文献库</button>
       <button class="research-tab-btn" id="rtab-subs-btn" onclick="switchResearchTab('subs')">📄 投稿管理</button>
+      <button class="research-tab-btn" id="rtab-writing-btn" onclick="switchResearchTab('writing')">✍️ 写作</button>
     </div>
   </div>
 
@@ -1090,6 +1112,100 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
     </div>
   </div>
+
+  <!-- ── 写作面板 ── -->
+  <div id="rs-writing" style="display:none">
+    <div class="wr-layout">
+      <!-- 左列：Overleaf 项目 + 本地草稿 -->
+      <div class="wr-projects-col">
+        <!-- Overleaf 账户徽章 -->
+        <div id="wr-ol-account-badge" style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-size:18px">🍃</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="wr-ol-name">未连接 Overleaf</div>
+            <div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="wr-ol-email"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="font-size:10px;flex-shrink:0" onclick="wrOpenAccountSettings()">设置</button>
+        </div>
+        <!-- Overleaf 项目区 -->
+        <div style="padding:8px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+          <span>Overleaf 项目</span>
+          <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 6px" onclick="wrAddOlProject()">+ 添加</button>
+        </div>
+        <div id="wr-ol-projects-list" style="padding:0 8px 8px;flex-shrink:0"></div>
+        <!-- 本地草稿区 -->
+        <div style="padding:8px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);flex-shrink:0">
+          <span>本地草稿</span>
+          <button class="btn btn-primary btn-sm" style="font-size:10px;padding:2px 8px" onclick="wrNewDoc()">+ 新建</button>
+        </div>
+        <div id="wr-docs-list" style="flex:1;overflow-y:auto;padding:0 8px 8px"></div>
+      </div>
+      <!-- 中列：编辑器 -->
+      <div class="wr-editor-col">
+        <div class="wr-editor-toolbar">
+          <span style="font-size:12px;color:var(--text2);margin-right:4px">文件：</span>
+          <input id="wr-doc-title" style="font-size:12px;border:1px solid var(--border);border-radius:4px;padding:2px 8px;width:180px;background:var(--bg)" placeholder="草稿标题..." oninput="wrDocTitleChanged()">
+          <div style="flex:1"></div>
+          <button class="wr-tb-btn" onclick="wrInsert('\\textbf{','}')" title="粗体"><b>B</b></button>
+          <button class="wr-tb-btn" onclick="wrInsert('\\textit{','}')" title="斜体"><i>I</i></button>
+          <button class="wr-tb-btn" onclick="wrInsert('$','$')" title="行内公式">∑</button>
+          <button class="wr-tb-btn" onclick="wrInsert('\n$$\n','\n$$\n')" title="块级公式">∬</button>
+          <button class="wr-tb-btn" onclick="wrInsert('\\section{','}')" title="章节">§</button>
+          <button class="wr-tb-btn" onclick="wrInsert('\\cite{','}')" title="引用">📎</button>
+          <button class="wr-tb-btn" onclick="wrInsertTable()" title="插入表格">⊞</button>
+          <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrSaveDoc()">💾 保存</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrExportTex()">⬇ .tex</button>
+          <button class="btn btn-ghost btn-sm" id="wr-del-btn" style="font-size:11px;color:#dc2626" onclick="wrDeleteDoc()">🗑</button>
+        </div>
+        <textarea id="wr-editor" placeholder="在此编写 LaTeX 内容...&#10;&#10;% 示例：&#10;\section{Introduction}&#10;This paper studies...&#10;&#10;% 行内公式：$E = mc^2$&#10;% 块级公式：&#10;$$\sum_{i=1}^{n} x_i = \mu$$" oninput="wrOnEdit(this)" onkeydown="wrHandleKey(event)"></textarea>
+        <div style="padding:4px 12px;font-size:10px;color:var(--text2);display:flex;gap:12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
+          <span id="wr-char-count">0 字符</span>
+          <span id="wr-line-count">0 行</span>
+          <span id="wr-save-status" style="color:var(--green)"></span>
+        </div>
+      </div>
+      <!-- 右列：预览 -->
+      <div class="wr-preview-col">
+        <div style="padding:8px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+          <span>预览</span>
+          <span style="font-size:10px;font-weight:400">KaTeX 数学渲染</span>
+        </div>
+        <div id="wr-preview-area"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overleaf 账户设置弹窗 -->
+  <div id="wr-account-modal" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+    <div style="background:var(--card);border-radius:14px;padding:24px;width:500px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        <span>🍃</span> 连接 Overleaf 账户
+      </div>
+      <div style="font-size:12px;color:var(--text2);background:var(--surface2);padding:10px 12px;border-radius:8px;margin-bottom:16px;line-height:1.6">
+        输入你的 Overleaf 账户信息和项目链接。你可以在 Overleaf 项目页面 URL 中找到项目链接（如 https://www.overleaf.com/project/xxxxxxxx）。
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">显示名称</label>
+          <input id="wr-acc-name" placeholder="你的名字" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Overleaf 邮箱</label>
+          <input id="wr-acc-email" type="email" placeholder="your@email.com" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Overleaf 主页链接（可选）</label>
+          <input id="wr-acc-profile" placeholder="https://www.overleaf.com" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg)">
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost" onclick="document.getElementById('wr-account-modal').style.display='none'">取消</button>
+        <button class="btn btn-primary" onclick="wrSaveAccount()">💾 保存账户信息</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ── Gantt ── -->
@@ -5625,18 +5741,411 @@ function _areaToEn(a){return _AREA_EN[a]||a}
 // ── 文献&投稿 Tab 切换 ──
 function switchResearchTab(tab){
   const isPapers=tab==='papers'
+  const isSubs=tab==='subs'
+  const isWriting=tab==='writing'
   const rsPapers=document.getElementById('rs-papers')
   const rsSubs=document.getElementById('rs-subs')
   const rsPapersD=document.getElementById('rs-papers-detail')
   const rsSubsD=document.getElementById('rs-subs-detail')
+  const rsMainLayout=document.querySelector('.research-layout')
+  const rsWriting=document.getElementById('rs-writing')
+  // main layout visibility
+  if(rsMainLayout)rsMainLayout.style.display=isWriting?'none':'flex'
+  if(rsWriting)rsWriting.style.display=isWriting?'block':'none'
+  // within main layout
   if(rsPapers)rsPapers.style.display=isPapers?'block':'none'
-  if(rsSubs)rsSubs.style.display=isPapers?'none':'block'
+  if(rsSubs)rsSubs.style.display=isSubs?'block':'none'
   if(rsPapersD)rsPapersD.style.display=isPapers?'block':'none'
-  if(rsSubsD)rsSubsD.style.display=isPapers?'none':'block'
+  if(rsSubsD)rsSubsD.style.display=isSubs?'block':'none'
+  // button states
   const pb=document.getElementById('rtab-papers-btn')
   const sb=document.getElementById('rtab-subs-btn')
-  if(pb){pb.classList.toggle('active',isPapers)}
-  if(sb){sb.classList.toggle('active',!isPapers)}
+  const wb=document.getElementById('rtab-writing-btn')
+  if(pb)pb.classList.toggle('active',isPapers)
+  if(sb)sb.classList.toggle('active',isSubs)
+  if(wb)wb.classList.toggle('active',isWriting)
+  // init writing panel on first open
+  if(isWriting)initWritingPanel()
+}
+
+// ══════════════════════════════════════════════
+// ✍️ Writing Panel
+// ══════════════════════════════════════════════
+const WR_DOCS_KEY='phd_wr_docs_v1'
+const WR_OL_PROJ_KEY='phd_ol_projects_v1'
+const WR_OL_ACC_KEY='phd_ol_account_v1'
+
+let _wrCurrentDocId=null
+let _wrAutoSaveTimer=null
+let _wrPreviewTimer=null
+let _wrPanelInited=false
+let _katexLoaded=false
+let _katexLoading=false
+
+function initWritingPanel(){
+  if(_wrPanelInited)return
+  _wrPanelInited=true
+  renderOlAccountBadge()
+  renderOlProjectsList()
+  renderWrDocsList()
+  _ensureKatex()
+}
+
+// ── Docs list ──
+function renderWrDocsList(){
+  const docs=ld(WR_DOCS_KEY)||[]
+  const el=document.getElementById('wr-docs-list')
+  if(!el)return
+  if(docs.length===0){
+    el.innerHTML='<div style="padding:12px 8px;font-size:11px;color:var(--text2);text-align:center">暂无草稿<br>点击「+ 新建」创建</div>'
+    return
+  }
+  el.innerHTML=docs.map(d=>`
+    <div class="wr-doc-item${_wrCurrentDocId===d.id?' active':''}" onclick="wrOpenDoc('${d.id}')" title="${escHtml(d.title||'无标题')}">
+      <div style="font-weight:${_wrCurrentDocId===d.id?'600':'400'}">${escHtml(d.title||'无标题')}</div>
+      <div style="font-size:10px;color:var(--text2);margin-top:1px">${d.updated||d.created||''}</div>
+    </div>`).join('')
+}
+
+// ── Overleaf projects list ──
+function renderOlProjectsList(){
+  const projects=ld(WR_OL_PROJ_KEY)||[]
+  const el=document.getElementById('wr-ol-projects-list')
+  if(!el)return
+  if(projects.length===0){
+    el.innerHTML='<div style="padding:6px 4px;font-size:11px;color:var(--text2)">暂无项目，点击「+ 添加」</div>'
+    return
+  }
+  el.innerHTML=projects.map(p=>`
+    <div class="wr-ol-project">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(p.name)}">${escHtml(p.name)}</div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="btn btn-primary btn-sm" style="font-size:10px;flex:1" onclick="window.open('${escHtml(p.url)}','_blank')">在Overleaf中打开</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:10px;color:#dc2626;padding:2px 6px" onclick="wrDeleteOlProject('${p.id}')" title="删除">🗑</button>
+      </div>
+    </div>`).join('')
+}
+
+// ── Account badge ──
+function renderOlAccountBadge(){
+  const acc=ld(WR_OL_ACC_KEY)||{}
+  const nameEl=document.getElementById('wr-ol-name')
+  const emailEl=document.getElementById('wr-ol-email')
+  if(nameEl)nameEl.textContent=acc.name||'未连接 Overleaf'
+  if(emailEl)emailEl.textContent=acc.email||''
+}
+
+// ── New doc ──
+function wrNewDoc(){
+  const docs=ld(WR_DOCS_KEY)||[]
+  const d={
+    id:uid(),
+    title:'新草稿 '+(docs.length+1),
+    content:'',
+    created:today(),
+    updated:today()
+  }
+  docs.unshift(d)
+  sv(WR_DOCS_KEY,docs)
+  renderWrDocsList()
+  wrOpenDoc(d.id)
+}
+
+// ── Open doc ──
+function wrOpenDoc(id){
+  const docs=ld(WR_DOCS_KEY)||[]
+  const d=docs.find(x=>x.id===id)
+  if(!d)return
+  _wrCurrentDocId=id
+  const titleEl=document.getElementById('wr-doc-title')
+  const editorEl=document.getElementById('wr-editor')
+  if(titleEl)titleEl.value=d.title||''
+  if(editorEl){
+    editorEl.value=d.content||''
+    _wrUpdateCounts(editorEl)
+  }
+  renderWrDocsList()
+  wrRenderPreview()
+  const saveStatus=document.getElementById('wr-save-status')
+  if(saveStatus)saveStatus.textContent=''
+}
+
+// ── Save doc ──
+function wrSaveDoc(){
+  if(!_wrCurrentDocId)return
+  const docs=ld(WR_DOCS_KEY)||[]
+  const idx=docs.findIndex(x=>x.id===_wrCurrentDocId)
+  if(idx===-1)return
+  const editorEl=document.getElementById('wr-editor')
+  const titleEl=document.getElementById('wr-doc-title')
+  docs[idx].content=editorEl?editorEl.value:docs[idx].content
+  docs[idx].title=titleEl?titleEl.value:docs[idx].title
+  docs[idx].updated=today()
+  sv(WR_DOCS_KEY,docs)
+  renderWrDocsList()
+  const saveStatus=document.getElementById('wr-save-status')
+  if(saveStatus){
+    saveStatus.textContent='✓ 已保存'
+    setTimeout(()=>{if(saveStatus)saveStatus.textContent=''},2000)
+  }
+}
+
+// ── Delete doc ──
+function wrDeleteDoc(){
+  if(!_wrCurrentDocId)return
+  if(!confirm('确定删除此草稿？此操作不可撤销。'))return
+  let docs=ld(WR_DOCS_KEY)||[]
+  docs=docs.filter(x=>x.id!==_wrCurrentDocId)
+  sv(WR_DOCS_KEY,docs)
+  _wrCurrentDocId=null
+  const titleEl=document.getElementById('wr-doc-title')
+  const editorEl=document.getElementById('wr-editor')
+  const previewEl=document.getElementById('wr-preview-area')
+  if(titleEl)titleEl.value=''
+  if(editorEl)editorEl.value=''
+  if(previewEl)previewEl.innerHTML=''
+  _wrUpdateCounts(null)
+  renderWrDocsList()
+  toast('草稿已删除','success')
+}
+
+// ── Title changed ──
+function wrDocTitleChanged(){
+  if(!_wrCurrentDocId)return
+  clearTimeout(_wrAutoSaveTimer)
+  _wrAutoSaveTimer=setTimeout(wrSaveDoc,800)
+}
+
+// ── On edit (debounced autosave + preview) ──
+function wrOnEdit(ta){
+  _wrUpdateCounts(ta)
+  clearTimeout(_wrAutoSaveTimer)
+  _wrAutoSaveTimer=setTimeout(wrSaveDoc,800)
+  clearTimeout(_wrPreviewTimer)
+  _wrPreviewTimer=setTimeout(wrRenderPreview,300)
+}
+
+function _wrUpdateCounts(ta){
+  const charEl=document.getElementById('wr-char-count')
+  const lineEl=document.getElementById('wr-line-count')
+  if(!ta){
+    if(charEl)charEl.textContent='0 字符'
+    if(lineEl)lineEl.textContent='0 行'
+    return
+  }
+  const v=ta.value||''
+  if(charEl)charEl.textContent=v.length+' 字符'
+  if(lineEl)lineEl.textContent=v.split('\n').length+' 行'
+}
+
+// ── Key handler ──
+function wrHandleKey(e){
+  const ta=e.target
+  if(e.key==='Tab'){
+    e.preventDefault()
+    const s=ta.selectionStart,en=ta.selectionEnd
+    ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(en)
+    ta.selectionStart=ta.selectionEnd=s+2
+    wrOnEdit(ta)
+  }else if((e.ctrlKey||e.metaKey)&&e.key==='s'){
+    e.preventDefault()
+    wrSaveDoc()
+  }
+}
+
+// ── Insert wrapper ──
+function wrInsert(before,after){
+  const ta=document.getElementById('wr-editor')
+  if(!ta)return
+  ta.focus()
+  const s=ta.selectionStart,en=ta.selectionEnd
+  const sel=ta.value.slice(s,en)
+  const ins=before+sel+after
+  ta.value=ta.value.slice(0,s)+ins+ta.value.slice(en)
+  if(sel){
+    ta.selectionStart=s+before.length
+    ta.selectionEnd=s+before.length+sel.length
+  }else{
+    ta.selectionStart=ta.selectionEnd=s+before.length
+  }
+  wrOnEdit(ta)
+}
+
+// ── Insert table ──
+function wrInsertTable(){
+  const tbl=`\n\\begin{table}[h]\n\\centering\n\\caption{表格标题}\n\\label{tab:example}\n\\begin{tabular}{|c|c|c|}\n\\hline\n列1 & 列2 & 列3 \\\\\\\\\n\\hline\n数据1 & 数据2 & 数据3 \\\\\\\\\n数据4 & 数据5 & 数据6 \\\\\\\\\n\\hline\n\\end{tabular}\n\\end{table}\n`
+  wrInsert(tbl,'')
+}
+
+// ── Export .tex ──
+function wrExportTex(){
+  if(!_wrCurrentDocId){toast('请先打开一个草稿','warning');return}
+  const docs=ld(WR_DOCS_KEY)||[]
+  const d=docs.find(x=>x.id===_wrCurrentDocId)
+  if(!d)return
+  const blob=new Blob([d.content||''],{type:'text/plain;charset=utf-8'})
+  const url=URL.createObjectURL(blob)
+  const a=document.createElement('a')
+  a.href=url
+  a.download=(d.title||'draft').replace(/[^a-zA-Z0-9\u4e00-\u9fa5_\-]/g,'_')+'.tex'
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url)},500)
+  toast('已导出 .tex 文件','success')
+}
+
+// ── Render preview ──
+function wrRenderPreview(){
+  const ta=document.getElementById('wr-editor')
+  const preEl=document.getElementById('wr-preview-area')
+  if(!ta||!preEl)return
+  let raw=ta.value||''
+  if(!raw.trim()){preEl.innerHTML='<div style="color:var(--text2);font-size:13px;text-align:center;padding-top:40px">开始编写后预览将实时更新</div>';return}
+
+  // split into segments for safe math handling
+  // Process: extract math blocks first, replace with placeholders, then escape HTML on text, restore math
+  const mathBlocks=[]
+  let idx=0
+
+  // replace $$...$$ block math
+  let processed=raw.replace(/\$\$([\s\S]*?)\$\$/g,(match,inner)=>{
+    const ph=`\x00MATH_BLOCK_${idx}\x00`
+    mathBlocks.push({ph,inner:inner.trim(),block:true})
+    idx++
+    return ph
+  })
+  // replace $...$ inline math (not already replaced)
+  processed=processed.replace(/\$([^$\n]+?)\$/g,(match,inner)=>{
+    const ph=`\x00MATH_INLINE_${idx}\x00`
+    mathBlocks.push({ph,inner:inner.trim(),block:false})
+    idx++
+    return ph
+  })
+
+  // escape HTML on the rest
+  let html=processed
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+
+  // LaTeX structure transformations (after escaping)
+  html=html
+    .replace(/\\section\{([^}]*)\}/g,'<h2>$1</h2>')
+    .replace(/\\subsection\{([^}]*)\}/g,'<h3>$1</h3>')
+    .replace(/\\subsubsection\{([^}]*)\}/g,'<h4 style="font-size:13px;font-weight:700;margin:10px 0 4px">$1</h4>')
+    .replace(/\\textbf\{([^}]*)\}/g,'<strong>$1</strong>')
+    .replace(/\\textit\{([^}]*)\}/g,'<em>$1</em>')
+    .replace(/\\emph\{([^}]*)\}/g,'<em>$1</em>')
+    .replace(/\\underline\{([^}]*)\}/g,'<u>$1</u>')
+    .replace(/\\footnote\{([^}]*)\}/g,'<sup style="font-size:10px;color:var(--text2)" title="$1">[注]</sup>')
+    .replace(/\\label\{([^}]*)\}/g,'')
+    .replace(/\\ref\{([^}]*)\}/g,'<span style="color:var(--primary)">[ref:$1]</span>')
+    .replace(/\\cite\{([^}]*)\}/g,'<span style="color:var(--primary)">[cite:$1]</span>')
+    .replace(/\\begin\{equation\}([\s\S]*?)\\end\{equation\}/g,'<div class="wr-math-block">$1</div>')
+    .replace(/\\begin\{align\*?\}([\s\S]*?)\\end\{align\*?\}/g,'<div class="wr-math-block">$1</div>')
+    .replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g,(m,inner)=>'<ul style="margin:8px 0 8px 20px">'+inner.replace(/\\item\s*/g,'<li>').replace(/<li>([^<]*)/g,'<li>$1</li>')+'</ul>')
+    .replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g,(m,inner)=>'<ol style="margin:8px 0 8px 20px">'+inner.replace(/\\item\s*/g,'<li>').replace(/<li>([^<]*)/g,'<li>$1</li>')+'</ol>')
+    .replace(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/g,'<div style="background:var(--surface2);border-left:3px solid var(--primary);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:13px"><strong>Abstract</strong><br>$1</div>')
+    // comment lines
+    .replace(/(^|\n)([ \t]*%[^\n]*)/g,(m,pre,line)=>pre+'<span class="wr-comment">'+line+'</span>')
+    // double newline → paragraph
+    .replace(/\n\n+/g,'</p><p style="margin:0 0 8px">')
+
+  html='<p style="margin:0 0 8px">'+html+'</p>'
+
+  // restore math placeholders
+  for(const m of mathBlocks){
+    const escapedPh=m.ph.replace(/\x00/g,'\\x00')
+    let rendered
+    if(_katexLoaded&&window.katex){
+      try{
+        rendered=window.katex.renderToString(m.inner,{throwOnError:false,displayMode:m.block})
+      }catch(e){
+        rendered='<code style="color:#dc2626">'+escHtml(m.inner)+'</code>'
+      }
+    }else{
+      rendered=m.block
+        ?'<div class="wr-math-block"><code>'+escHtml(m.inner)+'</code></div>'
+        :'<code style="background:var(--surface2);padding:1px 4px;border-radius:3px">'+escHtml(m.inner)+'</code>'
+    }
+    if(m.block){
+      rendered='<div class="wr-math-block">'+rendered+'</div>'
+    }
+    html=html.split(m.ph).join(rendered)
+  }
+
+  preEl.innerHTML=html
+}
+
+// ── Add Overleaf project ──
+function wrAddOlProject(){
+  const name=prompt('项目名称：')
+  if(!name||!name.trim())return
+  const url=prompt('Overleaf 项目链接（如 https://www.overleaf.com/project/xxx）：')
+  if(!url||!url.trim())return
+  const projects=ld(WR_OL_PROJ_KEY)||[]
+  projects.push({id:uid(),name:name.trim(),url:url.trim(),created:today()})
+  sv(WR_OL_PROJ_KEY,projects)
+  renderOlProjectsList()
+  toast('项目已添加','success')
+}
+
+// ── Delete Overleaf project ──
+function wrDeleteOlProject(id){
+  if(!confirm('确定删除此 Overleaf 项目？'))return
+  let projects=ld(WR_OL_PROJ_KEY)||[]
+  projects=projects.filter(p=>p.id!==id)
+  sv(WR_OL_PROJ_KEY,projects)
+  renderOlProjectsList()
+  toast('项目已删除','success')
+}
+
+// ── Account settings modal ──
+function wrOpenAccountSettings(){
+  const acc=ld(WR_OL_ACC_KEY)||{}
+  const nameEl=document.getElementById('wr-acc-name')
+  const emailEl=document.getElementById('wr-acc-email')
+  const profileEl=document.getElementById('wr-acc-profile')
+  if(nameEl)nameEl.value=acc.name||''
+  if(emailEl)emailEl.value=acc.email||''
+  if(profileEl)profileEl.value=acc.profile||''
+  const modal=document.getElementById('wr-account-modal')
+  if(modal){modal.style.display='flex'}
+}
+
+function wrSaveAccount(){
+  const nameEl=document.getElementById('wr-acc-name')
+  const emailEl=document.getElementById('wr-acc-email')
+  const profileEl=document.getElementById('wr-acc-profile')
+  const acc={
+    name:(nameEl?nameEl.value:'').trim(),
+    email:(emailEl?emailEl.value:'').trim(),
+    profile:(profileEl?profileEl.value:'').trim()
+  }
+  sv(WR_OL_ACC_KEY,acc)
+  renderOlAccountBadge()
+  const modal=document.getElementById('wr-account-modal')
+  if(modal)modal.style.display='none'
+  toast('账户信息已保存','success')
+}
+
+// ── Lazy-load KaTeX ──
+function _ensureKatex(){
+  if(_katexLoaded||_katexLoading)return
+  _katexLoading=true
+  const link=document.createElement('link')
+  link.rel='stylesheet'
+  link.href='https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css'
+  document.head.appendChild(link)
+  const script=document.createElement('script')
+  script.src='https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js'
+  script.onload=()=>{
+    _katexLoaded=true
+    _katexLoading=false
+    // re-render preview if editor has content
+    const ta=document.getElementById('wr-editor')
+    if(ta&&ta.value.trim())wrRenderPreview()
+  }
+  script.onerror=()=>{_katexLoading=false}
+  document.head.appendChild(script)
 }
 
 // ── 文献列表左栏拖拽调宽 ──
