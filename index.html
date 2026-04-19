@@ -616,7 +616,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="nav-group">主要</div>
     <div class="nav-item active" data-page="overview"><span class="nav-icon">📊</span>今日概览</div>
     <div class="nav-item" data-page="tasks"><span class="nav-icon">✅</span>任务管理</div>
-    <div class="nav-item" data-page="focus"><span class="nav-icon">🍅</span>专注计时</div>
+    <div class="nav-item" data-page="focus"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" style="vertical-align:-3px"><path d="M12 3L6 16A6 6 0 0018 16Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 19Q10 17 12 19Q14 21 16 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>心流时光</div>
     <div class="nav-item" data-page="habits"><span class="nav-icon">🔥</span>习惯打卡</div>
     <div class="nav-group">科研</div>
     <div class="nav-item" data-page="submissions"><span class="nav-icon">📖</span>文献 & 投稿</div>
@@ -674,7 +674,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   </div>
   <div class="grid-4 mb-16">
     <div class="stat-card stat-purple"><div class="stat-value" id="s-tasks">0</div><div class="stat-label">今日完成任务</div></div>
-    <div class="stat-card stat-green"><div class="stat-value" id="s-pomos">0</div><div class="stat-label">番茄钟数</div></div>
+    <div class="stat-card stat-green"><div class="stat-value" id="s-pomos">0</div><div class="stat-label">心流时段</div></div>
     <div class="stat-card stat-orange"><div class="stat-value" id="s-habits">0/0</div><div class="stat-label">习惯完成</div></div>
     <div class="stat-card stat-blue"><div class="stat-value" id="s-streak">0</div><div class="stat-label">连续打卡天</div></div>
   </div>
@@ -822,7 +822,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
 <!-- ── Focus ── -->
 <div class="page" id="page-focus">
-  <div class="page-title">专注计时</div>
+  <div class="page-title">心流时光</div>
   <div class="page-subtitle">番茄工作法</div>
   <div class="grid-2">
     <div class="card">
@@ -1056,7 +1056,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
             <span style="font-weight:700;font-size:14px;color:var(--primary)">今日工作简报</span>
             <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(16,185,129,0.15);color:#10b981">▶ 点击运行</span>
           </div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.6">自动采集今日任务、番茄钟、习惯完成情况，AI 生成可编辑工作简报，一键保存到本地</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">自动采集今日任务、心流时光、习惯完成情况，AI 生成可编辑工作简报，一键保存到本地</div>
         </div>
       </div>
     </div>
@@ -1127,7 +1127,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
   <div class="page-subtitle">数据驱动科研节奏</div>
   <div class="grid-2 mb-16">
     <div class="card"><div class="card-title">近7天完成任务</div><div class="chart-wrap"><canvas id="ch-tasks"></canvas></div></div>
-    <div class="card"><div class="card-title">近7天番茄钟</div><div class="chart-wrap"><canvas id="ch-pomos"></canvas></div></div>
+    <div class="card"><div class="card-title">近7天心流时光</div><div class="chart-wrap"><canvas id="ch-pomos"></canvas></div></div>
   </div>
   <div class="grid-2">
     <div class="card"><div class="card-title">任务项目分布</div><div class="chart-wrap"><canvas id="ch-projs"></canvas></div></div>
@@ -2666,7 +2666,7 @@ function togglePomo(){
           list.push({id:uid(),date:today(),taskId:pomo.taskId,taskTitle:pomo.taskTitle,
             dur:parseInt(document.getElementById('pomo-work')?.value||25),ts:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
           sv(K.pomos,list);pomo.round=(pomo.round+1)%4;
-          toast('🍅 专注完成！');renderPomoLog();updateStats();
+          toast('🌊 心流完成！');renderPomoLog();updateStats();
           if(pomo.taskId){const tasks=ld(K.tasks),t=tasks.find(t=>t.id===pomo.taskId);if(t){t.pomos=(t.pomos||0)+1;sv(K.tasks,tasks);}}
         }else{toast('✅ 休息结束！继续加油！');}
         pomo.isBreak=!pomo.isBreak;
@@ -2682,8 +2682,8 @@ function resetPomo(){clearInterval(pomo.iv);pomo={running:false,isBreak:false,se
 function renderPomoLog(){
   const el=document.getElementById('pomo-log');if(!el)return;
   const list=ld(K.pomos).filter(p=>p.date===today()).reverse();
-  el.innerHTML=list.length?list.map(p=>`<div class="pomo-hist-item"><span>🍅 ${p.taskTitle||'自由专注'}</span><span class="text-muted">${p.ts} · ${p.dur}min</span></div>`).join('')
-    :'<div class="empty-state"><div class="icon">🍅</div><p>今日暂无记录</p></div>';
+  el.innerHTML=list.length?list.map(p=>`<div class="pomo-hist-item"><span>🌊 ${p.taskTitle||'自由心流'}</span><span class="text-muted">${p.ts} · ${p.dur}min</span></div>`).join('')
+    :'<div class="empty-state"><div class="icon">🌊</div><p>今日暂无心流记录</p></div>';
 }
 function updatePomoTaskSel(){
   const sel=document.getElementById('pomo-task-sel');if(!sel)return;
@@ -3004,7 +3004,7 @@ function renderCharts(){
             y:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'},beginAtZero:true}}};
   const tasks=ld(K.tasks),pomos=ld(K.pomos),cks=ld(K.checkins);
   new Chart(document.getElementById('ch-tasks'),{type:'bar',data:{labels,datasets:[{label:'任务',data:days.map(d=>tasks.filter(t=>t.done===d).length),backgroundColor:'rgba(124,58,237,.5)',borderColor:'#7c3aed',borderWidth:1,borderRadius:4}]},options:cOpts});
-  new Chart(document.getElementById('ch-pomos'),{type:'bar',data:{labels,datasets:[{label:'番茄钟',data:days.map(d=>pomos.filter(p=>p.date===d).length),backgroundColor:'rgba(239,68,68,.4)',borderColor:'#ef4444',borderWidth:1,borderRadius:4}]},options:cOpts});
+  new Chart(document.getElementById('ch-pomos'),{type:'bar',data:{labels,datasets:[{label:'心流时光',data:days.map(d=>pomos.filter(p=>p.date===d).length),backgroundColor:'rgba(239,68,68,.4)',borderColor:'#ef4444',borderWidth:1,borderRadius:4}]},options:cOpts});
   // Projects pie
   const projs=getProjects(),pcnts={};tasks.filter(t=>t.status==='done').forEach(t=>{pcnts[t.proj]=(pcnts[t.proj]||0)+1;});
   const pLabels=projs.map(p=>p.name),pData=projs.map(p=>pcnts[p.id]||0),pColors=projs.map(p=>p.color);
@@ -3850,7 +3850,7 @@ function openDailyBrief(){
     const chips=[
       {icon:'✅',label:`完成任务 ${doneTasks.length} 项`,color:'#10b981'},
       {icon:'⏳',label:`进行中 ${activeTasks.length} 项`,color:'#f59e0b'},
-      {icon:'🍅',label:`番茄 ${pomos.length} 个 · ${pomoDur}min`,color:'#ef4444'},
+      {icon:'🌊',label:`心流 ${pomos.length} 段 · ${pomoDur}min`,color:'#ef4444'},
       {icon:'🌱',label:`习惯 ${doneHabits.length}/${defs.length}`,color:'#3b82f6'},
       {icon:'📍',label:checkin?'已打卡':'未打卡',color:checkin?'#10b981':'#6b7280'},
     ]
@@ -3893,7 +3893,7 @@ async function generateDailyBrief(){
     `【进行中任务】`,
     activeTasks.length?activeTasks.slice(0,6).map(t=>`- ${t.title||''}`).join('\n'):'（无）',
     '',
-    `【番茄钟】${pomos.length} 个，约 ${pomoDur} 分钟深度工作`,
+    `【心流时光】${pomos.length} 段，约 ${pomoDur} 分钟深度心流`,
     `【习惯完成】${doneHabits.length}/${defs.length}（${doneHabits.map(h=>h.emoji+h.name).join('、')||'无'}）`,
     `【打卡备注】${checkin?.note||checkin?.notes||'无'}`,
     '',
@@ -6186,7 +6186,7 @@ ${_prmChatHistory.length?'\n对话历史（最近2轮）：\n'+_prmChatHistory.s
   log.scrollTop=log.scrollHeight
 }
 
-// 番茄钟联动
+// 心流时光联动
 function prm_startPomo(){
   if(!_prmPaper)return
   const title=('📖 阅读：'+((_prmPaper.title||'').slice(0,30))).trim()
@@ -6205,7 +6205,7 @@ function prm_startPomo(){
     updatePomoTaskSel()
     const sel=document.getElementById('pomo-task-sel')
     if(sel)for(let i=0;i<sel.options.length;i++){if(sel.options[i].value===readTask.id){sel.selectedIndex=i;break}}
-    toast('已切换到专注页，任务已设置为「'+title+'」')
+    toast('🌊 已切换到心流时光，任务已设置为「'+title+'」')
   },300)
 }
 
@@ -6231,7 +6231,7 @@ function prm_addToDaily(){
   // 如果 pomodoro 正在运行，也记录到 pomo 日志
   if(pomo.running){
     pomo.taskTitle='📖 '+p.title.slice(0,25)
-    toast('已同步至番茄钟任务名称')
+    toast('已同步至心流任务名称')
   }
 }
 
