@@ -477,6 +477,23 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 #prm-chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;min-height:0}
 #prm-chat-input-row{display:flex;gap:6px;padding-top:8px;border-top:1px solid var(--border);flex-shrink:0}
 #prm-chat-input{flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)}
+/* ── Annotation ── */
+#prm-sel-toolbar{position:fixed;z-index:2000;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);padding:6px 10px;display:none;align-items:center;gap:6px}
+.prm-hl-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
+.prm-hl-dot:hover{transform:scale(1.25);border-color:rgba(0,0,0,.3)}
+.prm-ann-btn{font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text);white-space:nowrap}
+.prm-ann-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+.prm-hl-card{border-radius:8px;padding:10px 12px;margin-bottom:8px;position:relative;border-left:4px solid;background:var(--bg)}
+.prm-hl-text{font-style:italic;font-size:12px;line-height:1.6;margin-bottom:4px;color:var(--text)}
+.prm-hl-comment{font-size:11px;font-weight:600;color:var(--primary);margin-bottom:4px;padding:4px 6px;background:var(--primary-soft);border-radius:4px}
+.prm-hl-ts{font-size:10px;color:var(--text2)}
+.annotatable mark{border-radius:2px;padding:0 2px;cursor:pointer}
+mark.hl-yellow{background:#fef08a;color:#713f12}
+mark.hl-green{background:#bbf7d0;color:#14532d}
+mark.hl-blue{background:#bfdbfe;color:#1e3a5f}
+mark.hl-pink{background:#fecdd3;color:#881337}
+.dp-note-preview{font-size:11px;color:var(--text2);margin-top:3px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dp-ann-badge{display:inline-flex;align-items:center;gap:2px;font-size:10px;padding:1px 5px;border-radius:8px;background:var(--primary-soft);color:var(--primary);margin-top:3px;margin-right:3px}
 /* ── Research Two-column Layout ── */
 .research-layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
 .research-list-col{min-width:0}
@@ -5875,17 +5892,21 @@ function renderPapersPage(){
   // 用 ID 索引代替 JSON-in-HTML-attribute，避免引号冲突
   window._dpLibMap={}
   filtered.forEach(p=>{window._dpLibMap[p.id]=p})
+  const _allNotes=_ldAllNotes()
+  const _allHl=_ldAllHl()
   listEl.innerHTML=filtered.map(p=>{
-    const hasNotes=!!(_ldAllNotes()[p.id])
+    const notes=_allNotes[p.id]||''
+    const hls=_allHl[p.id]||[]
+    const notePreview=notes.replace(/[#*`>\-]/g,'').trim().slice(0,80)
     return`<div class="dp-lib-row" onclick="openPaperReader('${escHtml(p.id)}')">
       <div style="flex:1;min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.title)}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px">${escHtml(p.area||'')} · ${escHtml(p.date||'')} · ${escHtml((p.authors||'').slice(0,40))}</div>
+        ${notePreview?`<div class="dp-note-preview">📝 ${escHtml(notePreview)}${notes.length>80?'…':''}</div>`:''}
+        ${hls.length?`<span class="dp-ann-badge">🖊 ${hls.length}条批注</span>`:''}
       </div>
-      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px">
-        ${hasNotes?'<span title="有笔记" style="font-size:12px">📝</span>':''}
+      <div style="display:flex;align-items:flex-start;gap:4px;flex-shrink:0;margin-left:8px;padding-top:2px">
         <span class="dp-score">⭐${p.score||0}</span>
-        ${p.pdf_url?`<button class="btn btn-sm" style="padding:2px 7px;font-size:10px;color:#dc2626;border:1px solid #dc2626;background:transparent" title="打开阅读器" onclick="event.stopPropagation();openPaperReader('${escHtml(p.id)}')">PDF</button>`:''}
         <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:12px;color:var(--text2)" title="删除" onclick="event.stopPropagation();delFromLib('${escHtml(p.id)}')">🗑</button>
       </div>
     </div>`
@@ -6003,12 +6024,140 @@ function saveAddPaper(){
 //  PAPER READER MODAL
 // ══════════════════════════════════════
 const _PRM_NOTES_KEY='_pnotes_v1'
+const _PRM_HL_KEY='_phl_v1'
 let _prmPaper=null
 let _prmChatHistory=[]
-let _prmViewMode='auto' // 'ar5iv'|'pdf'|'abstract'
+let _prmViewMode='auto'
+let _prmSelText=''  // 当前选中文本缓存
 
+// ── Notes storage ──
 function _ldAllNotes(){try{return JSON.parse(localStorage.getItem(_PRM_NOTES_KEY)||'{}')}catch{return{}}}
 function _svAllNotes(o){localStorage.setItem(_PRM_NOTES_KEY,JSON.stringify(o))}
+
+// ── Highlights storage ──
+function _ldAllHl(){try{return JSON.parse(localStorage.getItem(_PRM_HL_KEY)||'{}')}catch{return{}}}
+function _svAllHl(o){localStorage.setItem(_PRM_HL_KEY,JSON.stringify(o))}
+function _ldPaperHl(id){return(_ldAllHl()[id]||[])}
+function _svPaperHl(id,arr){const all=_ldAllHl();if(arr.length)all[id]=arr;else delete all[id];_svAllHl(all)}
+
+// ── 标注工具栏 ──
+function prm_onAbstractMouseup(e){
+  const sel=window.getSelection()
+  const text=(sel?.toString()||'').trim()
+  if(!text||text.length<2){prm_hideSelToolbar();return}
+  _prmSelText=text
+  const toolbar=document.getElementById('prm-sel-toolbar')
+  // 定位在选区末尾正上方
+  const range=sel.getRangeAt(0)
+  const rect=range.getBoundingClientRect()
+  const tw=toolbar.offsetWidth||200
+  let left=rect.left+(rect.width/2)-(tw/2)
+  left=Math.max(8,Math.min(left,window.innerWidth-tw-8))
+  toolbar.style.left=left+'px'
+  toolbar.style.top=(rect.top+window.scrollY-48)+'px'
+  toolbar.style.display='flex'
+}
+function prm_hideSelToolbar(){
+  document.getElementById('prm-sel-toolbar').style.display='none'
+  _prmSelText=''
+}
+// 点击其他地方关闭工具栏
+document.addEventListener('mousedown',function(e){
+  if(!e.target.closest('#prm-sel-toolbar'))prm_hideSelToolbar()
+})
+
+function prm_addHighlight(cls,color){
+  const text=_prmSelText;if(!text||!_prmPaper)return
+  prm_hideSelToolbar()
+  const hl={id:'hl_'+Date.now(),text,cls,color,comment:'',ts:today()}
+  const arr=_ldPaperHl(_prmPaper.id)
+  // 防止重复添加同一段文字
+  if(!arr.find(h=>h.text===text)){
+    arr.push(hl)
+    _svPaperHl(_prmPaper.id,arr)
+  }
+  prm_renderAbstractWithHighlights()
+  prm_renderHighlightsPanel()
+  window.getSelection()?.removeAllRanges()
+  // 自动切换到批注 Tab
+  prm_switchTab('highlights',document.querySelectorAll('.prm-stab')[1])
+}
+
+function prm_addHighlightWithNote(){
+  const text=_prmSelText;if(!text||!_prmPaper)return
+  prm_hideSelToolbar()
+  // 用 inline prompt 输入批注文字
+  const comment=prompt('为选中文字「'+text.slice(0,30)+(text.length>30?'...':'')+'」添加批注：','')
+  if(comment===null)return  // 取消
+  const hl={id:'hl_'+Date.now(),text,cls:'yellow',color:'#fef08a',comment:comment.trim(),ts:today()}
+  const arr=_ldPaperHl(_prmPaper.id)
+  arr.push(hl)
+  _svPaperHl(_prmPaper.id,arr)
+  prm_renderAbstractWithHighlights()
+  prm_renderHighlightsPanel()
+  window.getSelection()?.removeAllRanges()
+  prm_switchTab('highlights',document.querySelectorAll('.prm-stab')[1])
+}
+
+function prm_deleteHighlight(hlId){
+  if(!_prmPaper)return
+  const arr=_ldPaperHl(_prmPaper.id).filter(h=>h.id!==hlId)
+  _svPaperHl(_prmPaper.id,arr)
+  prm_renderAbstractWithHighlights()
+  prm_renderHighlightsPanel()
+}
+
+// 把摘要文本 + 已保存高亮重新渲染到 DOM
+function prm_renderAbstractWithHighlights(){
+  const p=_prmPaper;if(!p)return
+  const el=document.getElementById('prm-fb-abstract');if(!el)return
+  const hls=_ldPaperHl(p.id)
+  let html=escHtml(p.abstract||'暂无摘要')
+  // 按文本长度降序处理，优先匹配较长的引用（避免短串提前截断）
+  const sorted=[...hls].sort((a,b)=>b.text.length-a.text.length)
+  sorted.forEach(h=>{
+    const safe=h.text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
+    html=html.replace(new RegExp(safe.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),'g'),
+      `<mark class="hl-${h.cls}" style="background:${h.color}" data-hlid="${h.id}" title="${h.comment?'批注：'+escHtml(h.comment):''}">${escHtml(h.text)}</mark>`)
+  })
+  el.innerHTML=html
+}
+
+// 渲染批注侧边栏面板
+function prm_renderHighlightsPanel(){
+  const p=_prmPaper
+  const listEl=document.getElementById('prm-hl-list')
+  const emptyEl=document.getElementById('prm-hl-empty')
+  if(!listEl||!p)return
+  const hls=_ldPaperHl(p.id)
+  if(!hls.length){
+    listEl.innerHTML='';emptyEl.style.display='block';return
+  }
+  emptyEl.style.display='none'
+  listEl.innerHTML=hls.map(h=>`
+    <div class="prm-hl-card" style="border-left-color:${h.color}">
+      <div class="prm-hl-text">"${escHtml(h.text)}"</div>
+      ${h.comment?`<div class="prm-hl-comment">📝 ${escHtml(h.comment)}</div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+        <span class="prm-hl-ts">${h.ts||''}</span>
+        <div style="display:flex;gap:4px">
+          <button class="prm-ann-btn" onclick="prm_editHighlightComment('${h.id}')">编辑批注</button>
+          <button class="prm-ann-btn" style="color:#ef4444;border-color:#ef4444" onclick="prm_deleteHighlight('${h.id}')">删除</button>
+        </div>
+      </div>
+    </div>`).join('')
+}
+
+function prm_editHighlightComment(hlId){
+  if(!_prmPaper)return
+  const arr=_ldPaperHl(_prmPaper.id)
+  const hl=arr.find(h=>h.id===hlId);if(!hl)return
+  const newComment=prompt('修改批注（留空则删除批注文字）：',hl.comment)
+  if(newComment===null)return
+  hl.comment=newComment.trim()
+  _svPaperHl(_prmPaper.id,arr)
+  prm_renderHighlightsPanel()
+}
 
 function openPaperReader(id){
   const p=(window._dpLibMap&&window._dpLibMap[id])||_ldPapLib().find(x=>x.id===id)
@@ -6037,6 +6186,8 @@ function openPaperReader(id){
   prm_switchTab('notes',document.querySelector('.prm-stab'))
   // 加载阅读器（默认摘要，不自动嵌入 PDF）
   _prmLoadViewer()
+  // 渲染批注面板
+  prm_renderHighlightsPanel()
   document.body.style.overflow='hidden'
   // 注册 history state，使浏览器「返回」关闭 modal 而非离开 app
   history.pushState({prmOpen:true},'')
@@ -6113,7 +6264,7 @@ function prm_switchView(mode){
     label.textContent=p.arxiv_id?'摘要视图 · 点击「加载 HTML 版」可嵌入阅读':'摘要视图'
     document.getElementById('prm-fb-title').textContent=p.title
     document.getElementById('prm-fb-meta').textContent=[p.venue,p.date,(p.authors||'').slice(0,80)].filter(Boolean).join(' · ')
-    document.getElementById('prm-fb-abstract').textContent=p.abstract||'暂无摘要'
+    prm_renderAbstractWithHighlights()  // 带高亮重新渲染摘要
     const linksHtml=[
       p.url?`<a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 摘要页</a>`:'',
       p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600">📄 在新标签页打开 PDF</a>`:''
@@ -6558,7 +6709,8 @@ function _prefillFromAI(btn){
       <div id="prm-viewer-fallback">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--primary)" id="prm-fb-title"></div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:12px" id="prm-fb-meta"></div>
-        <div style="font-size:13px;line-height:1.8;color:var(--text);background:var(--surface2);padding:14px;border-radius:8px;border-left:3px solid var(--primary)" id="prm-fb-abstract"></div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text);background:var(--surface2);padding:14px;border-radius:8px;border-left:3px solid var(--primary);cursor:text;user-select:text" id="prm-fb-abstract" class="annotatable" onmouseup="prm_onAbstractMouseup(event)"></div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:right">💡 选中文字可划线标注</div>
         <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap" id="prm-fb-links"></div>
       </div>
     </div>
@@ -6566,7 +6718,8 @@ function _prefillFromAI(btn){
     <div id="prm-sidebar">
       <div class="prm-stab-bar">
         <div class="prm-stab active" onclick="prm_switchTab('notes',this)">📝 笔记</div>
-        <div class="prm-stab" onclick="prm_switchTab('ai',this)">🤖 AI 助手</div>
+        <div class="prm-stab" onclick="prm_switchTab('highlights',this)">🖊 批注</div>
+        <div class="prm-stab" onclick="prm_switchTab('ai',this)">🤖 AI</div>
       </div>
       <!-- 笔记 Tab -->
       <div class="prm-spanel active" id="prm-tab-notes">
@@ -6581,6 +6734,14 @@ function _prefillFromAI(btn){
         </div>
         <textarea id="prm-notes-area" placeholder="记录阅读笔记、关键贡献、与自己研究的联系...&#10;&#10;支持 Markdown 格式：**加粗** *斜体* - 列表 > 引用" oninput="prm_notesChanged()"></textarea>
         <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="prm_saveNotes()">💾 保存笔记</button>
+      </div>
+      <!-- 批注 Tab -->
+      <div class="prm-spanel" id="prm-tab-highlights">
+        <div style="font-size:11px;color:var(--text2);flex-shrink:0;padding:4px 2px">
+          在左侧摘要中选中文字，即可划线标注并添加批注文字。
+        </div>
+        <div id="prm-hl-list" style="flex:1;overflow-y:auto;min-height:0"></div>
+        <div id="prm-hl-empty" style="display:none;text-align:center;padding:30px 0;color:var(--text2);font-size:13px">暂无批注<br><span style="font-size:11px">在摘要中选中文字即可添加</span></div>
       </div>
       <!-- AI Tab -->
       <div class="prm-spanel" id="prm-tab-ai" style="padding-bottom:0">
@@ -6599,6 +6760,18 @@ function _prefillFromAI(btn){
       </div>
     </div>
   </div>
+</div>
+
+<!-- 文本标注浮动工具栏 -->
+<div id="prm-sel-toolbar">
+  <span style="font-size:10px;color:var(--text2);margin-right:2px">划线</span>
+  <div class="prm-hl-dot" style="background:#fef08a" title="黄色高亮" onclick="prm_addHighlight('yellow','#fef08a')"></div>
+  <div class="prm-hl-dot" style="background:#bbf7d0" title="绿色高亮" onclick="prm_addHighlight('green','#bbf7d0')"></div>
+  <div class="prm-hl-dot" style="background:#bfdbfe" title="蓝色高亮" onclick="prm_addHighlight('blue','#bfdbfe')"></div>
+  <div class="prm-hl-dot" style="background:#fecdd3" title="粉色高亮" onclick="prm_addHighlight('pink','#fecdd3')"></div>
+  <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
+  <button class="prm-ann-btn" onclick="prm_addHighlightWithNote()">📝 加批注</button>
+  <button class="prm-ann-btn" style="color:var(--text2)" onclick="prm_hideSelToolbar()">✕</button>
 </div>
 
 <div id="scan-timer-bar">
