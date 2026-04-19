@@ -6019,12 +6019,179 @@ function wrExportTex(){
 }
 
 // ── Render preview ──
+// ── ZIP 项目自定义命令解析与展开 ──
+
+// 用平衡括号解析器提取 {内容}，从 pos（即 '{' 之后的位置）开始
+function _wrBalancedBrace(s,pos){
+  let depth=1,start=pos,i=pos
+  while(i<s.length&&depth>0){
+    if(s[i]==='{')depth++
+    else if(s[i]==='}')depth--
+    i++
+  }
+  return{content:s.slice(start,i-1),end:i}
+}
+
+// 从一段 LaTeX 文本中解析 \newcommand / \newenvironment 定义
+function _wrParseDefs(text,cmds,envs){
+  // \newcommand* \renewcommand* \providecommand*
+  const re1=/\\(?:new|renew|provide)command\s*\*?\s*(?:\\([a-zA-Z@]+)|\{\\([a-zA-Z@]+)\})/g
+  let m
+  while((m=re1.exec(text))!==null){
+    const name=m[1]||m[2]
+    let pos=m.index+m[0].length
+    while(pos<text.length&&/[ \t\r\n]/.test(text[pos]))pos++
+    // optional [nargs]
+    let nargs=0
+    if(text[pos]==='['){
+      const cl=text.indexOf(']',pos+1)
+      if(cl>pos){nargs=parseInt(text.slice(pos+1,cl))||0;pos=cl+1}
+    }
+    while(pos<text.length&&/[ \t\r\n]/.test(text[pos]))pos++
+    // optional [default] – skip
+    if(text[pos]==='['){const cl=text.indexOf(']',pos+1);if(cl>pos)pos=cl+1}
+    while(pos<text.length&&/[ \t\r\n]/.test(text[pos]))pos++
+    if(text[pos]!=='{')continue
+    const{content:def,end}=_wrBalancedBrace(text,pos+1)
+    cmds[name]={nargs,def}
+    re1.lastIndex=end
+  }
+
+  // \newenvironment \renewenvironment
+  const re2=/\\(?:new|renew)environment\s*\{([a-zA-Z@*]+)\}/g
+  while((m=re2.exec(text))!==null){
+    const name=m[1]
+    let pos=m.index+m[0].length
+    while(pos<text.length&&/[ \t\r\n]/.test(text[pos]))pos++
+    // optional [nargs] – skip for simplicity
+    if(text[pos]==='['){const cl=text.indexOf(']',pos+1);if(cl>pos)pos=cl+1}
+    while(pos<text.length&&/[ \t\r\n]/.test(text[pos]))pos++
+    if(text[pos]!=='{')continue
+    const{content:begin,end:e1}=_wrBalancedBrace(text,pos+1);pos=e1
+    while(pos<text.length&&/[ \t\r\n]/.test(text[pos]))pos++
+    if(text[pos]!=='{')continue
+    const{content:endDef,end:e2}=_wrBalancedBrace(text,pos+1)
+    envs[name]={begin,end:endDef}
+    re2.lastIndex=e2
+  }
+}
+
+// 收集当前 ZIP 项目中所有 cls/sty 文件 + tex preamble 的自定义定义
+function _wrGetProjectDefs(){
+  const cmds={},envs={}
+  if(!_wrActiveZipId)return{cmds,envs}
+  const all=ld(WR_ZIP_KEY)||[]
+  const proj=all.find(p=>p.id===_wrActiveZipId)
+  if(!proj)return{cmds,envs}
+  for(const f of proj.files){
+    if(!f.content)continue
+    const ext=(f.path.match(/\.[^.]+$/)??[''])[0].toLowerCase()
+    if(ext==='.cls'||ext==='.sty'){
+      _wrParseDefs(f.content,cmds,envs)
+    }else if(ext==='.tex'){
+      // 仅解析 preamble（\begin{document} 之前）
+      const docIdx=f.content.indexOf('\\begin{document}')
+      _wrParseDefs(docIdx>=0?f.content.slice(0,docIdx):f.content,cmds,envs)
+    }
+  }
+  return{cmds,envs}
+}
+
+// 将自定义命令/环境展开到文本中
+function _wrExpandDefs(raw,cmds,envs){
+  // 先展开自定义环境
+  for(const[name,{begin,end}]of Object.entries(envs)){
+    try{
+      const re=new RegExp(`\\\\begin\\{${name.replace(/[*]/g,'\\*')}\\}([\\s\\S]*?)\\\\end\\{${name.replace(/[*]/g,'\\*')}\\}`,'g')
+      raw=raw.replace(re,(_,body)=>begin+body+end)
+    }catch{}
+  }
+  // 多轮展开自定义命令（支持命令嵌套定义）
+  for(let pass=0;pass<4;pass++){
+    let changed=false
+    for(const[name,{nargs,def}]of Object.entries(cmds)){
+      if(nargs===0){
+        const re=new RegExp(`\\\\${name}(?![a-zA-Z@])`,'g')
+        const before=raw
+        raw=raw.replace(re,def)
+        if(raw!==before)changed=true
+      }else{
+        // 手动扫描并展开带参数的命令
+        const marker=`\\${name}`
+        let i=0
+        while((i=raw.indexOf(marker,i))>=0){
+          // 确认不是更长的命令名
+          const nextCh=raw[i+marker.length]
+          if(nextCh&&/[a-zA-Z@]/.test(nextCh)){i+=marker.length;continue}
+          let pos=i+marker.length
+          while(pos<raw.length&&/[ \t\r\n]/.test(raw[pos]))pos++
+          const args=[]
+          for(let a=0;a<nargs;a++){
+            if(raw[pos]==='{'){ const{content,end}=_wrBalancedBrace(raw,pos+1);args.push(content);pos=end }
+            else if(raw[pos]==='['){ const cl=raw.indexOf(']',pos+1);args.push(cl>pos?raw.slice(pos+1,cl):'');pos=cl+1 }
+            else break
+            while(pos<raw.length&&/[ \t\r\n]/.test(raw[pos]))pos++
+          }
+          let expanded=def
+          for(let a=0;a<args.length;a++)expanded=expanded.replace(new RegExp('#'+(a+1),'g'),args[a])
+          raw=raw.slice(0,i)+expanded+raw.slice(pos)
+          changed=true
+          // 不移动 i，让下一轮处理展开结果中的嵌套命令
+          i+=expanded.length
+        }
+      }
+    }
+    if(!changed)break
+  }
+  return raw
+}
+
 function wrRenderPreview(){
   const ta=document.getElementById('wr-editor')
   const preEl=document.getElementById('wr-preview-area')
   if(!ta||!preEl)return
   let raw=ta.value||''
   if(!raw.trim()){preEl.innerHTML='<div style="color:var(--text2);font-size:13px;text-align:center;padding-top:40px">开始编写后预览将实时更新</div>';return}
+
+  // ── Step 0: ZIP 项目 —— 剥离 preamble + 展开 cls/sty 自定义命令 ──
+  if(_wrActiveZipId&&_wrActiveZipFile){
+    const ext=(_wrActiveZipFile.match(/\.[^.]+$/)??[''])[0].toLowerCase()
+    if(ext==='.tex'){
+      // 先从当前文件 preamble 解析本文件内 \newcommand
+      const localDefs={cmds:{},envs:{}}
+      const docIdx=raw.indexOf('\\begin{document}')
+      if(docIdx>=0)_wrParseDefs(raw.slice(0,docIdx),localDefs.cmds,localDefs.envs)
+      // 收集 cls/sty + 其他 tex preamble 的定义
+      const{cmds,envs}=_wrGetProjectDefs()
+      // 合并（本文件定义优先）
+      Object.assign(cmds,localDefs.cmds)
+      Object.assign(envs,localDefs.envs)
+      // 剥离 preamble：只渲染 \begin{document}...\end{document} 之间的内容
+      if(docIdx>=0){
+        const docEnd=raw.lastIndexOf('\\end{document}')
+        raw=docEnd>docIdx?raw.slice(docIdx+16,docEnd):raw.slice(docIdx+16)
+      }
+      // 展开自定义命令
+      raw=_wrExpandDefs(raw,cmds,envs)
+    }
+  }
+
+  // 额外清理：preamble 命令残留（非 ZIP 模式或 cls/sty 编辑时也生效）
+  raw=raw
+    .replace(/\\documentclass(?:\[[^\]]*\])?\{[^}]*\}/g,'')
+    .replace(/\\usepackage(?:\[[^\]]*\])?\{[^}]*\}/g,'')
+    .replace(/\\PassOptionsToPackage\{[^}]*\}\{[^}]*\}/g,'')
+    .replace(/\\NeedsTeXFormat\{[^}]*\}/g,'')
+    .replace(/\\ProvidesClass\{[^}]*\}(?:\[[^\]]*\])?/g,'')
+    .replace(/\\ProvidesPackage\{[^}]*\}(?:\[[^\]]*\])?/g,'')
+    .replace(/\\LoadClass(?:\[[^\]]*\])?\{[^}]*\}/g,'')
+    .replace(/\\DeclareOption\{[^}]*\}\{[^}]*\}/g,'')
+    .replace(/\\ProcessOptions\b\*?/g,'')
+    .replace(/\\setlength\{[^}]*\}\{[^}]*\}/g,'')
+    .replace(/\\setcounter\{[^}]*\}\{[^}]*\}/g,'')
+    .replace(/\\geometry\{[^}]*\}/g,'')
+    .replace(/\\(?:author|date|thanks)\{[^}]*\}/g,'')
+    .replace(/\\title\{([^}]*)\}/g,(_, t)=>`\\section{${t}}`)  // title → section heading
 
   // ── Step 1: Extract ALL math into placeholders (before HTML escape) ──
   const mathBlocks=[];let mi=0
