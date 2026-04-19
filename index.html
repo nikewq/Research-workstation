@@ -480,12 +480,12 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 /* ── Annotation ── */
 #prm-sel-toolbar{position:fixed;z-index:2000;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);padding:6px 10px;display:none;align-items:center;gap:6px;flex-wrap:wrap;max-width:360px}
 /* ── Inline AI / 翻译 面板 ── */
-#prm-inline-panel{position:fixed;z-index:1999;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:12px 14px;max-width:420px;min-width:260px;display:none;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto}
-#prm-inline-quote{font-size:11px;color:var(--text2);font-style:italic;border-left:2px solid var(--primary);padding-left:8px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-#prm-inline-result{font-size:13px;line-height:1.8;color:var(--text)}
+#prm-inline-panel{position:fixed;z-index:1999;background:#ffffff;border:1px solid #e0e4ea;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:12px 14px;max-width:420px;min-width:260px;display:none;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto}
+#prm-inline-quote{font-size:11px;color:#6b7280;font-style:italic;border-left:2px solid var(--primary);padding-left:8px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#prm-inline-result{font-size:13px;line-height:1.8;color:#1a2332}
 #prm-inline-result strong{color:var(--primary)}
 #prm-inline-qa-row{display:none;gap:6px;flex-shrink:0}
-#prm-inline-q{flex:1;padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text)}
+#prm-inline-q{flex:1;padding:5px 10px;border:1.5px solid #d1d5db;border-radius:6px;font-size:12px;background:#f9fafb;color:#1a2332}
 #prm-inline-q:focus{outline:none;border-color:var(--primary)}
 .prm-hl-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
 .prm-hl-dot:hover{transform:scale(1.25);border-color:rgba(0,0,0,.3)}
@@ -505,9 +505,11 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 /* ── Local PDF Viewer ── */
 #prm-pdf-canvas-area{flex:1;overflow-y:auto;background:#525659;display:none;flex-direction:column;align-items:center;padding:16px;gap:0;scroll-behavior:smooth}
 .pdf-page-wrap{position:relative;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.55);margin-bottom:16px;display:block;flex-shrink:0;user-select:text}
-.pdf-text-layer{position:absolute;inset:0;overflow:hidden;pointer-events:auto;line-height:1}
-.pdf-text-layer span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
-.pdf-text-layer span::selection{background:rgba(30,120,255,.28)}
+/* PDF text layer — styled for renderTextLayer compatibility */
+.pdf-text-layer{position:absolute;text-align:initial;inset:0;overflow:hidden;pointer-events:auto;line-height:1;opacity:1}
+.pdf-text-layer span,.pdf-text-layer br{color:transparent !important;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.pdf-text-layer .markedContent{top:0;height:0}
+.pdf-text-layer span::selection,.pdf-text-layer span::-moz-selection{background:rgba(30,120,255,.3);color:transparent}
 .pdf-ann-svg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
 #prm-pdf-page-info{font-size:11px;color:#ccc;text-align:center;padding:4px 0 8px;flex-shrink:0}
 /* ── Research Two-column Layout ── */
@@ -6839,27 +6841,31 @@ async function _prmRenderPdfPage(pdfjsLib,page,container,scale){
   const ctx=canvas.getContext('2d')
   ctx.scale(dpr,dpr)
   await page.render({canvasContext:ctx,viewport:vp}).promise
-  // Render text layer (transparent, for selection)
+  // Render text layer (transparent, for selection) — use official renderTextLayer for accuracy
   const tc=await page.getTextContent()
-  tc.items.forEach(item=>{
-    if(!item.str)return
-    const span=document.createElement('span')
-    const tx=pdfjsLib.Util.transform(vp.transform,item.transform)
-    // tx=[a,b,c,d,e,f]: e=x, f=y(baseline), a≈scaleX, d≈-fontSize
-    const fontSize=Math.abs(Math.sqrt(tx[0]*tx[0]+tx[1]*tx[1]))
-    if(fontSize<1)return
-    span.style.left=tx[4]+'px'
-    span.style.top=(tx[5]-fontSize)+'px'
-    span.style.fontSize=fontSize+'px'
-    // Width scaling
-    if(item.width){
-      const scaledW=Math.abs(item.width)*vp.scale
-      const natW=item.str.length*fontSize*0.55
-      if(natW>2&&Math.abs(scaledW/natW-1)>0.15)span.style.transform=`scaleX(${scaledW/natW})`
-    }
-    span.textContent=item.str
-    textDiv.appendChild(span)
-  })
+  try{
+    const rtask=pdfjsLib.renderTextLayer({textContent:tc,container:textDiv,viewport:vp,textDivs:[]})
+    await (rtask.promise||rtask)
+  }catch(e){
+    // Fallback: manual positioning
+    tc.items.forEach(item=>{
+      if(!item.str)return
+      const span=document.createElement('span')
+      const tx=pdfjsLib.Util.transform(vp.transform,item.transform)
+      const fontSize=Math.abs(Math.sqrt(tx[0]*tx[0]+tx[1]*tx[1]))
+      if(fontSize<1)return
+      span.style.left=tx[4]+'px'
+      span.style.top=(tx[5]-fontSize)+'px'
+      span.style.fontSize=fontSize+'px'
+      if(item.width){
+        const scaledW=Math.abs(item.width)*vp.scale
+        const natW=item.str.length*fontSize*0.55
+        if(natW>2&&Math.abs(scaledW/natW-1)>0.15)span.style.transform=`scaleX(${scaledW/natW})`
+      }
+      span.textContent=item.str
+      textDiv.appendChild(span)
+    })
+  }
 }
 
 // ── PDF 批注 SVG 绘制 ──
@@ -7293,7 +7299,7 @@ setTimeout(function(){
       <span id="prm-inline-title-icon"></span>
       <span id="prm-inline-title-text"></span>
     </span>
-    <button class="prm-ann-btn" style="color:var(--text2)" onclick="prm_hideInlinePanel()">✕</button>
+    <button class="prm-ann-btn" style="color:#6b7280" onclick="prm_hideInlinePanel()">✕</button>
   </div>
   <div id="prm-inline-quote"></div>
   <div id="prm-inline-result"></div>
