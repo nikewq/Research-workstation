@@ -451,6 +451,15 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .dp-read-panel{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px}
 .dp-tag-sel{cursor:pointer;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:500;border:1.5px solid var(--primary);color:var(--primary);background:transparent;transition:all .1s;display:inline-block;margin:3px}
 .dp-tag-sel.active{background:var(--primary);color:#fff}
+/* ── Research Two-column Layout ── */
+.research-layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+.research-list-col{min-width:0}
+.research-detail-col{min-width:0}
+.research-tab-bar{display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:9px;width:fit-content;margin-bottom:14px}
+.research-tab-btn{padding:5px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:all .15s}
+.research-tab-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.10)}
+.research-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;color:var(--text2);font-size:13px;gap:10px;background:var(--surface2);border-radius:12px;border:1.5px dashed var(--border)}
+@media(max-width:860px){.research-layout{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -584,14 +593,13 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     <div class="nav-item" data-page="focus"><span class="nav-icon">🍅</span>专注计时</div>
     <div class="nav-item" data-page="habits"><span class="nav-icon">🔥</span>习惯打卡</div>
     <div class="nav-group">科研</div>
-    <div class="nav-item" data-page="submissions"><span class="nav-icon">📄</span>投稿管理</div>
+    <div class="nav-item" data-page="submissions"><span class="nav-icon">📖</span>文献 & 投稿</div>
     <div class="nav-item" data-page="gantt"><span class="nav-icon">📅</span>项目甘特图</div>
     <div class="nav-item" data-page="tools"><span class="nav-icon">⚡</span>工具面板</div>
     <div class="nav-item" data-page="reflection"><span class="nav-icon">🌙</span>反思日记</div>
     <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
     <div class="nav-item" data-page="intel"><span class="nav-icon">📡</span>摸鱼侦察局</div>
     <div class="nav-item" data-page="procure"><span class="nav-icon">🛒</span>采购清单</div>
-    <div class="nav-item" data-page="papers"><span class="nav-icon">📚</span>文献库</div>
     <div class="nav-group">设置</div>
     <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
     <div class="nav-item" onclick="openThemeModal()"><span class="nav-icon">🎨</span>界面主题</div>
@@ -840,45 +848,123 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
 <!-- ── Submissions ── -->
 <div class="page" id="page-submissions">
-  <div class="page-title">投稿管理</div>
-  <div class="page-subtitle">论文投稿状态追踪</div>
-  <div class="card mb-16">
-    <div class="card-title">添加投稿</div>
-    <div class="form-row c2">
-      <div><label>论文标题</label><input id="sub-title" placeholder="论文标题..."></div>
-      <div><label>会议/期刊名称</label><input id="sub-venue" placeholder="如：NeurIPS 2026" oninput="_autoFillVenueUrl(this.value,'sub-url')"></div>
+  <!-- 顶部：标题 + Tab 切换 -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div class="page-title" style="margin-bottom:2px">文献 & 投稿</div>
+      <div class="page-subtitle">文献管理 · 投稿追踪</div>
     </div>
-    <div class="form-row c2">
-      <div><label>投稿/期刊链接 <span style="color:var(--text2);font-weight:400;font-size:11px">（会自动识别常见会议）</span></label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input id="sub-url" placeholder="https://openreview.net/..." style="flex:1">
-          <button class="btn btn-ghost btn-sm" id="sub-url-go" style="display:none;font-size:11px;white-space:nowrap" onclick="window.open(document.getElementById('sub-url').value,'_blank')">🔗 打开</button>
+    <div class="research-tab-bar">
+      <button class="research-tab-btn active" id="rtab-papers-btn" onclick="switchResearchTab('papers')">📚 文献库</button>
+      <button class="research-tab-btn" id="rtab-subs-btn" onclick="switchResearchTab('subs')">📄 投稿管理</button>
+    </div>
+  </div>
+
+  <!-- 两栏主体 -->
+  <div class="research-layout">
+
+    <!-- ── 左列：列表 ── -->
+    <div class="research-list-col">
+
+      <!-- 文献列表（默认显示） -->
+      <div id="rs-papers">
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+          <input id="papers-search" placeholder="搜索标题、作者、摘要..." style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--card)" oninput="renderPapersPage()">
+          <button class="btn btn-primary btn-sm" onclick="openDailyPapers()" style="font-size:11px;white-space:nowrap">+ 获取论文</button>
+        </div>
+        <div id="papers-area-filters" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+        <div id="papers-count" style="font-size:11px;color:var(--text2);margin-bottom:6px"></div>
+        <div id="papers-list" style="max-height:calc(100vh - 260px);overflow-y:auto;padding-right:2px"></div>
+        <div id="papers-empty" style="display:none;text-align:center;padding:30px 0;color:var(--text2);font-size:13px">
+          暂无文献<br><span style="font-size:11px">点击「+ 获取论文」开始</span>
         </div>
       </div>
-      <div><label>状态</label>
-        <select id="sub-status">
-          <option value="submitted">审核中</option>
-          <option value="revision">修改中</option>
-          <option value="accepted">录用</option>
-          <option value="rejected">拒稿</option>
-          <option value="withdrawn">撤稿</option>
-        </select>
+
+      <!-- 投稿列表（切换后显示） -->
+      <div id="rs-subs" style="display:none">
+        <div class="grid-4 mb-12" style="grid-template-columns:repeat(4,1fr);gap:8px">
+          <div class="stat-card stat-orange" style="padding:10px 8px"><div class="stat-value" style="font-size:20px" id="ss-total">0</div><div class="stat-label" style="font-size:11px">总投稿</div></div>
+          <div class="stat-card stat-blue" style="padding:10px 8px"><div class="stat-value" style="font-size:20px" id="ss-sub">0</div><div class="stat-label" style="font-size:11px">审核中</div></div>
+          <div class="stat-card stat-green" style="padding:10px 8px"><div class="stat-value" style="font-size:20px" id="ss-acc">0</div><div class="stat-label" style="font-size:11px">录用</div></div>
+          <div class="stat-card stat-purple" style="padding:10px 8px"><div class="stat-value" style="font-size:20px" id="ss-rev">0</div><div class="stat-label" style="font-size:11px">修改中</div></div>
+        </div>
+        <div id="sub-list" style="max-height:calc(100vh - 300px);overflow-y:auto;padding-right:2px"></div>
       </div>
     </div>
-    <div class="form-row c2">
-      <div><label>投稿日期</label><input type="date" id="sub-date"></div>
-      <div><label>结果日期(预计)</label><input type="date" id="sub-decision"></div>
+
+    <!-- ── 右列：详情 ── -->
+    <div class="research-detail-col">
+
+      <!-- 文献：阅读面板 -->
+      <div id="rs-papers-detail">
+        <div id="papers-reading-placeholder" class="research-placeholder">
+          <span style="font-size:28px">📖</span>
+          <span>点击左侧论文，开始 AI 辅助阅读</span>
+          <button class="btn btn-primary btn-sm" onclick="openDailyPapers()">🔍 获取今日论文</button>
+        </div>
+        <div id="papers-reading-panel" style="display:none" class="dp-read-panel">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
+            <div style="font-size:14px;font-weight:700;line-height:1.4;flex:1" id="rp-title"></div>
+            <button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="closeReadingPanel()">×</button>
+          </div>
+          <div id="rp-meta" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+          <div id="rp-links" class="dp-links" style="margin-bottom:10px"></div>
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">摘要</div>
+          <div id="rp-abstract" style="font-size:12px;color:var(--text);line-height:1.7;background:var(--surface2);border-radius:6px;padding:10px;margin-bottom:10px;max-height:110px;overflow-y:auto"></div>
+          <div id="rp-summary" style="margin-bottom:12px"></div>
+          <div style="border-top:1px solid var(--border);padding-top:12px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:8px">🤖 AI 辅助阅读</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+              <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文解决了什么问题？创新点是什么？')">💡 核心贡献</button>
+              <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文和我的研究有什么联系？能否启发我的工作？')">🔗 与我相关</button>
+              <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文有什么局限性？未来工作方向是什么？')">🔭 局限与展望</button>
+              <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('帮我生成这篇论文的 BibTeX 引用')">📎 BibTeX</button>
+            </div>
+            <div style="display:flex;gap:8px">
+              <input id="rp-ask-input" placeholder="提问..." style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)" onkeydown="if(event.key==='Enter')aiAskPaper()">
+              <button class="btn btn-primary btn-sm" onclick="aiAskPaper()">问</button>
+            </div>
+            <div id="rp-ai-answer" style="margin-top:10px;font-size:13px;line-height:1.7;display:none;background:var(--surface2);border-radius:6px;padding:10px;border-left:3px solid var(--primary)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 投稿：添加表单 -->
+      <div id="rs-subs-detail" style="display:none">
+        <div class="card">
+          <div class="card-title">添加投稿</div>
+          <div class="form-row c2">
+            <div><label>论文标题</label><input id="sub-title" placeholder="论文标题..."></div>
+            <div><label>会议/期刊</label><input id="sub-venue" placeholder="如：NeurIPS 2026" oninput="_autoFillVenueUrl(this.value,'sub-url')"></div>
+          </div>
+          <div class="form-row c2">
+            <div><label>链接 <span style="color:var(--text2);font-weight:400;font-size:11px">（常见会议自动填充）</span></label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input id="sub-url" placeholder="https://openreview.net/..." style="flex:1">
+                <button class="btn btn-ghost btn-sm" id="sub-url-go" style="display:none;font-size:11px;white-space:nowrap" onclick="window.open(document.getElementById('sub-url').value,'_blank')">🔗 打开</button>
+              </div>
+            </div>
+            <div><label>状态</label>
+              <select id="sub-status">
+                <option value="submitted">审核中</option>
+                <option value="revision">修改中</option>
+                <option value="accepted">录用</option>
+                <option value="rejected">拒稿</option>
+                <option value="withdrawn">撤稿</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row c2">
+            <div><label>投稿日期</label><input type="date" id="sub-date"></div>
+            <div><label>结果日期(预计)</label><input type="date" id="sub-decision"></div>
+          </div>
+          <div class="form-row"><div><label>备注</label><textarea id="sub-notes" placeholder="OpenReview链接、分数等..." rows="3"></textarea></div></div>
+          <button class="btn btn-primary" onclick="addSubmission()">➕ 添加</button>
+        </div>
+      </div>
+
     </div>
-    <div class="form-row"><div><label>备注</label><textarea id="sub-notes" placeholder="OpenReview链接、分数等..." rows="2"></textarea></div></div>
-    <button class="btn btn-primary" onclick="addSubmission()">➕ 添加</button>
   </div>
-  <div class="grid-4 mb-16">
-    <div class="stat-card stat-orange"><div class="stat-value" id="ss-total">0</div><div class="stat-label">总投稿</div></div>
-    <div class="stat-card stat-blue"><div class="stat-value" id="ss-sub">0</div><div class="stat-label">审核中</div></div>
-    <div class="stat-card stat-green"><div class="stat-value" id="ss-acc">0</div><div class="stat-label">录用</div></div>
-    <div class="stat-card stat-purple"><div class="stat-value" id="ss-rev">0</div><div class="stat-label">修改中</div></div>
-  </div>
-  <div id="sub-list"></div>
 </div>
 
 <!-- ── Gantt ── -->
@@ -1307,47 +1393,6 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
       </div>
     </div>
 
-  </div>
-</div>
-
-<!-- ── Papers Library ── -->
-<div class="page" id="page-papers">
-  <div class="page-title">📚 文献库</div>
-  <div class="page-subtitle">保存的文献，AI 辅助阅读</div>
-  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-    <input id="papers-search" placeholder="搜索标题、作者、摘要..." style="flex:1;min-width:200px;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card)" oninput="renderPapersPage()">
-    <div id="papers-area-filters" style="display:flex;flex-wrap:wrap;gap:4px"></div>
-    <button class="btn btn-primary btn-sm" onclick="openDailyPapers()">+ 获取今日论文</button>
-  </div>
-  <div id="papers-count" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
-  <div id="papers-list"></div>
-  <div id="papers-reading-panel" style="display:none" class="dp-read-panel">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:700" id="rp-title"></div>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('papers-reading-panel').style.display='none'">×</button>
-    </div>
-    <div id="rp-meta" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
-    <div id="rp-links" class="dp-links" style="margin-bottom:10px"></div>
-    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">摘要</div>
-    <div id="rp-abstract" style="font-size:13px;color:var(--text);line-height:1.7;background:var(--surface2);border-radius:6px;padding:10px;margin-bottom:10px;max-height:120px;overflow-y:auto"></div>
-    <div id="rp-summary" style="margin-bottom:12px"></div>
-    <div style="border-top:1px solid var(--border);padding-top:12px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🤖 AI 辅助阅读</div>
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文解决了什么问题？创新点是什么？')">💡 核心贡献</button>
-        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文和我的研究有什么联系？能否启发我的工作？')">🔗 与我相关</button>
-        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('这篇论文有什么局限性？未来工作方向是什么？')">🔭 局限与展望</button>
-        <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="aiAskPaper('帮我生成这篇论文的 BibTeX 引用')">📎 BibTeX</button>
-      </div>
-      <div style="display:flex;gap:8px">
-        <input id="rp-ask-input" placeholder="输入问题，AI 回答..." style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--card)" onkeydown="if(event.key==='Enter')aiAskPaper()" >
-        <button class="btn btn-primary btn-sm" onclick="aiAskPaper()">问</button>
-      </div>
-      <div id="rp-ai-answer" style="margin-top:10px;font-size:13px;line-height:1.7;display:none;background:var(--surface2);border-radius:6px;padding:10px;border-left:3px solid var(--primary)"></div>
-    </div>
-  </div>
-  <div id="papers-empty" style="display:none;text-align:center;padding:40px 0;color:var(--text2);font-size:14px">
-    暂无保存的文献<br><span style="font-size:12px">点击上方「获取今日论文」开始</span>
   </div>
 </div>
 
@@ -1854,14 +1899,13 @@ function switchPage(name) {
   if (name==='focus') renderPomoLog();
   if (name==='habits') renderHabits();
   if (name==='tasks') {renderTasks();_refreshNickDisplay();}
-  if (name==='submissions') renderSubmissions();
+  if (name==='submissions') { renderSubmissions(); renderPapersPage(); }
   if (name==='reflection') renderRefHistory();
   if (name==='settings') populateSettingsForm();
   if (name==='tools') renderTools();
   if (name==='intel') initIntelPage();
   if (name==='gantt') renderGantt();
   if (name==='procure') initProcurePage();
-  if (name==='papers') renderPapersPage();
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
 
@@ -5351,6 +5395,29 @@ const _AREA_EN={
 }
 function _areaToEn(a){return _AREA_EN[a]||a}
 
+// ── 文献&投稿 Tab 切换 ──
+function switchResearchTab(tab){
+  const isPapers=tab==='papers'
+  const rsPapers=document.getElementById('rs-papers')
+  const rsSubs=document.getElementById('rs-subs')
+  const rsPapersD=document.getElementById('rs-papers-detail')
+  const rsSubsD=document.getElementById('rs-subs-detail')
+  if(rsPapers)rsPapers.style.display=isPapers?'block':'none'
+  if(rsSubs)rsSubs.style.display=isPapers?'none':'block'
+  if(rsPapersD)rsPapersD.style.display=isPapers?'block':'none'
+  if(rsSubsD)rsSubsD.style.display=isPapers?'none':'block'
+  const pb=document.getElementById('rtab-papers-btn')
+  const sb=document.getElementById('rtab-subs-btn')
+  if(pb){pb.classList.toggle('active',isPapers)}
+  if(sb){sb.classList.toggle('active',!isPapers)}
+}
+function closeReadingPanel(){
+  const panel=document.getElementById('papers-reading-panel')
+  const placeholder=document.getElementById('papers-reading-placeholder')
+  if(panel)panel.style.display='none'
+  if(placeholder)placeholder.style.display='flex'
+}
+
 // 打开 modal
 function openDailyPapers(){
   const cfg=getCfg(),areas=cfg.areas||[]
@@ -5669,7 +5736,9 @@ function openReadingPanel(pJson){
   const p=JSON.parse(pJson)
   window._rpCurrent=p
   const panel=document.getElementById('papers-reading-panel')
+  const placeholder=document.getElementById('papers-reading-placeholder')
   if(!panel)return
+  if(placeholder)placeholder.style.display='none'
   document.getElementById('rp-title').textContent=p.title
   document.getElementById('rp-meta').textContent=`${p.area||''} · ${p.venue||''} · ${p.date||''} · ${(p.authors||'').slice(0,60)}`
   const linksEl=document.getElementById('rp-links')
