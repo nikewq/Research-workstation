@@ -1173,6 +1173,25 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
     </div>
   </div>
   <div class="settings-section">
+    <h3>📚 论文数据库认证</h3>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
+      「每日文献」功能使用公开 API（OpenAlex → S2 → CrossRef）无需 Key 即可运行。<br>
+      若遇到频率限制，可填入 <b>Semantic Scholar API Key</b>（免费申请，无需信用卡）：<br>
+      👉 <a href="https://www.semanticscholar.org/product/api#api-key" target="_blank" style="color:var(--primary)">semanticscholar.org 申请免费 Key</a>（速率从 1 req/s 提升至 10 req/s）
+    </div>
+    <div class="form-row c2">
+      <div>
+        <label>Semantic Scholar API Key <span style="font-weight:400;color:var(--text2);font-size:11px">（可选，提高频率限制）</span></label>
+        <input id="s2-key-inp" type="password" placeholder="粘贴 S2 API Key..." autocomplete="off">
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px">
+        <button class="btn btn-primary" onclick="saveS2Key()">保存 Key</button>
+        <button class="btn btn-ghost" onclick="clearS2Key()" id="s2-clear-btn" style="display:none">清除</button>
+        <span id="s2-key-tip" style="font-size:12px;color:var(--text2)"></span>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
     <h3>⚠️ 危险区域</h3>
     <button class="btn btn-danger" onclick="resetAll()">🗑 清除所有数据（重新设置）</button>
   </div>
@@ -2951,7 +2970,7 @@ function populateSettingsForm(){
   const lbl=document.getElementById('set-start-label');
   if(lbl) lbl.textContent=ROLE_DATE_LABEL[cfg.role||'phd']||'入学日期';
   renderProjSettings();renderAreaTagsSettings();
-  _populateAISettings();
+  _populateAISettings();_loadS2KeyUI();
 }
 function _populateAISettings(){
   try{
@@ -3033,6 +3052,35 @@ function saveAISettings(){
   if(tip){tip.textContent='✅ 已保存';tip.style.color='#10b981'}
   toast('✅ AI 设置已保存')
 }
+// ── S2 API Key ──
+function saveS2Key(){
+  const val=document.getElementById('s2-key-inp')?.value.trim()
+  if(!val){clearS2Key();return}
+  localStorage.setItem('_s2_api_key',val)
+  const tip=document.getElementById('s2-key-tip')
+  const btn=document.getElementById('s2-clear-btn')
+  if(tip){tip.textContent='✅ 已保存';tip.style.color='#10b981'}
+  if(btn)btn.style.display='inline-flex'
+}
+function clearS2Key(){
+  localStorage.removeItem('_s2_api_key')
+  const inp=document.getElementById('s2-key-inp')
+  const tip=document.getElementById('s2-key-tip')
+  const btn=document.getElementById('s2-clear-btn')
+  if(inp)inp.value=''
+  if(tip){tip.textContent='已清除';tip.style.color='var(--text2)'}
+  if(btn)btn.style.display='none'
+}
+function _loadS2KeyUI(){
+  const key=localStorage.getItem('_s2_api_key')
+  const inp=document.getElementById('s2-key-inp')
+  const btn=document.getElementById('s2-clear-btn')
+  const tip=document.getElementById('s2-key-tip')
+  if(inp)inp.value=key?'••••••••••••':''
+  if(btn)btn.style.display=key?'inline-flex':'none'
+  if(tip)tip.textContent=key?'已配置（S2 速率提升）':''
+}
+
 function clearAISettings(){
   localStorage.removeItem('_ai_cfg')
   _aiKeyCache=null; sessionStorage.removeItem('_gk')
@@ -5453,59 +5501,88 @@ function _getDpAreas(){
   return[...(document.querySelectorAll('#dp-areas .dp-tag-sel.active')||[])].map(el=>el.dataset.area)
 }
 
-// OpenAlex（主力：CORS 友好，免费，覆盖广）
+// ── 论文获取：三源 + 认证通道 ──
 function _invertIdx(inv){
-  if(!inv)return''
-  const w=[];for(const[word,pos]of Object.entries(inv))pos.forEach(i=>{w[i]=word});return w.join(' ')
+  if(!inv||typeof inv!=='object')return''
+  const w=[];try{for(const[word,pos]of Object.entries(inv))if(Array.isArray(pos))pos.forEach(i=>{w[i]=word})}catch{}
+  return w.filter(Boolean).join(' ')
 }
+
+// OpenAlex（主力：CORS 友好，免费，覆盖近一年论文）
 async function _fetchOpenAlex(query,limit=15){
-  const thisYear=new Date().getFullYear()
-  const url=`https://api.openalex.org/works?search=${encodeURIComponent(query)}&sort=publication_date:desc&filter=publication_year:${thisYear-1}|${thisYear}&per_page=${limit}&select=id,title,authorships,abstract_inverted_index,primary_location,best_oa_location,publication_date,open_access&mailto=phd-workstation@noreply.io`
+  const cutoff=new Date(Date.now()-365*24*3600*1000).toISOString().slice(0,10)
+  const url=`https://api.openalex.org/works?search=${encodeURIComponent(query)}&sort=publication_date:desc&filter=from_publication_date:${cutoff}&per_page=${Math.min(limit,25)}&mailto=phd-workstation@noreply.io`
   const r=await fetch(url)
-  if(!r.ok)throw new Error('OpenAlex '+r.status)
+  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(`OpenAlex ${r.status}: ${t.slice(0,120)}`)}
   const d=await r.json()
-  return(d.results||[]).map(p=>{
-    const oaUrl=p.best_oa_location?.pdf_url||p.open_access?.oa_url||''
-    const landingUrl=p.primary_location?.landing_page_url||''
-    const arxivMatch=(oaUrl||landingUrl).match(/arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d+)/i)
-    const aid=arxivMatch?arxivMatch[1]:''
-    const paperUrl=aid?`https://arxiv.org/abs/${aid}`:(landingUrl||`https://openalex.org/${p.id?.replace('https://openalex.org/','')||''}`)
-    const pdfUrl=aid?`https://arxiv.org/pdf/${aid}`:(oaUrl||'')
+  if(!d.results?.length)throw new Error('OpenAlex: 0 results')
+  return d.results.map(p=>{
+    const landing=p.primary_location?.landing_page_url||''
+    const oaPdf=p.best_oa_location?.pdf_url||p.open_access?.oa_url||''
+    const searchStr=[oaPdf,landing,...(p.locations||[]).map(l=>l.landing_page_url||'')].join(' ')
+    const arxivM=searchStr.match(/arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,})/i)
+    const aid=arxivM?.[1]||''
     return{
       id:'oa_'+(p.id||'').replace(/\W/g,'_'),
       arxiv_id:aid,
-      title:p.title||'',
+      title:(p.title||'').replace(/<[^>]+>/g,''),
       authors:(p.authorships||[]).slice(0,5).map(a=>a.author?.display_name||'').filter(Boolean).join(', '),
       abstract:_invertIdx(p.abstract_inverted_index),
-      url:paperUrl,
-      pdf_url:pdfUrl,
+      url:aid?`https://arxiv.org/abs/${aid}`:(landing||p.id||''),
+      pdf_url:aid?`https://arxiv.org/pdf/${aid}`:oaPdf,
       code_url:'',
       date:p.publication_date||'',
-      venue:p.primary_location?.source?.display_name||'',
+      venue:p.primary_location?.source?.display_name||p.host_venue?.display_name||'',
       figure:'',score:0,summary:'',area:''
     }
-  }).filter(p=>p.title)
+  }).filter(p=>p.title&&p.url)
 }
 
-// Semantic Scholar（兜底，修正参数）
+// Semantic Scholar（兜底1：支持用户 API Key，可提高频率）
 async function _fetchS2(query,limit=15){
-  const url=`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&fields=paperId,title,authors,abstract,year,venue,externalIds,openAccessPdf,publicationDate&limit=${limit}`
-  const r=await fetch(url)
-  if(!r.ok)throw new Error('S2 '+r.status)
+  const key=localStorage.getItem('_s2_api_key')||''
+  const headers={}
+  if(key)headers['x-api-key']=key
+  const url=`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&fields=paperId,title,authors,abstract,year,venue,externalIds,openAccessPdf,publicationDate&limit=${Math.min(limit,100)}`
+  const r=await fetch(url,{headers})
+  if(!r.ok)throw new Error(`S2 ${r.status}${r.status===429?' (频率限制，可在设置中填写 S2 API Key)':''}`)
   const d=await r.json()
-  return(d.data||[]).map(p=>{
+  if(!d.data?.length)throw new Error('S2: 0 results')
+  return d.data.map(p=>{
     const aid=p.externalIds?.ArXiv||''
     return{
-      id:'s2_'+p.paperId,
-      arxiv_id:aid,
+      id:'s2_'+p.paperId,arxiv_id:aid,
       title:p.title||'',
       authors:(p.authors||[]).map(a=>a.name).slice(0,5).join(', '),
       abstract:p.abstract||'',
       url:aid?`https://arxiv.org/abs/${aid}`:`https://www.semanticscholar.org/paper/${p.paperId}`,
       pdf_url:p.openAccessPdf?.url||(aid?`https://arxiv.org/pdf/${aid}`:''),
-      code_url:'',
-      date:p.publicationDate||String(p.year||''),
-      venue:p.venue||'arXiv',
+      code_url:'',date:p.publicationDate||String(p.year||''),
+      venue:p.venue||'arXiv',figure:'',score:0,summary:'',area:''
+    }
+  })
+}
+
+// CrossRef（兜底2：CORS 友好，覆盖期刊论文）
+async function _fetchCrossRef(query,limit=15){
+  const url=`https://api.crossref.org/works?query=${encodeURIComponent(query)}&sort=published&order=desc&rows=${Math.min(limit,20)}&select=DOI,title,author,abstract,published,container-title,link&mailto=phd-workstation@noreply.io`
+  const r=await fetch(url)
+  if(!r.ok)throw new Error('CrossRef '+r.status)
+  const d=await r.json()
+  if(!d.message?.items?.length)throw new Error('CrossRef: 0 results')
+  return d.message.items.filter(p=>p.title?.[0]).map(p=>{
+    const doi=p.DOI||''
+    const pdfLink=(p.link||[]).find(l=>l['content-type']?.includes('pdf'))?.URL||''
+    const dateArr=p.published?.['date-parts']?.[0]||[]
+    return{
+      id:'cr_'+doi.replace(/\W/g,'_'),arxiv_id:'',
+      title:p.title[0],
+      authors:(p.author||[]).slice(0,5).map(a=>[a.given,a.family].filter(Boolean).join(' ')).join(', '),
+      abstract:(p.abstract||'').replace(/<[^>]+>/g,''),
+      url:doi?`https://doi.org/${doi}`:'',
+      pdf_url:pdfLink,code_url:'',
+      date:dateArr.join('-'),
+      venue:p['container-title']?.[0]||'',
       figure:'',score:0,summary:'',area:''
     }
   })
@@ -5533,12 +5610,17 @@ async function fetchDailyPapers(){
     try{
       let papers=[]
       const perArea=Math.ceil(maxPerArea/areas.length)+5
-      try{papers=await _fetchOpenAlex(query,perArea)}
-      catch(e1){
-        console.warn('OpenAlex failed, trying S2',e1)
-        try{papers=await _fetchS2(query,perArea)}
-        catch(e2){console.warn('S2 also failed',e2)}
+      const errs=[]
+      // 依次尝试三个数据源
+      for(const[name,fn]of[['OpenAlex',()=>_fetchOpenAlex(query,perArea)],['Semantic Scholar',()=>_fetchS2(query,perArea)],['CrossRef',()=>_fetchCrossRef(query,perArea)]]){
+        try{
+          if(statusEl)statusEl.innerHTML=`<span class="spinner"></span> 「${escHtml(area)}」→ ${name}...`
+          papers=await fn()
+          if(papers.length>0){console.log(`[papers] ${name} OK: ${papers.length}`);break}
+          errs.push(`${name}: 0条`)
+        }catch(e){errs.push(`${name}: ${e.message?.slice(0,60)}`);console.warn(`[papers] ${name} failed`,e)}
       }
+      if(!papers.length&&statusEl)statusEl.innerHTML=`⚠️ 「${escHtml(area)}」所有源均失败：${errs.join(' | ')}`
       papers.forEach(p=>{p.area=area})
       allPapers.push(...papers)
     }catch(e){console.warn('fetch area failed',area,e)}
