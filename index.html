@@ -1205,6 +1205,8 @@ mark.hl-pink{background:#fecdd3;color:#881337}
               <div class="wr-ai-menu-item" onclick="wrAiAction('grammar')">🔍 修正语法</div>
               <div class="wr-ai-menu-item" onclick="wrAiAction('translate')">🌐 翻译成英文</div>
               <div class="wr-ai-menu-item" onclick="wrAiAction('abstract')">📄 生成摘要</div>
+              <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+              <div class="wr-ai-menu-item" style="color:var(--text2);font-size:11px" onclick="wrOpenAiCfg()">⚙️ AI 模型配置</div>
             </div>
           </div>
           <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
@@ -1237,6 +1239,71 @@ mark.hl-pink{background:#fecdd3;color:#881337}
           <span style="font-size:10px;font-weight:400">KaTeX 数学渲染</span>
         </div>
         <div id="wr-preview-area"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 写作模块 AI 配置弹窗 -->
+  <div id="wr-ai-cfg-modal" style="display:none;position:fixed;inset:0;z-index:1600;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+    <div style="background:var(--card);border-radius:14px;padding:24px;width:480px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">⚙️ 写作模块 AI 配置</div>
+      <!-- 模式选择 -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);transition:border-color .15s" id="wr-ai-opt-global-wrap">
+          <input type="radio" name="wr-ai-mode" id="wr-ai-opt-global" value="global" style="margin-top:2px" onchange="wrAiCfgModeChange()">
+          <div>
+            <div style="font-size:13px;font-weight:600">使用全局 AI 设置</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">与「设置 → AI 模型」共用同一配置（默认）</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);transition:border-color .15s" id="wr-ai-opt-custom-wrap">
+          <input type="radio" name="wr-ai-mode" id="wr-ai-opt-custom" value="custom" style="margin-top:2px" onchange="wrAiCfgModeChange()">
+          <div>
+            <div style="font-size:13px;font-weight:600">本模块独立配置</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">仅在写作面板中使用，不影响其他模块</div>
+          </div>
+        </label>
+      </div>
+      <!-- 自定义配置字段（仅 custom 模式显示） -->
+      <div id="wr-ai-custom-fields" style="display:none;flex-direction:column;gap:10px;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;background:var(--surface2)">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">服务商</label>
+          <select id="wr-ai-cfg-provider" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px" onchange="wrAiCfgProviderChange()">
+            <optgroup label="✅ 完全免费 · 无需 Key">
+              <option value="pollinations">Pollinations AI（免费·无需注册）</option>
+              <option value="ollama">Ollama（本地）</option>
+            </optgroup>
+            <optgroup label="🆓 注册即免费">
+              <option value="groq">Groq（极快）</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="openrouter">OpenRouter 免费模型</option>
+            </optgroup>
+            <optgroup label="💳 付费 API">
+              <option value="deepseek">DeepSeek</option>
+              <option value="openai">OpenAI</option>
+              <option value="moonshot">Kimi</option>
+              <option value="custom_url">自定义 URL（兼容 OpenAI 格式）</option>
+            </optgroup>
+          </select>
+        </div>
+        <div id="wr-ai-cfg-key-row">
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">API Key</label>
+          <input id="wr-ai-cfg-key" type="password" placeholder="输入 API Key..." style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;box-sizing:border-box">
+        </div>
+        <div id="wr-ai-cfg-url-row" style="display:none">
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">API Base URL</label>
+          <input id="wr-ai-cfg-url" placeholder="如 http://localhost:11434/v1" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">模型</label>
+          <input id="wr-ai-cfg-model" placeholder="自动填入默认模型，也可手动输入" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;box-sizing:border-box">
+        </div>
+        <div id="wr-ai-cfg-status" style="font-size:11px;color:var(--text2)"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('wr-ai-cfg-modal').style.display='none'">取消</button>
+        <button class="btn btn-ghost btn-sm" id="wr-ai-cfg-test-btn" style="display:none" onclick="wrAiCfgTest()">测试连接</button>
+        <button class="btn btn-primary btn-sm" onclick="wrAiCfgSave()">保存</button>
       </div>
     </div>
   </div>
@@ -5855,6 +5922,7 @@ function initWritingPanel(){
   renderWrZipProjects()
   renderWrDocsList()
   _ensureKatex()
+  _wrUpdateAiBtnLabel()
 }
 
 // ── Docs list ──
@@ -6075,6 +6143,132 @@ function wrInsertTable(){
 
 let _wrAiSelStart=0,_wrAiSelEnd=0,_wrAiResult=''
 
+// ── 写作模块独立 AI 配置 ──
+const WR_AI_CFG_KEY='phd_wr_ai_cfg_v1'
+
+// 调用 AI（优先写作模块独立配置，否则回退全局）
+async function _wrCallAI(prompt,maxTokens=2000){
+  const wcfg=ld(WR_AI_CFG_KEY)
+  if(!wcfg||wcfg.mode!=='custom') return _callAI(prompt,maxTokens)
+  // 使用写作模块自定义配置
+  const{provider,key,model,base}=wcfg
+  const provDef=_AI_PROVIDERS[provider]||{}
+  try{
+    if(provider==='gemini'){
+      const r=await fetch(`${base||provDef.base}/models/${model}:generateContent?key=${key}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:maxTokens,temperature:0.4}})
+      })
+      const d=await r.json()
+      return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||null
+    }
+    const apiBase=base||provDef.base||''
+    const headers={'Content-Type':'application/json'}
+    if(provDef.needsKey!==false&&key) headers['Authorization']='Bearer '+key
+    const r=await fetch(`${apiBase}/chat/completions`,{
+      method:'POST',headers,
+      body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.4,max_tokens:maxTokens})
+    })
+    if(!r.ok) return null
+    const d=await r.json()
+    return d.choices?.[0]?.message?.content?.trim()||null
+  }catch(_){return null}
+}
+
+// 打开配置弹窗
+function wrOpenAiCfg(){
+  const menu=document.getElementById('wr-ai-menu')
+  if(menu)menu.classList.remove('open')
+  const modal=document.getElementById('wr-ai-cfg-modal')
+  if(!modal)return
+  // 读取当前配置并回填
+  const wcfg=ld(WR_AI_CFG_KEY)||{mode:'global'}
+  const globalRadio=document.getElementById('wr-ai-opt-global')
+  const customRadio=document.getElementById('wr-ai-opt-custom')
+  if(wcfg.mode==='custom'){if(customRadio)customRadio.checked=true}
+  else{if(globalRadio)globalRadio.checked=true}
+  // 回填字段
+  const prov=document.getElementById('wr-ai-cfg-provider')
+  const keyEl=document.getElementById('wr-ai-cfg-key')
+  const urlEl=document.getElementById('wr-ai-cfg-url')
+  const modelEl=document.getElementById('wr-ai-cfg-model')
+  if(prov)prov.value=wcfg.provider||'groq'
+  if(keyEl)keyEl.value=wcfg.key||''
+  if(urlEl)urlEl.value=wcfg.base||''
+  if(modelEl)modelEl.value=wcfg.model||''
+  wrAiCfgModeChange()
+  wrAiCfgProviderChange()
+  modal.style.display='flex'
+}
+
+function wrAiCfgModeChange(){
+  const custom=document.getElementById('wr-ai-opt-custom')?.checked
+  const fields=document.getElementById('wr-ai-custom-fields')
+  const testBtn=document.getElementById('wr-ai-cfg-test-btn')
+  const gWrap=document.getElementById('wr-ai-opt-global-wrap')
+  const cWrap=document.getElementById('wr-ai-opt-custom-wrap')
+  if(fields)fields.style.display=custom?'flex':'none'
+  if(testBtn)testBtn.style.display=custom?'':'none'
+  if(gWrap)gWrap.style.borderColor=custom?'var(--border)':'var(--primary)'
+  if(cWrap)cWrap.style.borderColor=custom?'var(--primary)':'var(--border)'
+}
+
+function wrAiCfgProviderChange(){
+  const prov=document.getElementById('wr-ai-cfg-provider')?.value||'groq'
+  const provDef=_AI_PROVIDERS[prov]||{}
+  const keyRow=document.getElementById('wr-ai-cfg-key-row')
+  const urlRow=document.getElementById('wr-ai-cfg-url-row')
+  const modelEl=document.getElementById('wr-ai-cfg-model')
+  if(keyRow)keyRow.style.display=provDef.needsKey===false?'none':''
+  if(urlRow)urlRow.style.display=(provDef.needsUrl||prov==='custom_url')?'':'none'
+  if(modelEl&&!modelEl.value)modelEl.placeholder=provDef.defModel||'输入模型名'
+}
+
+async function wrAiCfgTest(){
+  const statusEl=document.getElementById('wr-ai-cfg-status')
+  if(statusEl)statusEl.innerHTML='<span style="color:var(--primary)">测试中…</span>'
+  const cfg=_wrBuildCfgFromModal()
+  // 临时用此 cfg 测试
+  const prev=ld(WR_AI_CFG_KEY)
+  sv(WR_AI_CFG_KEY,{...cfg,mode:'custom'})
+  const result=await _wrCallAI('Reply with exactly: "OK"',20)
+  sv(WR_AI_CFG_KEY,prev)
+  if(statusEl)statusEl.innerHTML=result
+    ?'<span style="color:#16a34a">✓ 连接成功</span>'
+    :'<span style="color:#dc2626">✗ 连接失败，请检查 Key 和模型名</span>'
+}
+
+function _wrBuildCfgFromModal(){
+  const prov=document.getElementById('wr-ai-cfg-provider')?.value||'groq'
+  const provDef=_AI_PROVIDERS[prov]||{}
+  const key=document.getElementById('wr-ai-cfg-key')?.value?.trim()||''
+  const base=document.getElementById('wr-ai-cfg-url')?.value?.trim()||provDef.base||''
+  const model=document.getElementById('wr-ai-cfg-model')?.value?.trim()||provDef.defModel||''
+  return{provider:prov,key,base,model}
+}
+
+function wrAiCfgSave(){
+  const custom=document.getElementById('wr-ai-opt-custom')?.checked
+  if(custom){
+    const cfg=_wrBuildCfgFromModal()
+    sv(WR_AI_CFG_KEY,{mode:'custom',...cfg})
+  }else{
+    sv(WR_AI_CFG_KEY,{mode:'global'})
+  }
+  document.getElementById('wr-ai-cfg-modal').style.display='none'
+  // 更新按钮标签提示当前来源
+  _wrUpdateAiBtnLabel()
+  toast('AI 配置已保存','success')
+}
+
+function _wrUpdateAiBtnLabel(){
+  const btn=document.getElementById('wr-ai-toggle')
+  if(!btn)return
+  const wcfg=ld(WR_AI_CFG_KEY)
+  const custom=wcfg?.mode==='custom'
+  btn.title=custom?`写作 AI：${wcfg.provider||''} / ${wcfg.model||''}`:'写作 AI：使用全局设置'
+}
+
 const _WR_AI_PROMPTS={
   polish:{
     label:'✏️ 润色表达',
@@ -6159,7 +6353,7 @@ async function wrAiAction(type){
   panel.scrollIntoView({behavior:'smooth',block:'nearest'})
 
   const prompt=`${cfg.sys}\n\n${cfg.user(text)}`
-  const result=await _callAI(prompt,2000)
+  const result=await _wrCallAI(prompt,2000)
 
   if(!result){
     resultEl.innerHTML='<div style="padding:12px;color:#dc2626;font-size:13px">⚠️ AI 暂时不可用，请稍后重试</div>'
