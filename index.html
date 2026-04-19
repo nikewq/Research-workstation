@@ -478,7 +478,15 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 #prm-chat-input-row{display:flex;gap:6px;padding-top:8px;border-top:1px solid var(--border);flex-shrink:0}
 #prm-chat-input{flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)}
 /* ── Annotation ── */
-#prm-sel-toolbar{position:fixed;z-index:2000;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);padding:6px 10px;display:none;align-items:center;gap:6px}
+#prm-sel-toolbar{position:fixed;z-index:2000;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);padding:6px 10px;display:none;align-items:center;gap:6px;flex-wrap:wrap;max-width:360px}
+/* ── Inline AI / 翻译 面板 ── */
+#prm-inline-panel{position:fixed;z-index:1999;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:12px 14px;max-width:420px;min-width:260px;display:none;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto}
+#prm-inline-quote{font-size:11px;color:var(--text2);font-style:italic;border-left:2px solid var(--primary);padding-left:8px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#prm-inline-result{font-size:13px;line-height:1.8;color:var(--text)}
+#prm-inline-result strong{color:var(--primary)}
+#prm-inline-qa-row{display:none;gap:6px;flex-shrink:0}
+#prm-inline-q{flex:1;padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text)}
+#prm-inline-q:focus{outline:none;border-color:var(--primary)}
 .prm-hl-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
 .prm-hl-dot:hover{transform:scale(1.25);border-color:rgba(0,0,0,.3)}
 .prm-ann-btn{font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text);white-space:nowrap}
@@ -6053,6 +6061,9 @@ const _PRM_NOTES_KEY='_pnotes_v1'
 const _PRM_HL_KEY='_phl_v1'
 const _PRM_SESSION_KEY='_prm_session_v1'  // sessionStorage：记录当前打开的论文（刷新恢复）
 let _prmNotesTimer=null   // 笔记自动保存定时器
+let _prmSelRect=null      // 最后一次选区的 bounding rect（用于定位 inline 面板）
+let _prmInlineCtx=''      // inline 面板当前的原文上下文
+let _prmInlineHistory=[]  // inline 面板的追问历史
 let _prmPaper=null
 let _prmChatHistory=[]
 let _prmViewMode='auto'
@@ -6138,23 +6149,28 @@ function prm_onAbstractMouseup(e){
   if(!text||text.length<2){prm_hideSelToolbar();return}
   _prmSelText=text
   const toolbar=document.getElementById('prm-sel-toolbar')
-  // 定位在选区末尾正上方
   const range=sel.getRangeAt(0)
   const rect=range.getBoundingClientRect()
+  _prmSelRect=rect
   const tw=toolbar.offsetWidth||200
   let left=rect.left+(rect.width/2)-(tw/2)
   left=Math.max(8,Math.min(left,window.innerWidth-tw-8))
   toolbar.style.left=left+'px'
-  toolbar.style.top=(rect.top+window.scrollY-48)+'px'
+  toolbar.style.top=(rect.top-48)+'px'
   toolbar.style.display='flex'
 }
 function prm_hideSelToolbar(){
   document.getElementById('prm-sel-toolbar').style.display='none'
   _prmSelText=''
 }
-// 点击其他地方关闭工具栏
+function prm_hideInlinePanel(){
+  const p=document.getElementById('prm-inline-panel')
+  if(p)p.style.display='none'
+}
+// 点击其他地方关闭工具栏 & inline 面板
 document.addEventListener('mousedown',function(e){
   if(!e.target.closest('#prm-sel-toolbar'))prm_hideSelToolbar()
+  if(!e.target.closest('#prm-inline-panel')&&!e.target.closest('#prm-sel-toolbar'))prm_hideInlinePanel()
 })
 
 // PDF 文本层 mouseup：捕获选区 rects 并弹出标注工具栏
@@ -6186,6 +6202,7 @@ document.addEventListener('mouseup',function(e){
   _prmPdfSelPage=pageNum
   const toolbar=document.getElementById('prm-sel-toolbar')
   const lastR=clientRects[clientRects.length-1]
+  _prmSelRect=lastR
   const tw=toolbar.offsetWidth||220
   let left=lastR.left+(lastR.width/2)-(tw/2)
   left=Math.max(8,Math.min(left,window.innerWidth-tw-8))
@@ -6576,6 +6593,106 @@ function prm_addToDaily(){
     pomo.taskTitle='📖 '+p.title.slice(0,25)
     toast('已同步至心流任务名称')
   }
+}
+
+// ── Inline 面板：翻译 / 问AI ──
+function _prmShowInlinePanel(titleIcon,titleText){
+  const panel=document.getElementById('prm-inline-panel')
+  document.getElementById('prm-inline-title-icon').textContent=titleIcon
+  document.getElementById('prm-inline-title-text').textContent=titleText
+  const quote=document.getElementById('prm-inline-quote')
+  quote.textContent='"'+(_prmInlineCtx||'').slice(0,120)+(_prmInlineCtx&&_prmInlineCtx.length>120?'…':'"')
+  document.getElementById('prm-inline-result').innerHTML='<span class="spinner"></span> 处理中...'
+  document.getElementById('prm-inline-qa-row').style.display='none'
+  document.getElementById('prm-inline-q').value=''
+  _prmInlineHistory=[]
+  // 定位：选区下方，尽量不超屏
+  panel.style.display='flex'
+  if(_prmSelRect){
+    const pw=Math.min(420,window.innerWidth-20)
+    let left=_prmSelRect.left
+    left=Math.max(10,Math.min(left,window.innerWidth-pw-10))
+    let top=_prmSelRect.bottom+10
+    if(top+280>window.innerHeight)top=Math.max(10,_prmSelRect.top-290)
+    panel.style.left=left+'px'
+    panel.style.top=top+'px'
+    panel.style.maxWidth=pw+'px'
+  }
+}
+
+async function prm_translateSel(){
+  const text=_prmSelText;if(!text)return
+  _prmInlineCtx=text
+  prm_hideSelToolbar()
+  _prmShowInlinePanel('🌐','翻译')
+  try{
+    const ans=await _callAI('请将以下文字翻译成中文，只输出翻译结果，不要解释：\n\n'+text,600)
+    document.getElementById('prm-inline-result').textContent=ans||'翻译失败'
+    document.getElementById('prm-inline-qa-row').style.display='flex'
+  }catch(e){
+    document.getElementById('prm-inline-result').textContent='翻译失败：'+e.message
+  }
+}
+
+async function prm_askAiWithSel(){
+  const text=_prmSelText;const p=_prmPaper;if(!text||!p)return
+  _prmInlineCtx=text
+  prm_hideSelToolbar()
+  _prmShowInlinePanel('💬','AI 解读')
+  const prompt=`论文《${p.title}》中有这样一段话：\n\n"${text}"\n\n请用中文简明解释这段话的含义，并说明其在论文语境中的重要性。`
+  try{
+    const ans=await _callAI(prompt,900)
+    const md2h=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')
+    document.getElementById('prm-inline-result').innerHTML=md2h(ans||'AI 无响应')
+    document.getElementById('prm-inline-qa-row').style.display='flex'
+    _prmInlineHistory.push({role:'user',content:prompt},{role:'assistant',content:ans||''})
+    // 同步到 AI 侧边栏
+    prm_switchTab('ai',document.querySelectorAll('.prm-stab')[2])
+    const log=document.getElementById('prm-chat-log')
+    if(log){
+      log.innerHTML+=`<div class="prm-ai-msg user">📌 "${escHtml(text.slice(0,80)+(text.length>80?'...':''))}"</div>`
+      log.innerHTML+=`<div class="prm-ai-msg ai">${md2h(ans||'')}</div>`
+      log.scrollTop=log.scrollHeight
+      _prmChatHistory.push({role:'user',content:prompt},{role:'assistant',content:ans||''})
+    }
+  }catch(e){
+    document.getElementById('prm-inline-result').textContent='AI 出错：'+e.message
+  }
+}
+
+async function prm_inlineAsk(){
+  const q=(document.getElementById('prm-inline-q').value||'').trim()
+  if(!q||!_prmPaper)return
+  document.getElementById('prm-inline-q').value=''
+  const res=document.getElementById('prm-inline-result')
+  const md2h=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')
+  res.innerHTML+=`<div style="margin-top:10px;padding:6px 8px;background:var(--primary-soft);border-radius:6px;font-size:12px;color:var(--primary)">${escHtml(q)}</div>`
+  const loadId='iql_'+Date.now()
+  res.innerHTML+=`<div id="${loadId}" style="font-size:12px;color:var(--text2);padding:4px 0"><span class="spinner"></span> 思考中...</div>`
+  res.scrollTop=res.scrollHeight
+  const ctx=`原文："${_prmInlineCtx.slice(0,300)}"
+${_prmInlineHistory.slice(-4).map(m=>`${m.role==='user'?'用户':'AI'}：${m.content.slice(0,150)}`).join('\n')}
+用户追问：${q}`
+  try{
+    const ans=await _callAI(ctx,700)
+    document.getElementById(loadId)?.remove()
+    res.innerHTML+=`<div style="font-size:13px;line-height:1.8;margin-top:4px">${md2h(ans||'')}</div>`
+    _prmInlineHistory.push({role:'user',content:q},{role:'assistant',content:ans||''})
+    // 同步到侧边栏
+    const log=document.getElementById('prm-chat-log')
+    if(log){
+      log.innerHTML+=`<div class="prm-ai-msg user">${escHtml(q)}</div>`
+      log.innerHTML+=`<div class="prm-ai-msg ai">${md2h(ans||'')}</div>`
+      log.scrollTop=log.scrollHeight
+      _prmChatHistory.push({role:'user',content:q},{role:'assistant',content:ans||''})
+    }
+  }catch(e){
+    document.getElementById(loadId)?.remove()
+    res.innerHTML+=`<div style="color:#ef4444;font-size:11px">${escHtml(e.message)}</div>`
+  }
+  res.scrollTop=res.scrollHeight
 }
 
 // ── 一键从 pdf_url 下载并保存到 IndexedDB ──
@@ -7163,8 +7280,27 @@ setTimeout(function(){
   <div class="prm-hl-dot" style="background:#bfdbfe" title="蓝色高亮" onclick="prm_addHighlight('blue','#bfdbfe')"></div>
   <div class="prm-hl-dot" style="background:#fecdd3" title="粉色高亮" onclick="prm_addHighlight('pink','#fecdd3')"></div>
   <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
-  <button class="prm-ann-btn" onclick="prm_addHighlightWithNote()">📝 加批注</button>
+  <button class="prm-ann-btn" onclick="prm_addHighlightWithNote()">📝 批注</button>
+  <button class="prm-ann-btn" style="color:var(--primary);border-color:var(--primary)" onclick="prm_translateSel()">🌐 翻译</button>
+  <button class="prm-ann-btn" style="color:#7c3aed;border-color:#7c3aed" onclick="prm_askAiWithSel()">💬 问AI</button>
   <button class="prm-ann-btn" style="color:var(--text2)" onclick="prm_hideSelToolbar()">✕</button>
+</div>
+
+<!-- 翻译 / AI 解读 inline 面板 -->
+<div id="prm-inline-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+    <span style="font-size:12px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:4px">
+      <span id="prm-inline-title-icon"></span>
+      <span id="prm-inline-title-text"></span>
+    </span>
+    <button class="prm-ann-btn" style="color:var(--text2)" onclick="prm_hideInlinePanel()">✕</button>
+  </div>
+  <div id="prm-inline-quote"></div>
+  <div id="prm-inline-result"></div>
+  <div id="prm-inline-qa-row">
+    <input id="prm-inline-q" placeholder="继续追问..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();prm_inlineAsk()}">
+    <button class="btn btn-primary btn-sm" style="flex-shrink:0;font-size:12px" onclick="prm_inlineAsk()">发送</button>
+  </div>
 </div>
 
 <div id="scan-timer-bar">
