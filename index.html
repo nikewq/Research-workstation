@@ -1989,7 +1989,9 @@ function initApp() {
 // ══════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════
+const _VALID_PAGES=new Set(['overview','tasks','focus','habits','submissions','gantt','tools','reflection','stats','intel','procure','settings'])
 function switchPage(name) {
+  if(!_VALID_PAGES.has(name))name='overview'
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -2007,8 +2009,24 @@ function switchPage(name) {
   if (name==='intel') initIntelPage();
   if (name==='gantt') renderGantt();
   if (name==='procure') initProcurePage();
+  // 同步 URL hash，让分享 / 收藏链接直接还原当前页
+  const target='#'+name
+  if(location.hash!==target)history.replaceState(null,'',target)
 }
+// showPage 别名（兼容内部调用）
+const showPage=switchPage
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
+// 浏览器前进 / 后退同步导航（不与 paper-reader popstate 冲突）
+window.addEventListener('popstate',function(){
+  if(document.getElementById('paper-reader-modal').classList.contains('open'))return
+  const h=(location.hash||'').slice(1)
+  if(_VALID_PAGES.has(h))switchPage(h)
+})
+// 初始加载：从 hash 恢复页面（setTimeout 确保所有 script 块执行完毕后再调用渲染函数）
+setTimeout(function(){
+  const h=(location.hash||'').slice(1)
+  if(_VALID_PAGES.has(h))switchPage(h)
+},0)
 
 // ══════════════════════════════════════
 //  CLOCK & COUNTERS
