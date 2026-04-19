@@ -195,19 +195,38 @@
 body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;font-size:14px;min-height:100vh;display:flex}
 
 /* Sidebar */
-#sidebar{width:200px;min-width:200px;background:var(--surface);border-right:1px solid var(--border);padding:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
-#nav-scroll{flex:1;overflow-y:auto;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+#sidebar{width:200px;min-width:200px;background:var(--surface);border-right:1px solid var(--border);padding:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:width .22s ease}
+#nav-scroll{flex:1;overflow-y:auto;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent;overflow-x:hidden}
 #nav-scroll::-webkit-scrollbar{width:4px}
 #nav-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.logo{padding:0 16px 16px;border-bottom:1px solid var(--border)}
-.logo h1{font-size:15px;font-weight:700;color:var(--primary)}
-.logo .subtitle{font-size:11px;color:var(--text2);margin-top:2px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:var(--text2);transition:all .15s;font-size:13px;border-left:2px solid transparent}
+.logo{padding:0 16px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.logo-text{min-width:0;overflow:hidden}
+.logo h1{font-size:15px;font-weight:700;color:var(--primary);white-space:nowrap}
+.logo .subtitle{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap}
+#sidebar-toggle{background:none;border:none;cursor:pointer;color:var(--text2);padding:3px 5px;border-radius:6px;font-size:15px;flex-shrink:0;margin-top:2px;line-height:1;transition:background .15s,color .15s}
+#sidebar-toggle:hover{background:var(--surface2);color:var(--primary)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:var(--text2);transition:background .15s,color .15s;font-size:13px;border-left:2px solid transparent;white-space:nowrap;overflow:hidden}
 .nav-item:hover{background:var(--surface2);color:var(--text)}
 .nav-item.active{background:var(--primary-bg);color:var(--primary);border-left-color:var(--primary);font-weight:600}
-.nav-icon{font-size:16px;width:20px;text-align:center}
-.nav-group{padding:12px 16px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
-.sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-label{overflow:hidden;transition:opacity .15s,max-width .22s ease;max-width:140px;opacity:1}
+.nav-group{padding:12px 16px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);white-space:nowrap;overflow:hidden;transition:opacity .15s}
+.sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);overflow:hidden}
+/* ── Nav item tooltip when collapsed ── */
+#sidebar.nav-collapsed .nav-item{position:relative}
+#sidebar.nav-collapsed .nav-item:hover::after{content:attr(data-label);position:absolute;left:58px;top:50%;transform:translateY(-50%);background:var(--text);color:var(--bg);padding:4px 10px;border-radius:6px;font-size:12px;white-space:nowrap;pointer-events:none;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+/* ── Collapsed state ── */
+#sidebar.nav-collapsed{width:56px}
+#sidebar.nav-collapsed .logo-text{display:none}
+#sidebar.nav-collapsed .logo{justify-content:center;padding-bottom:12px}
+#sidebar.nav-collapsed .nav-group{opacity:0;height:0;padding:0;margin:0}
+#sidebar.nav-collapsed .nav-label{opacity:0;max-width:0}
+#sidebar.nav-collapsed .nav-item{padding:10px 0;justify-content:center;gap:0;border-left-color:transparent}
+#sidebar.nav-collapsed .nav-item.active{border-left-color:transparent;background:var(--primary-bg)}
+#sidebar.nav-collapsed .mode-toggle{display:none}
+#sidebar.nav-collapsed .sidebar-bottom-text{display:none}
+#sidebar.nav-collapsed .sidebar-bottom{display:flex;flex-direction:column;align-items:center;padding:10px 0}
+#main{transition:margin-left .22s ease}
 .phd-counter{font-size:11px;color:var(--text2);text-align:center}
 .phd-counter span{font-size:22px;font-weight:700;color:var(--primary);display:block}
 .companion-counter{font-size:11px;color:var(--text2);text-align:center;margin-top:6px;opacity:.7}
@@ -244,7 +263,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .ai-loading .ai-reply-hd::after{content:'';display:inline-block;width:5px;height:5px;background:#10b981;border-radius:50%;margin-left:4px;animation:ai-pulse 1.2s ease-in-out infinite}
 
 /* Main */
-#main{margin-left:200px;flex:1;padding:24px;min-height:100vh}
+#main{margin-left:200px;flex:1;padding:24px;min-height:100vh;transition:margin-left .22s ease}
+#main.nav-collapsed{margin-left:56px}
 .page{display:none}.page.active{display:block}
 .page-title{font-size:20px;font-weight:700;margin-bottom:4px}
 .page-subtitle{color:var(--text2);font-size:13px;margin-bottom:20px}
@@ -647,43 +667,50 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 ══════════════════════════════════════ -->
 <aside id="sidebar">
   <div class="logo">
-    <h1 id="sidebar-title"><span id="sidebar-role-emoji">🎓</span> <span id="sidebar-role-label">科研工作台</span></h1>
-    <div class="subtitle" id="sidebar-field">博士科研工作台</div>
+    <div class="logo-text">
+      <h1 id="sidebar-title"><span id="sidebar-role-emoji">🎓</span> <span id="sidebar-role-label">科研工作台</span></h1>
+      <div class="subtitle" id="sidebar-field">博士科研工作台</div>
+    </div>
+    <button id="sidebar-toggle" onclick="toggleSidebar()" title="收起/展开菜单">‹</button>
   </div>
   <div id="nav-scroll">
     <div class="nav-group">主要</div>
-    <div class="nav-item active" data-page="overview"><span class="nav-icon">📊</span>今日概览</div>
-    <div class="nav-item" data-page="tasks"><span class="nav-icon">✅</span>任务管理</div>
-    <div class="nav-item" data-page="focus"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" style="vertical-align:-3px"><path d="M12 3L6 16A6 6 0 0018 16Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 19Q10 17 12 19Q14 21 16 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>心流时光</div>
-    <div class="nav-item" data-page="habits"><span class="nav-icon">🔥</span>习惯打卡</div>
+    <div class="nav-item active" data-page="overview" data-label="今日概览"><span class="nav-icon">📊</span><span class="nav-label">今日概览</span></div>
+    <div class="nav-item" data-page="tasks" data-label="任务管理"><span class="nav-icon">✅</span><span class="nav-label">任务管理</span></div>
+    <div class="nav-item" data-page="focus" data-label="心流时光"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" style="vertical-align:-3px"><path d="M12 3L6 16A6 6 0 0018 16Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 19Q10 17 12 19Q14 21 16 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">心流时光</span></div>
+    <div class="nav-item" data-page="habits" data-label="习惯打卡"><span class="nav-icon">🔥</span><span class="nav-label">习惯打卡</span></div>
     <div class="nav-group">科研</div>
-    <div class="nav-item" data-page="submissions"><span class="nav-icon">📖</span>文献 & 投稿</div>
-    <div class="nav-item" data-page="gantt"><span class="nav-icon">📅</span>项目甘特图</div>
-    <div class="nav-item" data-page="tools"><span class="nav-icon">⚡</span>工具面板</div>
-    <div class="nav-item" data-page="reflection"><span class="nav-icon">🌙</span>反思日记</div>
-    <div class="nav-item" data-page="stats"><span class="nav-icon">📈</span>统计图表</div>
-    <div class="nav-item" data-page="intel"><span class="nav-icon">📡</span>摸鱼侦察局</div>
-    <div class="nav-item" data-page="procure"><span class="nav-icon">🛒</span>采购清单</div>
+    <div class="nav-item" data-page="submissions" data-label="文献 & 投稿"><span class="nav-icon">📖</span><span class="nav-label">文献 & 投稿</span></div>
+    <div class="nav-item" data-page="gantt" data-label="项目甘特图"><span class="nav-icon">📅</span><span class="nav-label">项目甘特图</span></div>
+    <div class="nav-item" data-page="tools" data-label="工具面板"><span class="nav-icon">⚡</span><span class="nav-label">工具面板</span></div>
+    <div class="nav-item" data-page="reflection" data-label="反思日记"><span class="nav-icon">🌙</span><span class="nav-label">反思日记</span></div>
+    <div class="nav-item" data-page="stats" data-label="统计图表"><span class="nav-icon">📈</span><span class="nav-label">统计图表</span></div>
+    <div class="nav-item" data-page="intel" data-label="摸鱼侦察局"><span class="nav-icon">📡</span><span class="nav-label">摸鱼侦察局</span></div>
+    <div class="nav-item" data-page="procure" data-label="采购清单"><span class="nav-icon">🛒</span><span class="nav-label">采购清单</span></div>
     <div class="nav-group">设置</div>
-    <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>个人设置</div>
-    <div class="nav-item" onclick="openThemeModal()"><span class="nav-icon">🎨</span>界面主题</div>
+    <div class="nav-item" data-page="settings" data-label="个人设置"><span class="nav-icon">⚙️</span><span class="nav-label">个人设置</span></div>
+    <div class="nav-item" onclick="openThemeModal()" data-label="界面主题"><span class="nav-icon">🎨</span><span class="nav-label">界面主题</span></div>
     <div class="mode-toggle" onclick="toggleMode()" title="切换深色/浅色模式">
       <div class="mode-toggle-track"><div class="mode-toggle-thumb"></div></div>
       <span id="mode-label">深色模式</span>
     </div>
-    <div class="nav-item" onclick="openSyncModal()"><span class="nav-icon">☁️</span>云同步</div>
-    <div class="nav-item" id="exportBtn"><span class="nav-icon">💾</span>导出数据</div>
-    <div class="nav-item" id="importBtn"><span class="nav-icon">📥</span>导入数据</div>
+    <div class="nav-item" onclick="openSyncModal()" data-label="云同步"><span class="nav-icon">☁️</span><span class="nav-label">云同步</span></div>
+    <div class="nav-item" id="exportBtn" data-label="导出数据"><span class="nav-icon">💾</span><span class="nav-label">导出数据</span></div>
+    <div class="nav-item" id="importBtn" data-label="导入数据"><span class="nav-icon">📥</span><span class="nav-label">导入数据</span></div>
     <input type="file" id="importFile" accept=".json" style="display:none">
   </div>
   <div class="sidebar-bottom">
-    <div class="phd-counter"><span id="phd-day">—</span><span id="roleLabel">博士第 N 天</span></div>
-    <div class="role-badge" id="role-badge" onclick="openRoleModal()" title="点击切换角色">
-      <span id="role-emoji">🎓</span><span id="role-name">设置角色</span>
+    <div class="sidebar-bottom-text">
+      <div class="phd-counter"><span id="phd-day">—</span><span id="roleLabel">博士第 N 天</span></div>
+      <div class="role-badge" id="role-badge" onclick="openRoleModal()" title="点击切换角色">
+        <span id="role-emoji">🎓</span><span id="role-name">设置角色</span>
+      </div>
+      <div class="companion-counter" id="busuanzi_container_site_uv" style="display:none">
+        🌐 同行者 <span id="busuanzi_value_site_uv">…</span> 人
+      </div>
     </div>
-    <div class="companion-counter" id="busuanzi_container_site_uv" style="display:none">
-      🌐 同行者 <span id="busuanzi_value_site_uv">…</span> 人
-    </div>
+    <!-- 收起状态：只显示角色 emoji -->
+    <div class="role-badge-collapsed" id="role-badge-collapsed" onclick="openRoleModal()" title="点击切换角色" style="display:none;cursor:pointer;font-size:20px;text-align:center"></div>
   </div>
 </aside>
 
@@ -2032,6 +2059,42 @@ function switchPage(name) {
 // showPage 别名（兼容内部调用）
 const showPage=switchPage
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
+
+// ── 侧边栏折叠/展开 ──
+function toggleSidebar(){
+  const sidebar=document.getElementById('sidebar')
+  const main=document.getElementById('main')
+  const btn=document.getElementById('sidebar-toggle')
+  const collapsed=sidebar.classList.toggle('nav-collapsed')
+  main.classList.toggle('nav-collapsed',collapsed)
+  btn.textContent=collapsed?'›':'‹'
+  // 折叠状态下显示角色 emoji
+  const badgeCollapsed=document.getElementById('role-badge-collapsed')
+  const bottomText=document.querySelector('.sidebar-bottom-text')
+  if(badgeCollapsed){
+    badgeCollapsed.style.display=collapsed?'block':'none'
+    badgeCollapsed.textContent=document.getElementById('role-emoji')?.textContent||'🎓'
+  }
+  if(bottomText)bottomText.style.display=collapsed?'none':'block'
+  try{localStorage.setItem('_nav_collapsed',collapsed?'1':'')}catch{}
+}
+// 初始恢复折叠状态
+;(function(){
+  try{
+    if(localStorage.getItem('_nav_collapsed')==='1'){
+      const sidebar=document.getElementById('sidebar')
+      const main=document.getElementById('main')
+      const btn=document.getElementById('sidebar-toggle')
+      sidebar.classList.add('nav-collapsed')
+      main.classList.add('nav-collapsed')
+      if(btn)btn.textContent='›'
+      const badgeCollapsed=document.getElementById('role-badge-collapsed')
+      const bottomText=document.querySelector('.sidebar-bottom-text')
+      if(badgeCollapsed)badgeCollapsed.style.display='block'
+      if(bottomText)bottomText.style.display='none'
+    }
+  }catch{}
+})()
 // 浏览器前进 / 后退同步导航（不与 paper-reader popstate 冲突）
 window.addEventListener('popstate',function(){
   if(document.getElementById('paper-reader-modal').classList.contains('open'))return
