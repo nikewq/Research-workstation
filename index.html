@@ -6002,74 +6002,120 @@ function wrRenderPreview(){
   let raw=ta.value||''
   if(!raw.trim()){preEl.innerHTML='<div style="color:var(--text2);font-size:13px;text-align:center;padding-top:40px">开始编写后预览将实时更新</div>';return}
 
-  // split into segments for safe math handling
-  // Process: extract math blocks first, replace with placeholders, then escape HTML on text, restore math
-  const mathBlocks=[]
-  let idx=0
+  // ── Step 1: Extract ALL math into placeholders (before HTML escape) ──
+  const mathBlocks=[];let mi=0
+  function _ph(inner,block){
+    const p=`\x00M${mi++}\x00`
+    mathBlocks.push({p,inner:inner.trim(),block})
+    return p
+  }
+  // equation / align / gather environments → display math
+  raw=raw.replace(/\\begin\{(equation|align|gather|multline)\*?\}([\s\S]*?)\\end\{\1\*?\}/g,(_,_env,inner)=>_ph(inner,true))
+  // \[...\] display math
+  raw=raw.replace(/\\\[([\s\S]*?)\\\]/g,(_,inner)=>_ph(inner,true))
+  // $$...$$ display math
+  raw=raw.replace(/\$\$([\s\S]*?)\$\$/g,(_,inner)=>_ph(inner,true))
+  // \(...\) inline math
+  raw=raw.replace(/\\\(([\s\S]*?)\\\)/g,(_,inner)=>_ph(inner,false))
+  // $...$ inline math  (careful: not $$)
+  raw=raw.replace(/(?<!\$)\$([^$\n]{1,300}?)\$(?!\$)/g,(_,inner)=>_ph(inner,false))
 
-  // replace $$...$$ block math
-  let processed=raw.replace(/\$\$([\s\S]*?)\$\$/g,(match,inner)=>{
-    const ph=`\x00MATH_BLOCK_${idx}\x00`
-    mathBlocks.push({ph,inner:inner.trim(),block:true})
-    idx++
-    return ph
-  })
-  // replace $...$ inline math (not already replaced)
-  processed=processed.replace(/\$([^$\n]+?)\$/g,(match,inner)=>{
-    const ph=`\x00MATH_INLINE_${idx}\x00`
-    mathBlocks.push({ph,inner:inner.trim(),block:false})
-    idx++
-    return ph
-  })
+  // ── Step 2: HTML escape the text ──
+  let html=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 
-  // escape HTML on the rest
-  let html=processed
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-
-  // LaTeX structure transformations (after escaping)
+  // ── Step 3: LaTeX text transformations ──
   html=html
-    .replace(/\\section\{([^}]*)\}/g,'<h2>$1</h2>')
-    .replace(/\\subsection\{([^}]*)\}/g,'<h3>$1</h3>')
-    .replace(/\\subsubsection\{([^}]*)\}/g,'<h4 style="font-size:13px;font-weight:700;margin:10px 0 4px">$1</h4>')
+    // Remove invisible / layout commands
+    .replace(/\\noindent\b\s*/g,'')
+    .replace(/\\indent\b\s*/g,'&nbsp;&nbsp;')
+    .replace(/\\label\{[^}]*\}/g,'')
+    .replace(/\\newpage\b|\\clearpage\b|\\pagebreak\b/g,'<hr style="margin:10px 0;border:none;border-top:1px dashed var(--border)">')
+    .replace(/\\maketitle\b|\\tableofcontents\b|\\listoffigures\b|\\listoftables\b/g,'')
+    // Spacing
+    .replace(/\\qquad\b/g,'&thinsp;&thinsp;&thinsp;&thinsp;&thinsp;&thinsp;&thinsp;&thinsp;')
+    .replace(/\\quad\b/g,'&thinsp;&thinsp;&thinsp;&thinsp;')
+    .replace(/\\[,;:!]\b/g,'&thinsp;')
+    .replace(/\\hspace\*?\{[^}]*\}/g,'&ensp;')
+    .replace(/\\vspace\*?\{[^}]*\}/g,'<div style="margin:8px 0"></div>')
+    .replace(/\\medskip\b/g,'<div style="margin:10px 0"></div>')
+    .replace(/\\bigskip\b/g,'<div style="margin:18px 0"></div>')
+    .replace(/\\smallskip\b/g,'<div style="margin:4px 0"></div>')
+    // Line break \\  in text mode
+    .replace(/\\\\(\s*)/g,'<br>')
+    .replace(/\\par\b/g,'</p><p style="margin:0 0 8px">')
+    .replace(/\\newline\b/g,'<br>')
+    // Structure
+    .replace(/\\section\*?\{([^}]*)\}/g,'<h2>$1</h2>')
+    .replace(/\\subsection\*?\{([^}]*)\}/g,'<h3>$1</h3>')
+    .replace(/\\subsubsection\*?\{([^}]*)\}/g,'<h4 style="font-size:13px;font-weight:700;margin:10px 0 4px">$1</h4>')
+    .replace(/\\paragraph\*?\{([^}]*)\}/g,'<strong>$1 </strong>')
+    // Text formatting
     .replace(/\\textbf\{([^}]*)\}/g,'<strong>$1</strong>')
     .replace(/\\textit\{([^}]*)\}/g,'<em>$1</em>')
     .replace(/\\emph\{([^}]*)\}/g,'<em>$1</em>')
     .replace(/\\underline\{([^}]*)\}/g,'<u>$1</u>')
+    .replace(/\\texttt\{([^}]*)\}/g,'<code style="font-size:12px;background:var(--surface2);padding:1px 4px;border-radius:3px">$1</code>')
+    .replace(/\\textsc\{([^}]*)\}/g,'<span style="font-variant:small-caps">$1</span>')
+    .replace(/\\text\{([^}]*)\}/g,'$1')
+    // Cross-refs
     .replace(/\\footnote\{([^}]*)\}/g,'<sup style="font-size:10px;color:var(--text2)" title="$1">[注]</sup>')
-    .replace(/\\label\{([^}]*)\}/g,'')
     .replace(/\\ref\{([^}]*)\}/g,'<span style="color:var(--primary)">[ref:$1]</span>')
-    .replace(/\\cite\{([^}]*)\}/g,'<span style="color:var(--primary)">[cite:$1]</span>')
-    .replace(/\\begin\{equation\}([\s\S]*?)\\end\{equation\}/g,'<div class="wr-math-block">$1</div>')
-    .replace(/\\begin\{align\*?\}([\s\S]*?)\\end\{align\*?\}/g,'<div class="wr-math-block">$1</div>')
-    .replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g,(m,inner)=>'<ul style="margin:8px 0 8px 20px">'+inner.replace(/\\item\s*/g,'<li>').replace(/<li>([^<]*)/g,'<li>$1</li>')+'</ul>')
-    .replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g,(m,inner)=>'<ol style="margin:8px 0 8px 20px">'+inner.replace(/\\item\s*/g,'<li>').replace(/<li>([^<]*)/g,'<li>$1</li>')+'</ol>')
+    .replace(/\\eqref\{([^}]*)\}/g,'<span style="color:var(--primary)">(eq.$1)</span>')
+    .replace(/\\citet?\*?\{([^}]*)\}/g,'<span style="color:var(--primary)">[cite:$1]</span>')
+    .replace(/\\citep\*?\{([^}]*)\}/g,'<span style="color:var(--primary)">[cite:$1]</span>')
+    .replace(/\\bibliography\{[^}]*\}/g,'')
+    .replace(/\\bibliographystyle\{[^}]*\}/g,'')
+    // Special chars
+    .replace(/\\%/g,'%').replace(/\\&amp;/g,'&amp;').replace(/\\_/g,'_')
+    .replace(/\\ldots\b|\\dots\b/g,'…').replace(/\\cdots\b/g,'⋯')
+    .replace(/---/g,'—').replace(/--/g,'–')
+    .replace(/``/g,'\u201C').replace(/''/g,'\u201D')
+    // Lists
+    .replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g,(m,inner)=>{
+      const items=inner.replace(/\\item\s*/g,'\x01').split('\x01').filter(s=>s.trim())
+      return'<ul style="margin:8px 0 8px 20px">'+items.map(i=>`<li>${i.trim()}</li>`).join('')+'</ul>'
+    })
+    .replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g,(m,inner)=>{
+      const items=inner.replace(/\\item\s*/g,'\x01').split('\x01').filter(s=>s.trim())
+      return'<ol style="margin:8px 0 8px 20px">'+items.map(i=>`<li>${i.trim()}</li>`).join('')+'</ol>'
+    })
     .replace(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/g,'<div style="background:var(--surface2);border-left:3px solid var(--primary);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:13px"><strong>Abstract</strong><br>$1</div>')
-    // comment lines
-    .replace(/(^|\n)([ \t]*%[^\n]*)/g,(m,pre,line)=>pre+'<span class="wr-comment">'+line+'</span>')
-    // double newline → paragraph
+    .replace(/\\begin\{quote\}([\s\S]*?)\\end\{quote\}/g,'<blockquote style="border-left:3px solid var(--border);margin:8px 0 8px 16px;padding:4px 12px;color:var(--text2)">$1</blockquote>')
+    // Remaining unknown environments: drop begin/end markers, keep content
+    .replace(/\\begin\{[a-zA-Z*]+\}/g,'').replace(/\\end\{[a-zA-Z*]+\}/g,'')
+    // Comment lines (% ...)
+    .replace(/(^|\n)([ \t]*%[^\n]*)/g,(m,pre,line)=>pre+`<span style="color:var(--text2);font-style:italic;font-size:12px">${line}</span>`)
+    // Double newline → paragraph
     .replace(/\n\n+/g,'</p><p style="margin:0 0 8px">')
+    // Single newline → space (LaTeX ignores single newlines)
+    .replace(/\n/g,' ')
+    // Drop remaining bare backslash-commands that didn't match (cleanup)
+    .replace(/\\[a-zA-Z]+\*?(?:\{[^}]*\})?/g,(m)=>{
+      // Keep if it's just a word like \\alpha etc. — already handled above; strip silently
+      return''
+    })
+    // Clean up {} braces left behind
+    .replace(/\{([^{}]*)\}/g,'$1')
 
   html='<p style="margin:0 0 8px">'+html+'</p>'
 
-  // restore math placeholders
+  // ── Step 4: Restore math placeholders with KaTeX ──
   for(const m of mathBlocks){
-    const escapedPh=m.ph.replace(/\x00/g,'\\x00')
     let rendered
     if(_katexLoaded&&window.katex){
       try{
-        rendered=window.katex.renderToString(m.inner,{throwOnError:false,displayMode:m.block})
+        rendered=window.katex.renderToString(m.inner,{throwOnError:false,displayMode:m.block,trust:false})
       }catch(e){
-        rendered='<code style="color:#dc2626">'+escHtml(m.inner)+'</code>'
+        rendered='<code style="color:#dc2626;font-size:12px">'+m.inner.replace(/</g,'&lt;')+'</code>'
       }
     }else{
+      // KaTeX not loaded yet — show code until it loads
       rendered=m.block
-        ?'<div class="wr-math-block"><code>'+escHtml(m.inner)+'</code></div>'
-        :'<code style="background:var(--surface2);padding:1px 4px;border-radius:3px">'+escHtml(m.inner)+'</code>'
+        ?`<div class="wr-math-block"><code style="font-size:12px">${m.inner.replace(/</g,'&lt;')}</code></div>`
+        :`<code style="background:var(--surface2);padding:1px 4px;border-radius:3px;font-size:12px">${m.inner.replace(/</g,'&lt;')}</code>`
     }
-    if(m.block){
-      rendered='<div class="wr-math-block">'+rendered+'</div>'
-    }
-    html=html.split(m.ph).join(rendered)
+    if(m.block)rendered='<div class="wr-math-block">'+rendered+'</div>'
+    html=html.split(m.p).join(rendered)
   }
 
   preEl.innerHTML=html
