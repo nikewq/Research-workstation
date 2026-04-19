@@ -1,0 +1,26 @@
+{
+  "name": "博士工作台 · PhD Workstation",
+  "short_name": "PhD Workstation",
+  "description": "为博士研究生定制的全功能工作台，集成日程、文献、实验记录、反思日记等模块",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#7c3aed",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "icons/tab_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "education"],
+  "screenshots": []
+}
