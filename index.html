@@ -451,6 +451,32 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .dp-read-panel{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px}
 .dp-tag-sel{cursor:pointer;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:500;border:1.5px solid var(--primary);color:var(--primary);background:transparent;transition:all .1s;display:inline-block;margin:3px}
 .dp-tag-sel.active{background:var(--primary);color:#fff}
+/* ── Paper Reader Modal ── */
+#paper-reader-modal{position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;display:none}
+#paper-reader-modal.open{display:flex}
+#prm-header{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0}
+#prm-title-wrap{flex:1;min-width:0}
+#prm-title{font-size:14px;font-weight:700;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#prm-meta{font-size:11px;color:var(--text2);margin-top:2px}
+#prm-actions{display:flex;gap:6px;flex-shrink:0;align-items:center;flex-wrap:wrap}
+#prm-body{flex:1;display:grid;grid-template-columns:1fr 360px;overflow:hidden;min-height:0}
+#prm-viewer{overflow:hidden;border-right:1px solid var(--border);display:flex;flex-direction:column;background:#f8f9fa}
+#prm-viewer iframe{flex:1;border:none;width:100%;height:100%}
+#prm-viewer-fallback{flex:1;overflow-y:auto;padding:20px;display:none}
+#prm-sidebar{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.prm-stab-bar{display:flex;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0}
+.prm-stab{flex:1;padding:9px 0;text-align:center;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);transition:all .15s}
+.prm-stab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.prm-spanel{flex:1;overflow-y:auto;padding:12px;display:none;flex-direction:column;gap:8px;min-height:0}
+.prm-spanel.active{display:flex}
+#prm-notes-area{flex:1;resize:none;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;background:var(--bg);color:var(--text);font-family:inherit;min-height:200px}
+#prm-notes-area:focus{outline:none;border-color:var(--primary)}
+.prm-ai-msg{padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.7;animation:fadeIn .2s}
+.prm-ai-msg.user{background:var(--primary-soft);color:var(--primary);align-self:flex-end;max-width:90%}
+.prm-ai-msg.ai{background:var(--surface2);color:var(--text);max-width:95%;border-left:3px solid var(--primary)}
+#prm-chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;min-height:0}
+#prm-chat-input-row{display:flex;gap:6px;padding-top:8px;border-top:1px solid var(--border);flex-shrink:0}
+#prm-chat-input{flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)}
 /* ── Research Two-column Layout ── */
 .research-layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
 .research-list-col{min-width:0}
@@ -5849,17 +5875,21 @@ function renderPapersPage(){
   // 用 ID 索引代替 JSON-in-HTML-attribute，避免引号冲突
   window._dpLibMap={}
   filtered.forEach(p=>{window._dpLibMap[p.id]=p})
-  listEl.innerHTML=filtered.map(p=>`
-    <div class="dp-lib-row" onclick="openReadingPanel('${escHtml(p.id)}')">
+  listEl.innerHTML=filtered.map(p=>{
+    const hasNotes=!!(_ldAllNotes()[p.id])
+    return`<div class="dp-lib-row" onclick="openPaperReader('${escHtml(p.id)}')">
       <div style="flex:1;min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.title)}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px">${escHtml(p.area||'')} · ${escHtml(p.date||'')} · ${escHtml((p.authors||'').slice(0,40))}</div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px">
+        ${hasNotes?'<span title="有笔记" style="font-size:12px">📝</span>':''}
         <span class="dp-score">⭐${p.score||0}</span>
+        ${p.pdf_url?`<button class="btn btn-sm" style="padding:2px 7px;font-size:10px;color:#dc2626;border:1px solid #dc2626;background:transparent" title="打开阅读器" onclick="event.stopPropagation();openPaperReader('${escHtml(p.id)}')">PDF</button>`:''}
         <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:12px;color:var(--text2)" title="删除" onclick="event.stopPropagation();delFromLib('${escHtml(p.id)}')">🗑</button>
       </div>
-    </div>`).join('')
+    </div>`
+  }).join('')
 }
 
 function _setPapArea(a,el){
@@ -5968,6 +5998,246 @@ function saveAddPaper(){
   renderPapersPage()
   toast('已添加到文献库')
 }
+
+// ══════════════════════════════════════
+//  PAPER READER MODAL
+// ══════════════════════════════════════
+const _PRM_NOTES_KEY='_pnotes_v1'
+let _prmPaper=null
+let _prmChatHistory=[]
+let _prmViewMode='auto' // 'ar5iv'|'pdf'|'abstract'
+
+function _ldAllNotes(){try{return JSON.parse(localStorage.getItem(_PRM_NOTES_KEY)||'{}')}catch{return{}}}
+function _svAllNotes(o){localStorage.setItem(_PRM_NOTES_KEY,JSON.stringify(o))}
+
+function openPaperReader(id){
+  const p=(window._dpLibMap&&window._dpLibMap[id])||_ldPapLib().find(x=>x.id===id)
+  if(!p){toast('找不到论文','warn');return}
+  _prmPaper=p
+  _prmChatHistory=[]
+  const modal=document.getElementById('paper-reader-modal')
+  modal.classList.add('open')
+  // 填充头部
+  document.getElementById('prm-title').textContent=p.title
+  document.getElementById('prm-meta').textContent=[p.area,p.venue,p.date,(p.authors||'').slice(0,50)].filter(Boolean).join(' · ')
+  const absBtn=document.getElementById('prm-abs-btn')
+  const pdfBtn=document.getElementById('prm-pdf-btn')
+  absBtn.href=p.url||'#';absBtn.style.display=p.url?'':'none'
+  pdfBtn.href=p.pdf_url||'#';pdfBtn.style.display=p.pdf_url?'':'none'
+  // 加载笔记
+  const notes=_ldAllNotes()[p.id]||''
+  const ta=document.getElementById('prm-notes-area')
+  ta.value=notes
+  document.getElementById('prm-notes-count').textContent=notes.length+'字'
+  // 清空 AI 聊天
+  document.getElementById('prm-chat-log').innerHTML=''
+  document.getElementById('prm-chat-input').value=''
+  // 切换到笔记 tab
+  prm_switchTab('notes',document.querySelector('.prm-stab'))
+  // 加载阅读器
+  _prmLoadViewer()
+  document.body.style.overflow='hidden'
+}
+
+function closePaperReader(){
+  document.getElementById('paper-reader-modal').classList.remove('open')
+  document.getElementById('prm-iframe').src=''
+  document.body.style.overflow=''
+  prm_saveNotes() // 自动保存
+}
+
+function _prmLoadViewer(){
+  const p=_prmPaper
+  if(!p)return
+  const iframe=document.getElementById('prm-iframe')
+  const fallback=document.getElementById('prm-viewer-fallback')
+  const label=document.getElementById('prm-viewer-label')
+  const ar5ivBtn=document.getElementById('prm-ar5iv-btn')
+  const pdfEmbedBtn=document.getElementById('prm-pdf-embed-btn')
+  const abstractBtn=document.getElementById('prm-abstract-btn')
+
+  // 确定最佳阅读策略
+  const hasAr5iv=!!p.arxiv_id
+  const hasPdf=!!p.pdf_url
+
+  // 显示可用视图按钮
+  ar5ivBtn.style.display=hasAr5iv?'':'none'
+  pdfEmbedBtn.style.display=hasPdf?'':'none'
+  abstractBtn.style.display='inline-block'
+
+  if(_prmViewMode==='auto'){
+    if(hasAr5iv)_prmViewMode='ar5iv'
+    else if(hasPdf)_prmViewMode='pdf'
+    else _prmViewMode='abstract'
+  }
+  prm_switchView(_prmViewMode)
+}
+
+function prm_switchView(mode){
+  _prmViewMode=mode
+  const p=_prmPaper
+  const iframe=document.getElementById('prm-iframe')
+  const fallback=document.getElementById('prm-viewer-fallback')
+  const label=document.getElementById('prm-viewer-label')
+
+  if(mode==='ar5iv'&&p.arxiv_id){
+    iframe.style.display='flex'
+    fallback.style.display='none'
+    iframe.src=`https://ar5iv.labs.arxiv.org/html/${p.arxiv_id}`
+    label.textContent='ar5iv HTML 渲染版（arXiv论文HTML格式，加载较慢）'
+  }else if(mode==='pdf'&&p.pdf_url){
+    iframe.style.display='flex'
+    fallback.style.display='none'
+    iframe.src=p.pdf_url
+    label.textContent='PDF嵌入（部分论文可能因安全策略无法显示，可切换视图）'
+  }else{
+    // 摘要 fallback
+    iframe.style.display='none'
+    fallback.style.display='block'
+    label.textContent='摘要视图'
+    document.getElementById('prm-fb-title').textContent=p.title
+    document.getElementById('prm-fb-meta').textContent=[p.venue,p.date,p.authors].filter(Boolean).join(' · ')
+    document.getElementById('prm-fb-abstract').textContent=p.abstract||'暂无摘要'
+    const linksHtml=[
+      p.url?`<a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 摘要页</a>`:'',
+      p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="border-color:#dc2626;color:#dc2626">📄 PDF</a>`:''
+    ].join('')
+    document.getElementById('prm-fb-links').innerHTML=linksHtml
+  }
+}
+
+function prm_switchTab(name,el){
+  document.querySelectorAll('.prm-stab').forEach(t=>t.classList.remove('active'))
+  document.querySelectorAll('.prm-spanel').forEach(p=>{p.classList.remove('active')})
+  if(el)el.classList.add('active')
+  else document.querySelectorAll('.prm-stab')[name==='notes'?0:1]?.classList.add('active')
+  const panel=document.getElementById(`prm-tab-${name}`)
+  if(panel)panel.classList.add('active')
+}
+
+function prm_notesChanged(){
+  const v=document.getElementById('prm-notes-area').value
+  document.getElementById('prm-notes-count').textContent=v.length+'字'
+}
+
+function prm_saveNotes(){
+  if(!_prmPaper)return
+  const notes=document.getElementById('prm-notes-area').value
+  const all=_ldAllNotes()
+  if(notes.trim())all[_prmPaper.id]=notes
+  else delete all[_prmPaper.id]
+  _svAllNotes(all)
+  toast('笔记已保存')
+}
+
+function prm_insertMd(before,after){
+  const ta=document.getElementById('prm-notes-area')
+  const s=ta.selectionStart,e=ta.selectionEnd
+  const sel=ta.value.slice(s,e)||'文字'
+  ta.value=ta.value.slice(0,s)+before+sel+after+ta.value.slice(e)
+  ta.selectionStart=s+before.length;ta.selectionEnd=s+before.length+sel.length
+  ta.focus();prm_notesChanged()
+}
+function prm_insertLine(prefix){
+  const ta=document.getElementById('prm-notes-area')
+  const s=ta.selectionStart
+  const newline=ta.value[s-1]&&ta.value[s-1]!=='\n'?'\n':''
+  ta.value=ta.value.slice(0,s)+newline+prefix+ta.value.slice(s)
+  ta.selectionStart=ta.selectionEnd=s+newline.length+prefix.length
+  ta.focus();prm_notesChanged()
+}
+
+// AI 聊天
+async function prm_ask(preset){
+  const p=_prmPaper;if(!p)return
+  const inp=document.getElementById('prm-chat-input')
+  const q=preset||inp.value.trim()
+  if(!q)return
+  inp.value=''
+  const log=document.getElementById('prm-chat-log')
+  const notes=document.getElementById('prm-notes-area').value
+  // 显示用户消息
+  log.innerHTML+=`<div class="prm-ai-msg user">${escHtml(q)}</div>`
+  log.scrollTop=log.scrollHeight
+  // 组装上下文
+  const ctx=`论文信息：
+标题：${p.title}
+作者：${p.authors||''}
+期刊/会议：${p.venue||''}
+日期：${p.date||''}
+摘要：${(p.abstract||'').slice(0,500)}
+${notes?`\n用户笔记：${notes.slice(0,300)}`:''}
+${_prmChatHistory.length?'\n对话历史（最近2轮）：\n'+_prmChatHistory.slice(-4).map(m=>`${m.role==='user'?'用户':'AI'}：${m.content.slice(0,150)}`).join('\n'):''}
+
+用户问题：${q}`
+  const loadingEl=document.createElement('div')
+  loadingEl.className='prm-ai-msg ai'
+  loadingEl.innerHTML='<span class="spinner"></span> 思考中...'
+  log.appendChild(loadingEl);log.scrollTop=log.scrollHeight
+  try{
+    const ans=await _callAI(ctx,1500)
+    _prmChatHistory.push({role:'user',content:q},{role:'assistant',content:ans||''})
+    const md2h=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/^- (.+)$/gm,'<li>$1</li>')
+      .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul style="padding-left:0;list-style:none">$1</ul>')
+    loadingEl.innerHTML=md2h(ans||'AI 无响应')
+  }catch(e){loadingEl.textContent='AI 出错：'+e.message}
+  log.scrollTop=log.scrollHeight
+}
+
+// 番茄钟联动
+function prm_startPomo(){
+  if(!_prmPaper)return
+  const title=('📖 阅读：'+((_prmPaper.title||'').slice(0,30))).trim()
+  // 创建一个临时任务（阅读任务）
+  const tasks=ld(K.tasks)
+  let readTask=tasks.find(t=>t.status!=='done'&&t.title===title)
+  if(!readTask){
+    readTask={id:uid(),title,proj:'',tags:[],priority:'medium',due:'',status:'todo',created:today(),done:null,pomos:0}
+    tasks.unshift(readTask)
+    sv(K.tasks,tasks)
+  }
+  // 关闭 modal，跳转到 focus 页，设置任务
+  closePaperReader()
+  showPage('focus')
+  setTimeout(()=>{
+    updatePomoTaskSel()
+    const sel=document.getElementById('pomo-task-sel')
+    if(sel)for(let i=0;i<sel.options.length;i++){if(sel.options[i].value===readTask.id){sel.selectedIndex=i;break}}
+    toast('已切换到专注页，任务已设置为「'+title+'」')
+  },300)
+}
+
+// 每日总结联动
+function prm_addToDaily(){
+  if(!_prmPaper)return
+  const p=_prmPaper
+  const notes=document.getElementById('prm-notes-area').value.trim()
+  // 获取今日反思，若无则提示去反思页
+  const refs=ld(K.refs)
+  const todayEntry=refs.find(r=>r.date===today())
+  const entry=`📖 阅读论文：《${p.title}》${p.venue?'（'+p.venue+'）':''}${notes?'\n  笔记：'+notes.slice(0,120)+(notes.length>120?'...':''):''}`
+  if(todayEntry){
+    todayEntry.wins=(todayEntry.wins?todayEntry.wins+'\n':'')+entry
+    sv(K.refs,refs)
+    toast('已追加到今日反思「科研进展」')
+  }else{
+    // 创建今日条目
+    refs.unshift({id:uid(),date:today(),mood:'📖',wins:entry,struggles:'',tomorrow:'',gratitude:'',ts:new Date().toLocaleString('zh-CN')})
+    sv(K.refs,refs)
+    toast('已创建今日反思并记录阅读进展')
+  }
+  // 如果 pomodoro 正在运行，也记录到 pomo 日志
+  if(pomo.running){
+    pomo.taskTitle='📖 '+p.title.slice(0,25)
+    toast('已同步至番茄钟任务名称')
+  }
+}
+
+// ══════════════════════════════════════
+//  END PAPER READER MODAL
+// ══════════════════════════════════════
 
 // AI 提问
 async function aiAskPaper(preset){
@@ -6244,6 +6514,77 @@ function _prefillFromAI(btn){
 </script>
 
 <!-- ── Floating Timer Bar ── -->
+<!-- ══ Paper Reader Modal ══ -->
+<div id="paper-reader-modal">
+  <div id="prm-header">
+    <div id="prm-title-wrap">
+      <div id="prm-title">论文标题</div>
+      <div id="prm-meta"></div>
+    </div>
+    <div id="prm-actions">
+      <a id="prm-abs-btn" class="btn btn-ghost btn-sm" href="#" target="_blank" style="font-size:11px">🔗 摘要页</a>
+      <a id="prm-pdf-btn" class="btn btn-ghost btn-sm" href="#" target="_blank" style="font-size:11px;border-color:#dc2626;color:#dc2626">📄 外链PDF</a>
+      <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="prm_startPomo()">⏱ 开始专注</button>
+      <button class="btn btn-sm" style="font-size:11px;background:#d1fae5;color:#065f46" onclick="prm_addToDaily()">📋 记入今日</button>
+      <button class="btn btn-ghost btn-sm" onclick="closePaperReader()" style="font-size:15px;padding:2px 8px">×</button>
+    </div>
+  </div>
+  <div id="prm-body">
+    <!-- 左：PDF 阅读区 -->
+    <div id="prm-viewer">
+      <div style="display:flex;gap:6px;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text2)" id="prm-viewer-label">正在加载...</span>
+        <button id="prm-ar5iv-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('ar5iv')">📄 HTML版(ar5iv)</button>
+        <button id="prm-pdf-embed-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('pdf')">📑 PDF嵌入</button>
+        <button id="prm-abstract-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('abstract')">📝 摘要视图</button>
+      </div>
+      <iframe id="prm-iframe" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" referrerpolicy="no-referrer"></iframe>
+      <div id="prm-viewer-fallback">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--primary)" id="prm-fb-title"></div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px" id="prm-fb-meta"></div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text);background:var(--surface2);padding:14px;border-radius:8px;border-left:3px solid var(--primary)" id="prm-fb-abstract"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap" id="prm-fb-links"></div>
+      </div>
+    </div>
+    <!-- 右：侧边栏 -->
+    <div id="prm-sidebar">
+      <div class="prm-stab-bar">
+        <div class="prm-stab active" onclick="prm_switchTab('notes',this)">📝 笔记</div>
+        <div class="prm-stab" onclick="prm_switchTab('ai',this)">🤖 AI 助手</div>
+      </div>
+      <!-- 笔记 Tab -->
+      <div class="prm-spanel active" id="prm-tab-notes">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+          <span style="font-size:11px;color:var(--text2)" id="prm-notes-count">0 字</span>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="prm_insertMd('**','**')" title="加粗">B</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="prm_insertMd('*','*')" title="斜体">I</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="prm_insertLine('- ')" title="列表">•</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="prm_insertLine('> ')" title="引用">❝</button>
+          </div>
+        </div>
+        <textarea id="prm-notes-area" placeholder="记录阅读笔记、关键贡献、与自己研究的联系...&#10;&#10;支持 Markdown 格式：**加粗** *斜体* - 列表 > 引用" oninput="prm_notesChanged()"></textarea>
+        <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="prm_saveNotes()">💾 保存笔记</button>
+      </div>
+      <!-- AI Tab -->
+      <div class="prm-spanel" id="prm-tab-ai" style="padding-bottom:0">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0">
+          <button class="btn btn-sm" style="font-size:10px;background:var(--primary-soft);color:var(--primary)" onclick="prm_ask('这篇论文的核心贡献是什么？解决了什么问题？')">💡 核心贡献</button>
+          <button class="btn btn-sm" style="font-size:10px;background:var(--primary-soft);color:var(--primary)" onclick="prm_ask('这篇论文的方法有什么局限性？未来工作方向？')">🔭 局限展望</button>
+          <button class="btn btn-sm" style="font-size:10px;background:var(--primary-soft);color:var(--primary)" onclick="prm_ask('这篇工作与因果表征学习、OOD泛化有什么关联？对我的研究有何启发？')">🔗 与我相关</button>
+          <button class="btn btn-sm" style="font-size:10px;background:var(--primary-soft);color:var(--primary)" onclick="prm_ask('帮我生成这篇论文的 BibTeX 格式引用')">📎 BibTeX</button>
+          <button class="btn btn-sm" style="font-size:10px;background:#fef3c7;color:#92400e" onclick="prm_ask('请用3句话提炼这篇论文的精华，写成可以直接放入每日总结的格式')">✍️ 一键摘要</button>
+        </div>
+        <div id="prm-chat-log"></div>
+        <div id="prm-chat-input-row">
+          <input id="prm-chat-input" placeholder="提问..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();prm_ask()}">
+          <button class="btn btn-primary btn-sm" onclick="prm_ask()">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="scan-timer-bar">
   <span style="font-size:16px">⏱</span>
   <span class="stb-label">摸鱼倒计时</span>
