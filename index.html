@@ -565,6 +565,13 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .wr-comment{color:var(--text2);font-style:italic;font-size:12px}
 .wr-math-block{display:block;overflow-x:auto;text-align:center;margin:12px 0;padding:8px;background:var(--surface2);border-radius:6px}
 @media(max-width:900px){.wr-preview-col{display:none}.wr-projects-col{width:200px}}
+/* ZIP file tree */
+.wr-zip-card{padding:7px 10px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px;background:var(--surface2);display:flex;align-items:center;gap:6px;font-size:12px}
+.wr-zip-card:hover{border-color:var(--primary)}
+.wr-zip-file{display:flex;align-items:center;gap:5px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2px solid transparent}
+.wr-zip-file:hover{background:var(--surface2);color:var(--text)}
+.wr-zip-file.active{background:var(--primary-bg);color:var(--primary);border-left-color:var(--primary);font-weight:600}
+.wr-zip-folder{padding:5px 12px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-top:4px}
 </style>
 </head>
 <body>
@@ -1133,6 +1140,21 @@ mark.hl-pink{background:#fecdd3;color:#881337}
           <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 6px" onclick="wrAddOlProject()">+ 添加</button>
         </div>
         <div id="wr-ol-projects-list" style="padding:0 8px 8px;flex-shrink:0"></div>
+        <!-- ZIP 项目区 -->
+        <div style="padding:8px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);flex-shrink:0">
+          <span>📦 ZIP 项目</span>
+          <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 6px" onclick="wrImportZip()" title="导入本地 ZIP（支持 Overleaf 导出）">导入</button>
+        </div>
+        <input type="file" id="wr-zip-input" accept=".zip" style="display:none" onchange="wrHandleZipFile(this)">
+        <!-- 项目列表 / 文件树（二选一显示） -->
+        <div id="wr-zip-projects" style="padding:0 8px 4px;flex-shrink:0"></div>
+        <div id="wr-zip-filetree" style="display:none;flex:1;overflow-y:auto;padding:0;border-top:1px solid var(--border)">
+          <div id="wr-zip-tree-header" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--surface2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1">
+            <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 6px" onclick="wrCloseZipProject()">← 返回</button>
+            <span id="wr-zip-proj-name" style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"></span>
+          </div>
+          <div id="wr-zip-tree-files" style="padding:4px 0"></div>
+        </div>
         <!-- 本地草稿区 -->
         <div style="padding:8px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);flex-shrink:0">
           <span>本地草稿</span>
@@ -1154,9 +1176,9 @@ mark.hl-pink{background:#fecdd3;color:#881337}
           <button class="wr-tb-btn" onclick="wrInsert('\\cite{','}')" title="引用">📎</button>
           <button class="wr-tb-btn" onclick="wrInsertTable()" title="插入表格">⊞</button>
           <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
-          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrSaveDoc()">💾 保存</button>
-          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrExportTex()">⬇ .tex</button>
-          <button class="btn btn-ghost btn-sm" id="wr-del-btn" style="font-size:11px;color:#dc2626" onclick="wrDeleteDoc()">🗑</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_wrActiveZipId?wrSaveZipFile():wrSaveDoc()">💾 保存</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_wrActiveZipId?wrExportZipProject():wrExportTex()">⬇ 导出</button>
+          <button class="btn btn-ghost btn-sm" id="wr-del-btn" style="font-size:11px;color:#dc2626" onclick="_wrActiveZipId?wrCloseZipProject():wrDeleteDoc()">🗑</button>
         </div>
         <textarea id="wr-editor" placeholder="在此编写 LaTeX 内容...&#10;&#10;% 示例：&#10;\section{Introduction}&#10;This paper studies...&#10;&#10;% 行内公式：$E = mc^2$&#10;% 块级公式：&#10;$$\sum_{i=1}^{n} x_i = \mu$$" oninput="wrOnEdit(this)" onkeydown="wrHandleKey(event)"></textarea>
         <div style="padding:4px 12px;font-size:10px;color:var(--text2);display:flex;gap:12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
@@ -5787,6 +5809,7 @@ function initWritingPanel(){
   _wrPanelInited=true
   renderOlAccountBadge()
   renderOlProjectsList()
+  renderWrZipProjects()
   renderWrDocsList()
   _ensureKatex()
 }
@@ -5949,7 +5972,8 @@ function wrHandleKey(e){
     wrOnEdit(ta)
   }else if((e.ctrlKey||e.metaKey)&&e.key==='s'){
     e.preventDefault()
-    wrSaveDoc()
+    if(_wrActiveZipId&&_wrActiveZipFile)wrSaveZipFile()
+    else wrSaveDoc()
   }
 }
 
@@ -6192,6 +6216,221 @@ function _ensureKatex(){
   }
   script.onerror=()=>{_katexLoading=false}
   document.head.appendChild(script)
+}
+
+// ══════════════════════════════════════════════
+// 📦 ZIP 项目管理
+// ══════════════════════════════════════════════
+const WR_ZIP_KEY='phd_wr_zip_v1'
+let _wrZipJsReady=null
+let _wrActiveZipId=null   // 当前打开的 ZIP 项目 id
+let _wrActiveZipFile=null // 当前打开的文件 path
+
+// 允许保存的文本扩展名
+const _WR_TEXT_EXTS=new Set(['.tex','.bib','.cls','.sty','.txt','.md','.cfg','.def','.clo','.bbx','.cbx'])
+function _wrIsText(name){return _WR_TEXT_EXTS.has(name.slice(name.lastIndexOf('.')).toLowerCase())}
+function _wrFileIcon(name){
+  const ext=name.slice(name.lastIndexOf('.')).toLowerCase()
+  if(ext==='.tex')return'📄'
+  if(ext==='.bib')return'📚'
+  if(['.png','.jpg','.jpeg','.pdf','.eps'].includes(ext))return'🖼'
+  if(ext==='.cls'||ext==='.sty')return'⚙️'
+  return'📁'
+}
+
+// 懒加载 JSZip
+function _ensureJSZip(){
+  if(_wrZipJsReady)return _wrZipJsReady
+  _wrZipJsReady=new Promise((res,rej)=>{
+    if(window.JSZip){res(window.JSZip);return}
+    const s=document.createElement('script')
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+    s.onload=()=>res(window.JSZip)
+    s.onerror=()=>rej(new Error('JSZip 加载失败'))
+    document.head.appendChild(s)
+  })
+  return _wrZipJsReady
+}
+
+function wrImportZip(){
+  const inp=document.getElementById('wr-zip-input')
+  if(inp){inp.value='';inp.click()}
+}
+
+async function wrHandleZipFile(inp){
+  const file=inp.files[0];if(!file)return
+  toast('⏳ 正在解压...')
+  try{
+    const JSZip=await _ensureJSZip()
+    const zip=await JSZip.loadAsync(file)
+    const projName=file.name.replace(/\.zip$/i,'')
+    const files=[]
+    // 找公共前缀（Overleaf 导出通常有一个顶层文件夹）
+    const allNames=Object.keys(zip.files)
+    let prefix=''
+    const firstDir=allNames[0]?.split('/')[0]
+    if(firstDir&&allNames.every(n=>n.startsWith(firstDir+'/')))prefix=firstDir+'/'
+
+    const promises=Object.entries(zip.files).map(async([path,entry])=>{
+      if(entry.dir)return
+      const relPath=prefix?path.slice(prefix.length):path
+      if(!relPath)return
+      if(_wrIsText(relPath)){
+        try{
+          const content=await entry.async('string')
+          files.push({path:relPath,content})
+        }catch{}
+      }else{
+        files.push({path:relPath,content:null}) // binary: tracked but not editable
+      }
+    })
+    await Promise.all(promises)
+    files.sort((a,b)=>a.path.localeCompare(b.path))
+
+    const proj={id:uid(),name:projName,created:today(),files}
+    const all=ld(WR_ZIP_KEY)||[]
+    all.unshift(proj)
+    // 限制 localStorage 大小：最多保留 10 个项目
+    if(all.length>10)all.length=10
+    try{
+      sv(WR_ZIP_KEY,all)
+    }catch(e){
+      toast('⚠️ 项目较大，已省略部分文件','warn')
+      // 仅保存 .tex / .bib 文件
+      proj.files=proj.files.filter(f=>f.content!==null)
+      all[0]=proj
+      sv(WR_ZIP_KEY,all)
+    }
+    renderWrZipProjects()
+    wrOpenZipProject(proj.id)
+    toast(`✅ 已导入 ${projName}（${files.length} 个文件）`)
+  }catch(err){
+    toast('❌ 导入失败：'+err.message,'error')
+  }
+}
+
+function renderWrZipProjects(){
+  const el=document.getElementById('wr-zip-projects');if(!el)return
+  const all=ld(WR_ZIP_KEY)||[]
+  if(!all.length){el.innerHTML='<div style="font-size:11px;color:var(--text2);padding:6px 10px">暂无 ZIP 项目</div>';return}
+  el.innerHTML=all.map(p=>`
+    <div class="wr-zip-card">
+      <span style="font-size:16px">📦</span>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="wrOpenZipProject('${p.id}')">
+        <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.name)}</div>
+        <div style="font-size:10px;color:var(--text2)">${p.files.length} 个文件 · ${p.created}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="font-size:10px;color:#dc2626;padding:2px 5px;flex-shrink:0" onclick="wrDeleteZipProject('${p.id}')" title="删除">🗑</button>
+    </div>`).join('')
+}
+
+function wrOpenZipProject(id){
+  const all=ld(WR_ZIP_KEY)||[]
+  const proj=all.find(p=>p.id===id);if(!proj)return
+  _wrActiveZipId=id
+  // 切换左栏：隐藏项目列表，显示文件树
+  document.getElementById('wr-zip-projects').style.display='none'
+  const tree=document.getElementById('wr-zip-filetree')
+  tree.style.display='flex';tree.style.flexDirection='column'
+  document.getElementById('wr-zip-proj-name').textContent=proj.name
+  // 构建文件树 HTML
+  const filesEl=document.getElementById('wr-zip-tree-files')
+  // 按目录分组
+  const dirMap={}
+  proj.files.forEach(f=>{
+    const parts=f.path.split('/')
+    const dir=parts.length>1?parts.slice(0,-1).join('/'):'.'
+    if(!dirMap[dir])dirMap[dir]=[]
+    dirMap[dir].push(f)
+  })
+  let html=''
+  const dirs=Object.keys(dirMap).sort()
+  dirs.forEach(dir=>{
+    if(dir!=='.')html+=`<div class="wr-zip-folder">📂 ${escHtml(dir)}/</div>`
+    dirMap[dir].forEach(f=>{
+      const fname=f.path.split('/').pop()
+      const isEditable=f.content!==null
+      const icon=_wrFileIcon(fname)
+      html+=`<div class="wr-zip-file${isEditable?'':' text-muted'}" id="wr-zf-${CSS.escape(f.path)}" onclick="${isEditable?`wrOpenZipFile('${id}','${f.path.replace(/'/g,"\\'")}')`:'void(0)'}" title="${escHtml(f.path)}">${icon} ${escHtml(fname)}${isEditable?'':' <span style="font-size:9px">(binary)</span>'}</div>`
+    })
+  })
+  filesEl.innerHTML=html
+  // 自动打开根目录下第一个 .tex 文件
+  const firstTex=proj.files.find(f=>f.path.split('/').length<=2&&f.path.endsWith('.tex')&&f.content!==null)
+    ||proj.files.find(f=>f.path.endsWith('.tex')&&f.content!==null)
+  if(firstTex)wrOpenZipFile(id,firstTex.path)
+}
+
+function wrOpenZipFile(projId,filePath){
+  const all=ld(WR_ZIP_KEY)||[]
+  const proj=all.find(p=>p.id===projId);if(!proj)return
+  const file=proj.files.find(f=>f.path===filePath);if(!file||file.content===null)return
+  _wrActiveZipId=projId
+  _wrActiveZipFile=filePath
+  const ta=document.getElementById('wr-editor')
+  const titleEl=document.getElementById('wr-doc-title')
+  if(ta)ta.value=file.content
+  if(titleEl)titleEl.value=proj.name+' / '+filePath.split('/').pop()
+  // 高亮当前文件
+  document.querySelectorAll('.wr-zip-file').forEach(el=>el.classList.remove('active'))
+  const activeEl=document.getElementById('wr-zf-'+CSS.escape(filePath))
+  if(activeEl){activeEl.classList.add('active');activeEl.scrollIntoView({block:'nearest'})}
+  // 更新状态
+  const countEl=document.getElementById('wr-char-count')
+  const lineEl=document.getElementById('wr-line-count')
+  if(countEl)countEl.textContent=file.content.length+' 字符'
+  if(lineEl)lineEl.textContent=file.content.split('\n').length+' 行'
+  wrRenderPreview()
+}
+
+function wrSaveZipFile(){
+  if(!_wrActiveZipId||!_wrActiveZipFile)return
+  const ta=document.getElementById('wr-editor');if(!ta)return
+  const all=ld(WR_ZIP_KEY)||[]
+  const proj=all.find(p=>p.id===_wrActiveZipId);if(!proj)return
+  const file=proj.files.find(f=>f.path===_wrActiveZipFile);if(!file)return
+  file.content=ta.value
+  try{
+    sv(WR_ZIP_KEY,all)
+    const st=document.getElementById('wr-save-status')
+    if(st){st.textContent='✅ 已保存';setTimeout(()=>st.textContent='',1800)}
+  }catch{toast('⚠️ 保存失败：存储空间不足','warn')}
+}
+
+function wrDeleteZipProject(id){
+  if(!confirm('删除该 ZIP 项目？所有本地修改将丢失。'))return
+  const all=(ld(WR_ZIP_KEY)||[]).filter(p=>p.id!==id)
+  sv(WR_ZIP_KEY,all)
+  if(_wrActiveZipId===id)wrCloseZipProject()
+  renderWrZipProjects()
+  toast('已删除')
+}
+
+function wrCloseZipProject(){
+  _wrActiveZipId=null;_wrActiveZipFile=null
+  document.getElementById('wr-zip-filetree').style.display='none'
+  document.getElementById('wr-zip-projects').style.display='block'
+  document.getElementById('wr-editor').value=''
+  document.getElementById('wr-doc-title').value=''
+  document.getElementById('wr-preview-area').innerHTML=''
+}
+
+// 导出当前 ZIP 文件（覆盖写回 → 重新打包下载）
+async function wrExportZipProject(){
+  if(!_wrActiveZipId)return
+  const all=ld(WR_ZIP_KEY)||[]
+  const proj=all.find(p=>p.id===_wrActiveZipId);if(!proj)return
+  try{
+    const JSZip=await _ensureJSZip()
+    const zip=new JSZip()
+    proj.files.forEach(f=>{if(f.content!==null)zip.file(f.path,f.content)})
+    const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE'})
+    const a=document.createElement('a')
+    a.href=URL.createObjectURL(blob)
+    a.download=proj.name+'.zip'
+    a.click();URL.revokeObjectURL(a.href)
+    toast('✅ 已导出 '+proj.name+'.zip')
+  }catch(e){toast('❌ 导出失败：'+e.message,'error')}
 }
 
 // ── 文献列表左栏拖拽调宽 ──
