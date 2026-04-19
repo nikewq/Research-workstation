@@ -871,6 +871,8 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
         <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
           <input id="papers-search" placeholder="搜索标题、作者、摘要..." style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--card)" oninput="renderPapersPage()">
           <button class="btn btn-primary btn-sm" onclick="openDailyPapers()" style="font-size:11px;white-space:nowrap">+ 获取论文</button>
+          <button class="btn btn-ghost btn-sm" onclick="openAddPaperPanel()" style="font-size:11px;white-space:nowrap">✏️ 手动添加</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearAllPapers()" style="font-size:11px;white-space:nowrap;color:var(--text2)">🗑 清空库</button>
         </div>
         <div id="papers-area-filters" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
         <div id="papers-count" style="font-size:11px;color:var(--text2);margin-bottom:6px"></div>
@@ -926,6 +928,35 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
             </div>
             <div id="rp-ai-answer" style="margin-top:10px;font-size:13px;line-height:1.7;display:none;background:var(--surface2);border-radius:6px;padding:10px;border-left:3px solid var(--primary)"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- 文献：手动添加面板 -->
+      <div id="papers-add-panel" style="display:none" class="dp-read-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:700">✏️ 手动添加文献</div>
+          <button class="btn btn-ghost btn-sm" onclick="closeAddPaperPanel()">×</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">标题 *</label>
+            <input id="ap-title" placeholder="论文标题..." style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">作者</label>
+              <input id="ap-authors" placeholder="Author1, Author2..." style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">日期</label>
+              <input id="ap-date" type="date" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">期刊/会议</label>
+              <input id="ap-venue" placeholder="如：NeurIPS 2025" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)"></div>
+            <div><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">研究方向</label>
+              <input id="ap-area" placeholder="如：OOD泛化" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)"></div>
+          </div>
+          <div><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">论文链接</label>
+            <input id="ap-url" placeholder="https://arxiv.org/abs/..." style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)"></div>
+          <div><label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">摘要</label>
+            <textarea id="ap-abstract" placeholder="粘贴摘要..." rows="4" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);resize:vertical;font-family:inherit"></textarea></div>
+          <button class="btn btn-primary" onclick="saveAddPaper()" style="margin-top:4px">💾 保存到文献库</button>
         </div>
       </div>
 
@@ -5509,9 +5540,11 @@ function _invertIdx(inv){
 }
 
 // OpenAlex（主力：CORS 友好，免费，覆盖近一年论文）
+// CS=C41008148, ML=C119857082, AI=C154945302, Stats=C33923547, EE=C127413603
+const _OA_CS_CONCEPTS='C41008148|C119857082|C154945302|C33923547|C127413603'
 async function _fetchOpenAlex(query,limit=15){
   const cutoff=new Date(Date.now()-365*24*3600*1000).toISOString().slice(0,10)
-  const url=`https://api.openalex.org/works?search=${encodeURIComponent(query)}&sort=publication_date:desc&filter=from_publication_date:${cutoff}&per_page=${Math.min(limit,25)}&mailto=phd-workstation@noreply.io`
+  const url=`https://api.openalex.org/works?search=${encodeURIComponent(query)}&sort=publication_date:desc&filter=from_publication_date:${cutoff},concepts.id:${_OA_CS_CONCEPTS}&per_page=${Math.min(limit,25)}&mailto=phd-workstation@noreply.io`
   const r=await fetch(url)
   if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(`OpenAlex ${r.status}: ${t.slice(0,120)}`)}
   const d=await r.json()
@@ -5581,7 +5614,7 @@ async function _fetchCrossRef(query,limit=15){
       abstract:(p.abstract||'').replace(/<[^>]+>/g,''),
       url:doi?`https://doi.org/${doi}`:'',
       pdf_url:pdfLink,code_url:'',
-      date:dateArr.join('-'),
+      date:dateArr.length>=3?dateArr.join('-'):dateArr.length===2?`${dateArr[0]}-${String(dateArr[1]).padStart(2,'0')}-01`:(dateArr[0]||'')+'',
       venue:p['container-title']?.[0]||'',
       figure:'',score:0,summary:'',area:''
     }
@@ -5625,10 +5658,14 @@ async function fetchDailyPapers(){
       allPapers.push(...papers)
     }catch(e){console.warn('fetch area failed',area,e)}
   }
-  // 去重
+  // 去重 + 过滤未来日期（>60天）
+  const _futureMs=Date.now()+60*24*3600*1000
   const seen=new Set()
-  allPapers=allPapers.filter(p=>{const k=p.arxiv_id||p.id;if(seen.has(k))return false;seen.add(k);return true})
-    .slice(0,maxPerArea*2)
+  allPapers=allPapers.filter(p=>{
+    const k=p.arxiv_id||p.id;if(seen.has(k))return false;seen.add(k)
+    if(p.date){const t=new Date(p.date).getTime();if(!isNaN(t)&&t>_futureMs)return false}
+    return true
+  }).slice(0,maxPerArea*2)
   if(!allPapers.length){
     if(statusEl)statusEl.textContent='未获取到论文，请检查网络'
     if(fetchBtn)fetchBtn.disabled=false
@@ -5809,13 +5846,19 @@ function renderPapersPage(){
     (!q||[p.title,p.authors,p.abstract,p.summary,p.venue].some(x=>(x||'').toLowerCase().includes(q)))
   ))
   if(countEl)countEl.textContent=`共 ${lib.length} 篇，显示 ${filtered.length} 篇`
+  // 用 ID 索引代替 JSON-in-HTML-attribute，避免引号冲突
+  window._dpLibMap={}
+  filtered.forEach(p=>{window._dpLibMap[p.id]=p})
   listEl.innerHTML=filtered.map(p=>`
-    <div class="dp-lib-row" onclick="openReadingPanel(${JSON.stringify(JSON.stringify(p))})">
-      <div style="flex:1;min-width:0">
+    <div class="dp-lib-row" onclick="openReadingPanel('${escHtml(p.id)}')">
+      <div style="flex:1;min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.title)}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px">${escHtml(p.area||'')} · ${escHtml(p.date||'')} · ${escHtml((p.authors||'').slice(0,40))}</div>
       </div>
-      <span class="dp-score" style="flex-shrink:0;margin-left:8px">⭐${p.score||0}</span>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px">
+        <span class="dp-score">⭐${p.score||0}</span>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:12px;color:var(--text2)" title="删除" onclick="event.stopPropagation();delFromLib('${escHtml(p.id)}')">🗑</button>
+      </div>
     </div>`).join('')
 }
 
@@ -5828,8 +5871,10 @@ function _setPapArea(a,el){
 
 // 打开阅读面板
 window._rpCurrent=null
-function openReadingPanel(pJson){
-  const p=JSON.parse(pJson)
+function openReadingPanel(id){
+  // 先从渲染时建立的 map 找，fallback 到 lib 全量查找
+  const p=(window._dpLibMap&&window._dpLibMap[id])||_ldPapLib().find(x=>x.id===id)
+  if(!p){toast('找不到该论文','warn');return}
   window._rpCurrent=p
   const panel=document.getElementById('papers-reading-panel')
   const placeholder=document.getElementById('papers-reading-placeholder')
@@ -5858,11 +5903,70 @@ function openReadingPanel(pJson){
 
 // 从库中删除
 function delFromLib(id){
+  if(!confirm('确定删除这篇文献？'))return
   const lib=_ldPapLib().filter(p=>p.id!==id)
   _svPapLib(lib)
   document.getElementById('papers-reading-panel').style.display='none'
+  document.getElementById('papers-reading-placeholder').style.display='flex'
   renderPapersPage()
   toast('已删除')
+}
+
+// 清空文献库
+function clearAllPapers(){
+  const lib=_ldPapLib()
+  if(!lib.length){toast('文献库已为空');return}
+  if(!confirm(`确定清空全部 ${lib.length} 篇文献？此操作不可撤销。`))return
+  _svPapLib([])
+  document.getElementById('papers-reading-panel').style.display='none'
+  document.getElementById('papers-reading-placeholder').style.display='flex'
+  renderPapersPage()
+  toast('文献库已清空')
+}
+
+// 手动添加面板
+function openAddPaperPanel(){
+  document.getElementById('papers-reading-panel').style.display='none'
+  document.getElementById('papers-reading-placeholder').style.display='none'
+  const panel=document.getElementById('papers-add-panel')
+  panel.style.display='block'
+  // 预填研究方向
+  const areas=_getDpAreas()
+  if(areas.length&&!document.getElementById('ap-area').value)
+    document.getElementById('ap-area').value=areas[0]
+}
+
+function closeAddPaperPanel(){
+  document.getElementById('papers-add-panel').style.display='none'
+  document.getElementById('papers-reading-placeholder').style.display='flex'
+}
+
+function saveAddPaper(){
+  const title=document.getElementById('ap-title').value.trim()
+  if(!title){toast('标题不能为空','warn');return}
+  const p={
+    id:'manual_'+Date.now(),
+    arxiv_id:'',
+    title,
+    authors:document.getElementById('ap-authors').value.trim(),
+    abstract:document.getElementById('ap-abstract').value.trim(),
+    url:document.getElementById('ap-url').value.trim(),
+    pdf_url:'',code_url:'',
+    date:document.getElementById('ap-date').value||today(),
+    venue:document.getElementById('ap-venue').value.trim(),
+    area:document.getElementById('ap-area').value.trim(),
+    figure:'',score:0,summary:''
+  }
+  const lib=_ldPapLib()
+  lib.unshift(p)
+  _svPapLib(lib)
+  // 清空表单
+  ;['ap-title','ap-authors','ap-abstract','ap-url','ap-date','ap-venue'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value=''
+  })
+  closeAddPaperPanel()
+  renderPapersPage()
+  toast('已添加到文献库')
 }
 
 // AI 提问
