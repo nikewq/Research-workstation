@@ -494,6 +494,14 @@ mark.hl-blue{background:#bfdbfe;color:#1e3a5f}
 mark.hl-pink{background:#fecdd3;color:#881337}
 .dp-note-preview{font-size:11px;color:var(--text2);margin-top:3px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .dp-ann-badge{display:inline-flex;align-items:center;gap:2px;font-size:10px;padding:1px 5px;border-radius:8px;background:var(--primary-soft);color:var(--primary);margin-top:3px;margin-right:3px}
+/* ── Local PDF Viewer ── */
+#prm-pdf-canvas-area{flex:1;overflow-y:auto;background:#525659;display:none;flex-direction:column;align-items:center;padding:16px;gap:0;scroll-behavior:smooth}
+.pdf-page-wrap{position:relative;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.55);margin-bottom:16px;display:block;flex-shrink:0;user-select:text}
+.pdf-text-layer{position:absolute;inset:0;overflow:hidden;pointer-events:auto;line-height:1}
+.pdf-text-layer span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.pdf-text-layer span::selection{background:rgba(30,120,255,.28)}
+.pdf-ann-svg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
+#prm-pdf-page-info{font-size:11px;color:#ccc;text-align:center;padding:4px 0 8px;flex-shrink:0}
 /* ── Research Two-column Layout ── */
 .research-layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
 .research-list-col{min-width:0}
@@ -6029,6 +6037,69 @@ let _prmPaper=null
 let _prmChatHistory=[]
 let _prmViewMode='auto'
 let _prmSelText=''  // 当前选中文本缓存
+// PDF 状态
+let _prmPdfDoc=null
+let _prmPdfPageRects={}  // {pageNum:{width,height}} for ratio calc
+let _prmPdfSelRects=[]   // rects from current PDF text selection (page-ratio coords)
+let _prmPdfSelPage=0
+
+// ── IndexedDB (PDF blob storage) ──
+const _IDB_NAME='phd_app_db',_IDB_VER=1,_IDB_STORE='pdf_blobs'
+let _pdfDbConn=null
+function _pdfDb(){
+  if(_pdfDbConn)return Promise.resolve(_pdfDbConn)
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(_IDB_NAME,_IDB_VER)
+    req.onupgradeneeded=e=>{
+      if(!e.target.result.objectStoreNames.contains(_IDB_STORE))
+        e.target.result.createObjectStore(_IDB_STORE)
+    }
+    req.onsuccess=e=>{_pdfDbConn=e.target.result;res(_pdfDbConn)}
+    req.onerror=e=>rej(e.target.error)
+  })
+}
+async function _svPdfBlob(pid,blob){
+  const db=await _pdfDb()
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(_IDB_STORE,'readwrite')
+    tx.objectStore(_IDB_STORE).put(blob,pid)
+    tx.oncomplete=res;tx.onerror=e=>rej(e.target.error)
+  })
+}
+async function _ldPdfBlob(pid){
+  const db=await _pdfDb()
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(_IDB_STORE,'readonly')
+    const req=tx.objectStore(_IDB_STORE).get(pid)
+    req.onsuccess=()=>res(req.result||null)
+    req.onerror=e=>rej(e.target.error)
+  })
+}
+async function _deletePdfBlob(pid){
+  const db=await _pdfDb()
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(_IDB_STORE,'readwrite')
+    tx.objectStore(_IDB_STORE).delete(pid)
+    tx.oncomplete=res;tx.onerror=e=>rej(e.target.error)
+  })
+}
+
+// ── PDF.js lazy loader ──
+let _pdfJsReady=null
+function _ensurePdfJs(){
+  if(_pdfJsReady)return _pdfJsReady
+  _pdfJsReady=new Promise((res,rej)=>{
+    const s=document.createElement('script')
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+    s.onload=()=>{
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+      res(pdfjsLib)
+    }
+    s.onerror=()=>rej(new Error('PDF.js 加载失败，请检查网络'))
+    document.head.appendChild(s)
+  })
+  return _pdfJsReady
+}
 
 // ── Notes storage ──
 function _ldAllNotes(){try{return JSON.parse(localStorage.getItem(_PRM_NOTES_KEY)||'{}')}catch{return{}}}
@@ -6066,34 +6137,86 @@ document.addEventListener('mousedown',function(e){
   if(!e.target.closest('#prm-sel-toolbar'))prm_hideSelToolbar()
 })
 
+// PDF 文本层 mouseup：捕获选区 rects 并弹出标注工具栏
+document.addEventListener('mouseup',function(e){
+  if(_prmViewMode!=='local-pdf')return
+  const area=document.getElementById('prm-pdf-canvas-area')
+  if(!area||!area.contains(e.target))return
+  const sel=window.getSelection()
+  const text=(sel?.toString()||'').trim()
+  if(!text||text.length<2){prm_hideSelToolbar();return}
+  _prmSelText=text
+  const range=sel.getRangeAt(0)
+  const clientRects=Array.from(range.getClientRects())
+  if(!clientRects.length){prm_hideSelToolbar();return}
+  // 找到所在页 wrap
+  const wrap=e.target.closest('.pdf-page-wrap')||
+    document.elementFromPoint(clientRects[0].left+2,clientRects[0].top+2)?.closest('.pdf-page-wrap')
+  if(!wrap){prm_hideSelToolbar();return}
+  const pageNum=parseInt(wrap.dataset.page)||1
+  const wrapRect=wrap.getBoundingClientRect()
+  const ps=_prmPdfPageRects[pageNum]||{width:wrapRect.width,height:wrapRect.height}
+  _prmPdfSelRects=clientRects.map(r=>({
+    page:pageNum,
+    x:(r.left-wrapRect.left)/ps.width,
+    y:(r.top-wrapRect.top)/ps.height,
+    w:r.width/ps.width,
+    h:r.height/ps.height
+  }))
+  _prmPdfSelPage=pageNum
+  const toolbar=document.getElementById('prm-sel-toolbar')
+  const lastR=clientRects[clientRects.length-1]
+  const tw=toolbar.offsetWidth||220
+  let left=lastR.left+(lastR.width/2)-(tw/2)
+  left=Math.max(8,Math.min(left,window.innerWidth-tw-8))
+  toolbar.style.left=left+'px'
+  toolbar.style.top=(lastR.top-52)+'px'
+  toolbar.style.display='flex'
+})
+
 function prm_addHighlight(cls,color){
   const text=_prmSelText;if(!text||!_prmPaper)return
   prm_hideSelToolbar()
-  const hl={id:'hl_'+Date.now(),text,cls,color,comment:'',ts:today()}
+  let hl
+  if(_prmViewMode==='local-pdf'&&_prmPdfSelRects.length){
+    // PDF 高亮：存储页面相对坐标 rect
+    hl={id:'hl_'+Date.now(),text,cls,color,comment:'',ts:today(),source:'pdf',rects:[..._prmPdfSelRects]}
+    _prmPdfSelRects=[]
+  }else{
+    // 摘要高亮
+    hl={id:'hl_'+Date.now(),text,cls,color,comment:'',ts:today(),source:'abstract'}
+  }
   const arr=_ldPaperHl(_prmPaper.id)
-  // 防止重复添加同一段文字
   if(!arr.find(h=>h.text===text)){
     arr.push(hl)
     _svPaperHl(_prmPaper.id,arr)
   }
-  prm_renderAbstractWithHighlights()
+  if(_prmViewMode==='local-pdf'){
+    _prmRenderPdfAnnotations()
+  }else{
+    prm_renderAbstractWithHighlights()
+  }
   prm_renderHighlightsPanel()
   window.getSelection()?.removeAllRanges()
-  // 自动切换到批注 Tab
   prm_switchTab('highlights',document.querySelectorAll('.prm-stab')[1])
 }
 
 function prm_addHighlightWithNote(){
   const text=_prmSelText;if(!text||!_prmPaper)return
   prm_hideSelToolbar()
-  // 用 inline prompt 输入批注文字
   const comment=prompt('为选中文字「'+text.slice(0,30)+(text.length>30?'...':'')+'」添加批注：','')
-  if(comment===null)return  // 取消
-  const hl={id:'hl_'+Date.now(),text,cls:'yellow',color:'#fef08a',comment:comment.trim(),ts:today()}
+  if(comment===null)return
+  let hl
+  if(_prmViewMode==='local-pdf'&&_prmPdfSelRects.length){
+    hl={id:'hl_'+Date.now(),text,cls:'yellow',color:'#fef08a',comment:comment.trim(),ts:today(),source:'pdf',rects:[..._prmPdfSelRects]}
+    _prmPdfSelRects=[]
+  }else{
+    hl={id:'hl_'+Date.now(),text,cls:'yellow',color:'#fef08a',comment:comment.trim(),ts:today(),source:'abstract'}
+  }
   const arr=_ldPaperHl(_prmPaper.id)
   arr.push(hl)
   _svPaperHl(_prmPaper.id,arr)
-  prm_renderAbstractWithHighlights()
+  if(_prmViewMode==='local-pdf'){_prmRenderPdfAnnotations()}else{prm_renderAbstractWithHighlights()}
   prm_renderHighlightsPanel()
   window.getSelection()?.removeAllRanges()
   prm_switchTab('highlights',document.querySelectorAll('.prm-stab')[1])
@@ -6103,7 +6226,7 @@ function prm_deleteHighlight(hlId){
   if(!_prmPaper)return
   const arr=_ldPaperHl(_prmPaper.id).filter(h=>h.id!==hlId)
   _svPaperHl(_prmPaper.id,arr)
-  prm_renderAbstractWithHighlights()
+  if(_prmViewMode==='local-pdf'){_prmRenderPdfAnnotations()}else{prm_renderAbstractWithHighlights()}
   prm_renderHighlightsPanel()
 }
 
@@ -6111,9 +6234,9 @@ function prm_deleteHighlight(hlId){
 function prm_renderAbstractWithHighlights(){
   const p=_prmPaper;if(!p)return
   const el=document.getElementById('prm-fb-abstract');if(!el)return
-  const hls=_ldPaperHl(p.id)
+  // 只渲染摘要层批注（PDF批注靠 SVG overlay，不混入摘要）
+  const hls=_ldPaperHl(p.id).filter(h=>!h.source||h.source==='abstract')
   let html=escHtml(p.abstract||'暂无摘要')
-  // 按文本长度降序处理，优先匹配较长的引用（避免短串提前截断）
   const sorted=[...hls].sort((a,b)=>b.text.length-a.text.length)
   sorted.forEach(h=>{
     const safe=h.text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
@@ -6136,6 +6259,7 @@ function prm_renderHighlightsPanel(){
   emptyEl.style.display='none'
   listEl.innerHTML=hls.map(h=>`
     <div class="prm-hl-card" style="border-left-color:${h.color}">
+      ${h.source==='pdf'?`<div style="font-size:10px;color:var(--primary);margin-bottom:3px">📋 PDF · 第${(h.rects&&h.rects[0]&&h.rects[0].page)||'?'}页</div>`:''}
       <div class="prm-hl-text">"${escHtml(h.text)}"</div>
       ${h.comment?`<div class="prm-hl-comment">📝 ${escHtml(h.comment)}</div>`:''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
@@ -6195,12 +6319,13 @@ function openPaperReader(id){
 
 function closePaperReader(){
   prm_saveNotes()
-  // 清空 iframe，防止页面留在历史记录
-  const iframe=document.getElementById('prm-iframe')
-  iframe.src='about:blank'
+  document.getElementById('prm-iframe').src='about:blank'
+  // 释放 PDF 资源
+  if(_prmPdfDoc){_prmPdfDoc.destroy();_prmPdfDoc=null}
+  document.getElementById('prm-pdf-canvas-area').innerHTML=''
+  _prmPdfPageRects={};_prmPdfSelRects=[];_prmPdfSelPage=0
   document.getElementById('paper-reader-modal').classList.remove('open')
   document.body.style.overflow=''
-  // 如果 history state 是我们推入的，pop 掉（避免点 × 后再按返回再触发 popstate）
   if(history.state&&history.state.prmOpen)history.back()
 }
 
@@ -6209,6 +6334,9 @@ window.addEventListener('popstate',function(e){
   if(document.getElementById('paper-reader-modal').classList.contains('open')){
     prm_saveNotes()
     document.getElementById('prm-iframe').src='about:blank'
+    if(_prmPdfDoc){_prmPdfDoc.destroy();_prmPdfDoc=null}
+    document.getElementById('prm-pdf-canvas-area').innerHTML=''
+    _prmPdfPageRects={};_prmPdfSelRects=[]
     document.getElementById('paper-reader-modal').classList.remove('open')
     document.body.style.overflow=''
   }
@@ -6217,16 +6345,19 @@ window.addEventListener('popstate',function(e){
 function _prmLoadViewer(){
   const p=_prmPaper;if(!p)return
   const hasAr5iv=!!p.arxiv_id
-  const hasPdf=!!p.pdf_url
   const ar5ivBtn=document.getElementById('prm-ar5iv-btn')
   const pdfEmbedBtn=document.getElementById('prm-pdf-embed-btn')
   const abstractBtn=document.getElementById('prm-abstract-btn')
-  // PDF 不再自动嵌入，只提供外链按钮；ar5iv 可选加载
+  const localPdfBtn=document.getElementById('prm-local-pdf-btn')
+  const deletePdfBtn=document.getElementById('prm-delete-pdf-btn')
   ar5ivBtn.style.display=hasAr5iv?'inline-block':'none'
-  pdfEmbedBtn.style.display='none'   // 永久隐藏 PDF 嵌入按钮（Chrome 会拦截）
-  abstractBtn.style.display='none'   // 默认就是摘要视图，无需额外按钮
-  // 始终默认摘要视图（安全、无拦截）
-  prm_switchView('abstract')
+  pdfEmbedBtn.style.display='none'
+  abstractBtn.style.display='none'
+  const hasLocal=!!p.has_local_pdf
+  localPdfBtn.style.display=hasLocal?'inline-block':'none'
+  deletePdfBtn.style.display=hasLocal?'inline-block':'none'
+  // 有本地 PDF → 自动打开；否则默认摘要
+  if(hasLocal){prm_switchView('local-pdf')}else{prm_switchView('abstract')}
 }
 
 function prm_switchView(mode){
@@ -6234,37 +6365,43 @@ function prm_switchView(mode){
   const p=_prmPaper
   const iframe=document.getElementById('prm-iframe')
   const fallback=document.getElementById('prm-viewer-fallback')
+  const canvasArea=document.getElementById('prm-pdf-canvas-area')
   const label=document.getElementById('prm-viewer-label')
 
+  // 重置所有面板
+  iframe.style.display='none'; iframe.src='about:blank'
+  fallback.style.display='none'
+  canvasArea.style.display='none'
+  document.getElementById('prm-abstract-btn').style.display='none'
+
   if(mode==='ar5iv'&&p.arxiv_id){
-    // ar5iv：HTML 渲染版，通常允许 iframe 嵌入
     iframe.style.display='block'
-    fallback.style.display='none'
     iframe.src=`https://ar5iv.labs.arxiv.org/html/${p.arxiv_id}`
-    label.textContent='ar5iv HTML 版（渲染 arXiv LaTeX 为网页，加载约 5-15 秒）'
+    label.textContent='ar5iv HTML 版（渲染 arXiv LaTeX，加载约 5-15 秒）'
     document.getElementById('prm-abstract-btn').style.display='inline-block'
     document.getElementById('prm-ar5iv-btn').style.display='none'
-    // 超时检测：15s 后若 iframe 无内容则 fallback
+    document.getElementById('prm-local-pdf-btn').style.display=p.has_local_pdf?'inline-block':'none'
     const _t=setTimeout(()=>{
-      try{
-        if(!iframe.contentDocument?.body?.textContent?.trim()){
-          prm_switchView('abstract')
-          label.textContent='ar5iv 加载超时，已切换为摘要视图'
-        }
-      }catch{}
+      try{if(!iframe.contentDocument?.body?.textContent?.trim()){prm_switchView('abstract');label.textContent='ar5iv 加载超时，已切换摘要'}}catch{}
     },15000)
     iframe.onload=()=>clearTimeout(_t)
-  }else{
-    // 摘要视图（默认、安全）
-    iframe.style.display='none'
-    iframe.src='about:blank'
-    fallback.style.display='block'
-    document.getElementById('prm-abstract-btn').style.display='none'
+  }else if(mode==='local-pdf'){
+    canvasArea.style.display='flex'
+    label.textContent='本地 PDF · 选中文字可划线标注'
     document.getElementById('prm-ar5iv-btn').style.display=p.arxiv_id?'inline-block':'none'
+    document.getElementById('prm-local-pdf-btn').style.display='none'
+    document.getElementById('prm-abstract-btn').style.display='inline-block'
+    // 异步渲染 PDF
+    _prmOpenLocalPdf()
+  }else{
+    // 摘要视图（默认）
+    fallback.style.display='block'
+    document.getElementById('prm-ar5iv-btn').style.display=p.arxiv_id?'inline-block':'none'
+    document.getElementById('prm-local-pdf-btn').style.display=p.has_local_pdf?'inline-block':'none'
     label.textContent=p.arxiv_id?'摘要视图 · 点击「加载 HTML 版」可嵌入阅读':'摘要视图'
     document.getElementById('prm-fb-title').textContent=p.title
     document.getElementById('prm-fb-meta').textContent=[p.venue,p.date,(p.authors||'').slice(0,80)].filter(Boolean).join(' · ')
-    prm_renderAbstractWithHighlights()  // 带高亮重新渲染摘要
+    prm_renderAbstractWithHighlights()
     const linksHtml=[
       p.url?`<a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 摘要页</a>`:'',
       p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600">📄 在新标签页打开 PDF</a>`:''
@@ -6400,6 +6537,171 @@ function prm_addToDaily(){
     pomo.taskTitle='📖 '+p.title.slice(0,25)
     toast('已同步至心流任务名称')
   }
+}
+
+// ── PDF 导入 ──
+function prm_importLocalPdf(){
+  document.getElementById('prm-pdf-file-input').click()
+}
+
+async function prm_onPdfFileSelected(e){
+  const file=e.target.files[0];e.target.value=''
+  if(!file){return}
+  if(file.type!=='application/pdf'&&!file.name.endsWith('.pdf')){toast('请选择 PDF 文件','warn');return}
+  if(!_prmPaper){toast('未打开任何论文','warn');return}
+  if(file.size>100*1024*1024){toast('PDF 超过 100 MB 限制','warn');return}
+  toast('📎 正在导入 PDF（'+Math.round(file.size/1024)+'KB）...')
+  try{
+    const buf=await file.arrayBuffer()
+    const blob=new Blob([buf],{type:'application/pdf'})
+    await _svPdfBlob(_prmPaper.id,blob)
+    // 更新 paper 标记
+    const lib=_ldPapLib()
+    const idx=lib.findIndex(p=>p.id===_prmPaper.id)
+    if(idx>=0){lib[idx].has_local_pdf=true;_svPapLib(lib)}
+    if(window._dpLibMap&&window._dpLibMap[_prmPaper.id])window._dpLibMap[_prmPaper.id].has_local_pdf=true
+    _prmPaper.has_local_pdf=true
+    document.getElementById('prm-local-pdf-btn').style.display='inline-block'
+    document.getElementById('prm-delete-pdf-btn').style.display='inline-block'
+    toast('✅ PDF 已保存，正在渲染...')
+    prm_switchView('local-pdf')
+  }catch(err){toast('导入失败：'+err.message,'warn')}
+}
+
+async function prm_deleteLocalPdf(){
+  if(!_prmPaper)return
+  if(!confirm('删除本地存储的 PDF？（批注数据不受影响）'))return
+  await _deletePdfBlob(_prmPaper.id)
+  const lib=_ldPapLib()
+  const idx=lib.findIndex(p=>p.id===_prmPaper.id)
+  if(idx>=0){delete lib[idx].has_local_pdf;_svPapLib(lib)}
+  _prmPaper.has_local_pdf=false
+  if(window._dpLibMap&&window._dpLibMap[_prmPaper.id])delete window._dpLibMap[_prmPaper.id].has_local_pdf
+  document.getElementById('prm-local-pdf-btn').style.display='none'
+  document.getElementById('prm-delete-pdf-btn').style.display='none'
+  if(_prmPdfDoc){_prmPdfDoc.destroy();_prmPdfDoc=null}
+  prm_switchView('abstract')
+  toast('PDF 已删除')
+}
+
+// ── PDF 渲染 ──
+async function _prmOpenLocalPdf(){
+  const canvasArea=document.getElementById('prm-pdf-canvas-area')
+  canvasArea.innerHTML='<div style="color:#ddd;text-align:center;padding:50px 20px;font-size:13px"><span class="spinner"></span> 正在加载 PDF.js...</div>'
+  try{
+    const pdfjs=await _ensurePdfJs()
+    const blob=await _ldPdfBlob(_prmPaper.id)
+    if(!blob){
+      canvasArea.innerHTML='<div style="color:#fca5a5;text-align:center;padding:50px 20px;font-size:13px">❌ 未找到本地 PDF，请点击「📎 导入PDF」重新导入</div>'
+      return
+    }
+    const url=URL.createObjectURL(blob)
+    if(_prmPdfDoc){await _prmPdfDoc.destroy();_prmPdfDoc=null}
+    canvasArea.innerHTML='<div style="color:#ddd;text-align:center;padding:30px 20px;font-size:13px"><span class="spinner"></span> 解析 PDF 中...</div>'
+    _prmPdfDoc=await pdfjs.getDocument({url,cMapUrl:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',cMapPacked:true}).promise
+    URL.revokeObjectURL(url)
+    canvasArea.innerHTML=''
+    _prmPdfPageRects={}
+    // 计算自适应缩放
+    const firstPage=await _prmPdfDoc.getPage(1)
+    const vp0=firstPage.getViewport({scale:1})
+    const containerW=Math.max(canvasArea.offsetWidth-40,400)
+    const scale=Math.min(containerW/vp0.width,2.5)
+    // 渲染所有页
+    for(let i=1;i<=_prmPdfDoc.numPages;i++){
+      const page=await _prmPdfDoc.getPage(i)
+      await _prmRenderPdfPage(pdfjs,page,canvasArea,scale)
+    }
+    // 页数信息
+    const info=document.createElement('div')
+    info.id='prm-pdf-page-info'
+    info.textContent=`共 ${_prmPdfDoc.numPages} 页 · 选中文字可划线标注`
+    canvasArea.appendChild(info)
+    // 绘制已保存的高亮
+    _prmRenderPdfAnnotations()
+  }catch(err){
+    canvasArea.innerHTML=`<div style="color:#fca5a5;text-align:center;padding:50px 20px;font-size:13px">❌ PDF 渲染失败：${escHtml(err.message)}<br><span style="font-size:11px;color:#9ca3af;margin-top:8px;display:block">请检查文件是否损坏，或尝试重新导入</span></div>`
+  }
+}
+
+async function _prmRenderPdfPage(pdfjsLib,page,container,scale){
+  const vp=page.getViewport({scale})
+  const w=Math.round(vp.width),h=Math.round(vp.height)
+  _prmPdfPageRects[page.pageNumber]={width:w,height:h}
+  // Wrapper
+  const wrap=document.createElement('div')
+  wrap.className='pdf-page-wrap'
+  wrap.dataset.page=page.pageNumber
+  wrap.style.width=w+'px';wrap.style.height=h+'px'
+  // Canvas
+  const canvas=document.createElement('canvas')
+  const dpr=Math.min(window.devicePixelRatio||1,2)
+  canvas.width=w*dpr;canvas.height=h*dpr
+  canvas.style.width=w+'px';canvas.style.height=h+'px'
+  canvas.style.display='block'
+  wrap.appendChild(canvas)
+  // Text layer
+  const textDiv=document.createElement('div')
+  textDiv.className='pdf-text-layer'
+  wrap.appendChild(textDiv)
+  // SVG overlay
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg')
+  svg.setAttribute('class','pdf-ann-svg')
+  svg.style.width=w+'px';svg.style.height=h+'px'
+  wrap.appendChild(svg)
+  container.appendChild(wrap)
+  // Render canvas
+  const ctx=canvas.getContext('2d')
+  ctx.scale(dpr,dpr)
+  await page.render({canvasContext:ctx,viewport:vp}).promise
+  // Render text layer (transparent, for selection)
+  const tc=await page.getTextContent()
+  tc.items.forEach(item=>{
+    if(!item.str)return
+    const span=document.createElement('span')
+    const tx=pdfjsLib.Util.transform(vp.transform,item.transform)
+    // tx=[a,b,c,d,e,f]: e=x, f=y(baseline), a≈scaleX, d≈-fontSize
+    const fontSize=Math.abs(Math.sqrt(tx[0]*tx[0]+tx[1]*tx[1]))
+    if(fontSize<1)return
+    span.style.left=tx[4]+'px'
+    span.style.top=(tx[5]-fontSize)+'px'
+    span.style.fontSize=fontSize+'px'
+    // Width scaling
+    if(item.width){
+      const scaledW=Math.abs(item.width)*vp.scale
+      const natW=item.str.length*fontSize*0.55
+      if(natW>2&&Math.abs(scaledW/natW-1)>0.15)span.style.transform=`scaleX(${scaledW/natW})`
+    }
+    span.textContent=item.str
+    textDiv.appendChild(span)
+  })
+}
+
+// ── PDF 批注 SVG 绘制 ──
+function _prmRenderPdfAnnotations(){
+  // 清空所有 SVG overlay
+  document.querySelectorAll('.pdf-ann-svg').forEach(s=>{while(s.firstChild)s.removeChild(s.firstChild)})
+  const p=_prmPaper;if(!p)return
+  const hls=_ldPaperHl(p.id).filter(h=>h.source==='pdf'&&Array.isArray(h.rects))
+  hls.forEach(hl=>{
+    hl.rects.forEach(rect=>{
+      const wrap=document.querySelector(`.pdf-page-wrap[data-page="${rect.page}"]`)
+      if(!wrap)return
+      const ps=_prmPdfPageRects[rect.page]||{width:wrap.offsetWidth,height:wrap.offsetHeight}
+      const svg=wrap.querySelector('.pdf-ann-svg')
+      if(!svg)return
+      const r=document.createElementNS('http://www.w3.org/2000/svg','rect')
+      r.setAttribute('x',rect.x*ps.width)
+      r.setAttribute('y',rect.y*ps.height)
+      r.setAttribute('width',rect.w*ps.width)
+      r.setAttribute('height',rect.h*ps.height)
+      r.setAttribute('fill',hl.color)
+      r.setAttribute('fill-opacity','0.38')
+      r.setAttribute('rx','2')
+      r.setAttribute('title',hl.comment||hl.text)
+      svg.appendChild(r)
+    })
+  })
 }
 
 // ══════════════════════════════════════
@@ -6704,8 +7006,13 @@ function _prefillFromAI(btn){
         <button id="prm-ar5iv-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('ar5iv')">📄 加载 HTML 版(ar5iv)</button>
         <button id="prm-pdf-embed-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('pdf')">📑 PDF嵌入</button>
         <button id="prm-abstract-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none" onclick="prm_switchView('abstract')">← 返回摘要</button>
+        <button id="prm-local-pdf-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none;border-color:#7c3aed;color:#7c3aed" onclick="prm_switchView('local-pdf')">📋 本地PDF</button>
+        <button id="prm-import-pdf-btn" class="btn btn-ghost btn-sm" style="font-size:10px" onclick="prm_importLocalPdf()" title="导入本地PDF文件存入浏览器">📎 导入PDF</button>
+        <button id="prm-delete-pdf-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none;color:#ef4444;border-color:#ef4444" onclick="prm_deleteLocalPdf()">🗑 删除PDF</button>
+        <input type="file" id="prm-pdf-file-input" accept=".pdf" style="display:none" onchange="prm_onPdfFileSelected(event)">
       </div>
       <iframe id="prm-iframe" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" referrerpolicy="no-referrer"></iframe>
+      <div id="prm-pdf-canvas-area"></div>
       <div id="prm-viewer-fallback">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--primary)" id="prm-fb-title"></div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:12px" id="prm-fb-meta"></div>
