@@ -6213,6 +6213,15 @@ document.addEventListener('mouseup',function(e){
   toolbar.style.display='flex'
 })
 
+function _prmFlashSaveStatus(){
+  const el=document.getElementById('prm-save-status')
+  if(!el)return
+  el.textContent='✅ 已保存到本地'
+  el.style.display='inline'
+  clearTimeout(el._flashTimer)
+  el._flashTimer=setTimeout(()=>el.style.display='none',2500)
+}
+
 function prm_addHighlight(cls,color){
   const text=_prmSelText;if(!text||!_prmPaper)return
   prm_hideSelToolbar()
@@ -6232,6 +6241,7 @@ function prm_addHighlight(cls,color){
   }
   if(_prmViewMode==='local-pdf'){
     _prmRenderPdfAnnotations()
+    _prmFlashSaveStatus()
   }else{
     prm_renderAbstractWithHighlights()
   }
@@ -6255,7 +6265,7 @@ function prm_addHighlightWithNote(){
   const arr=_ldPaperHl(_prmPaper.id)
   arr.push(hl)
   _svPaperHl(_prmPaper.id,arr)
-  if(_prmViewMode==='local-pdf'){_prmRenderPdfAnnotations()}else{prm_renderAbstractWithHighlights()}
+  if(_prmViewMode==='local-pdf'){_prmRenderPdfAnnotations();_prmFlashSaveStatus()}else{prm_renderAbstractWithHighlights()}
   prm_renderHighlightsPanel()
   window.getSelection()?.removeAllRanges()
   prm_switchTab('highlights',document.querySelectorAll('.prm-stab')[1])
@@ -6417,6 +6427,8 @@ function prm_switchView(mode){
   fallback.style.display='none'
   canvasArea.style.display='none'
   document.getElementById('prm-abstract-btn').style.display='none'
+  const _ss=document.getElementById('prm-save-status')
+  if(_ss)_ss.style.display='none'
 
   if(mode==='ar5iv'&&p.arxiv_id){
     iframe.style.display='block'
@@ -6802,10 +6814,14 @@ async function _prmOpenLocalPdf(){
     // 页数信息
     const info=document.createElement('div')
     info.id='prm-pdf-page-info'
-    info.textContent=`共 ${_prmPdfDoc.numPages} 页 · 选中文字可划线标注`
+    const savedHls=_ldPaperHl(_prmPaper.id).filter(h=>h.source==='pdf')
+    info.textContent=`共 ${_prmPdfDoc.numPages} 页 · 选中文字可划线标注`+(savedHls.length?` · 已有 ${savedHls.length} 条批注`:'')
     canvasArea.appendChild(info)
     // 绘制已保存的高亮
     _prmRenderPdfAnnotations()
+    // 显示保存状态
+    const saveStatus=document.getElementById('prm-save-status')
+    if(saveStatus)saveStatus.style.display='inline'
   }catch(err){
     canvasArea.innerHTML=`<div style="color:#fca5a5;text-align:center;padding:50px 20px;font-size:13px">❌ PDF 渲染失败：${escHtml(err.message)}<br><span style="font-size:11px;color:#9ca3af;margin-top:8px;display:block">请检查文件是否损坏，或尝试重新导入</span></div>`
   }
@@ -6841,31 +6857,37 @@ async function _prmRenderPdfPage(pdfjsLib,page,container,scale){
   const ctx=canvas.getContext('2d')
   ctx.scale(dpr,dpr)
   await page.render({canvasContext:ctx,viewport:vp}).promise
-  // Render text layer (transparent, for selection) — use official renderTextLayer for accuracy
+  // Render text layer — manual, sorted by visual reading order (top→bottom, left→right)
+  // renderTextLayer puts spans in PDF content-stream order which causes "vertical strip" selection
   const tc=await page.getTextContent()
-  try{
-    const rtask=pdfjsLib.renderTextLayer({textContent:tc,container:textDiv,viewport:vp,textDivs:[]})
-    await (rtask.promise||rtask)
-  }catch(e){
-    // Fallback: manual positioning
-    tc.items.forEach(item=>{
-      if(!item.str)return
-      const span=document.createElement('span')
+  const screenItems=tc.items
+    .filter(item=>item.str)
+    .map(item=>{
       const tx=pdfjsLib.Util.transform(vp.transform,item.transform)
       const fontSize=Math.abs(Math.sqrt(tx[0]*tx[0]+tx[1]*tx[1]))
-      if(fontSize<1)return
-      span.style.left=tx[4]+'px'
-      span.style.top=(tx[5]-fontSize)+'px'
-      span.style.fontSize=fontSize+'px'
-      if(item.width){
-        const scaledW=Math.abs(item.width)*vp.scale
-        const natW=item.str.length*fontSize*0.55
-        if(natW>2&&Math.abs(scaledW/natW-1)>0.15)span.style.transform=`scaleX(${scaledW/natW})`
-      }
-      span.textContent=item.str
-      textDiv.appendChild(span)
+      return{item,tx,fontSize,sx:tx[4],sy:tx[5]-fontSize}
     })
-  }
+  // Sort: group into lines (items within half a font-height), then left-to-right within each line
+  screenItems.sort((a,b)=>{
+    const lineThresh=(a.fontSize+b.fontSize)*0.3
+    const dy=a.sy-b.sy
+    if(Math.abs(dy)>lineThresh)return dy  // different lines → top-to-bottom
+    return a.sx-b.sx                      // same line → left-to-right
+  })
+  screenItems.forEach(({item,tx,fontSize})=>{
+    if(fontSize<1)return
+    const span=document.createElement('span')
+    span.style.left=tx[4]+'px'
+    span.style.top=(tx[5]-fontSize)+'px'
+    span.style.fontSize=fontSize+'px'
+    if(item.width){
+      const scaledW=Math.abs(item.width)*vp.scale
+      const natW=item.str.length*fontSize*0.55
+      if(natW>2&&Math.abs(scaledW/natW-1)>0.15)span.style.transform=`scaleX(${scaledW/natW})`
+    }
+    span.textContent=item.str
+    textDiv.appendChild(span)
+  })
 }
 
 // ── PDF 批注 SVG 绘制 ──
@@ -7218,6 +7240,7 @@ setTimeout(function(){
         <button id="prm-local-pdf-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none;border-color:#7c3aed;color:#7c3aed" onclick="prm_switchView('local-pdf')">📋 本地PDF</button>
         <button id="prm-import-pdf-btn" class="btn btn-ghost btn-sm" style="font-size:10px" onclick="prm_importLocalPdf()" title="导入本地PDF文件存入浏览器">📎 导入PDF</button>
         <button id="prm-delete-pdf-btn" class="btn btn-ghost btn-sm" style="font-size:10px;display:none;color:#ef4444;border-color:#ef4444" onclick="prm_deleteLocalPdf()">🗑 删除PDF</button>
+        <span id="prm-save-status" style="font-size:10px;color:#16a34a;display:none;margin-left:4px">✅ 已保存到本地</span>
         <input type="file" id="prm-pdf-file-input" accept=".pdf" style="display:none" onchange="prm_onPdfFileSelected(event)">
       </div>
       <iframe id="prm-iframe" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" referrerpolicy="no-referrer"></iframe>
