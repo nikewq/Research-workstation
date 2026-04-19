@@ -6561,26 +6561,100 @@ ${_prmChatHistory.length?'\n对话历史（最近2轮）：\n'+_prmChatHistory.s
 }
 
 // 心流时光联动
+// ── 阅读器内嵌心流计时器 ──
+let _prmPomoIv=null
+
 function prm_startPomo(){
   if(!_prmPaper)return
+  const btn=document.getElementById('prm-pomo-btn')
+  // 如果已在计时：暂停/继续
+  if(_prmPomoIv!==null){
+    if(pomo.running){
+      clearInterval(pomo.iv);pomo.running=false
+      if(btn)btn.textContent='▶ 继续专注'
+    }else{
+      // 恢复（复用全局 togglePomo 的启动逻辑）
+      pomo.running=true
+      pomo.iv=setInterval(_prmPomoTick,1000)
+      _prmUpdatePomoBtn()
+    }
+    return
+  }
+  // 首次：创建阅读任务
   const title=('📖 阅读：'+((_prmPaper.title||'').slice(0,30))).trim()
-  // 创建一个临时任务（阅读任务）
   const tasks=ld(K.tasks)
   let readTask=tasks.find(t=>t.status!=='done'&&t.title===title)
   if(!readTask){
     readTask={id:uid(),title,proj:'',tags:[],priority:'medium',due:'',status:'todo',created:today(),done:null,pomos:0}
-    tasks.unshift(readTask)
-    sv(K.tasks,tasks)
+    tasks.unshift(readTask);sv(K.tasks,tasks)
   }
-  // 关闭 modal，跳转到 focus 页，设置任务
-  closePaperReader()
-  showPage('focus')
+  // 停掉可能正在跑的全局 pomo，同步任务到 pomo 对象
+  if(pomo.running){clearInterval(pomo.iv);pomo.running=false}
+  const workMins=parseInt(document.getElementById('pomo-work')?.value||25)
+  pomo.taskId=readTask.id;pomo.taskTitle=title
+  pomo.isBreak=false;pomo.secs=workMins*60;pomo.running=true
+  updatePomoTaskSel()
   setTimeout(()=>{
-    updatePomoTaskSel()
     const sel=document.getElementById('pomo-task-sel')
     if(sel)for(let i=0;i<sel.options.length;i++){if(sel.options[i].value===readTask.id){sel.selectedIndex=i;break}}
-    toast('🌊 已切换到心流时光，任务已设置为「'+title+'」')
-  },300)
+  },100)
+  pomo.iv=setInterval(_prmPomoTick,1000)
+  _prmPomoIv=pomo.iv  // 标记已启动
+  _prmUpdatePomoBtn()
+  toast('🌊 心流计时开始（'+workMins+'分钟）· 阅读愉快！')
+}
+
+function _prmPomoTick(){
+  if(pomo.secs>0){
+    pomo.secs--
+    updatePomoDisplay()
+    _prmUpdatePomoBtn()
+  }else{
+    // 一轮结束
+    if(!pomo.isBreak){
+      const list=ld(K.pomos)
+      list.push({id:uid(),date:today(),taskId:pomo.taskId,taskTitle:pomo.taskTitle,
+        dur:parseInt(document.getElementById('pomo-work')?.value||25),ts:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})})
+      sv(K.pomos,list);pomo.round=(pomo.round+1)%4
+      toast('🌊 心流完成！稍作休息~');renderPomoLog();updateStats()
+      if(pomo.taskId){const tasks=ld(K.tasks),t=tasks.find(t=>t.id===pomo.taskId);if(t){t.pomos=(t.pomos||0)+1;sv(K.tasks,tasks)}}
+    }else{
+      toast('✅ 休息结束！继续加油！')
+    }
+    pomo.isBreak=!pomo.isBreak
+    pomo.secs=(pomo.isBreak?parseInt(document.getElementById('pomo-break')?.value||5):parseInt(document.getElementById('pomo-work')?.value||25))*60
+    updatePomoDisplay()
+    if(!pomo.isBreak){
+      clearInterval(pomo.iv);pomo.running=false;_prmPomoIv=null
+      const btn=document.getElementById('prm-pomo-btn')
+      if(btn){btn.textContent='⏱ 开始专注';btn.style.background='var(--primary-soft)';btn.style.color='var(--primary)'}
+      document.getElementById('pomo-btn')&&(document.getElementById('pomo-btn').textContent='▶ 开始')
+    }else{
+      _prmUpdatePomoBtn()
+    }
+  }
+}
+
+function _prmUpdatePomoBtn(){
+  const btn=document.getElementById('prm-pomo-btn');if(!btn)return
+  const m=Math.floor(pomo.secs/60),s=pomo.secs%60
+  if(pomo.isBreak){
+    btn.textContent=`🌿 ${pad(m)}:${pad(s)} 休息中`
+    btn.style.background='#d1fae5';btn.style.color='#065f46'
+  }else{
+    btn.textContent=`🔥 ${pad(m)}:${pad(s)} 专注中`
+    btn.style.background='var(--primary-soft)';btn.style.color='var(--primary)'
+  }
+}
+
+// 关闭阅读器时同步停止 pomo
+const _origClosePaperReader=closePaperReader
+closePaperReader=function(){
+  if(_prmPomoIv!==null){
+    clearInterval(pomo.iv);pomo.running=false;_prmPomoIv=null
+    document.title='PhD Workstation'
+  }
+  _origClosePaperReader()
 }
 
 // 每日总结联动
@@ -7224,7 +7298,7 @@ setTimeout(function(){
     <div id="prm-actions">
       <a id="prm-abs-btn" class="btn btn-ghost btn-sm" href="#" target="_blank" style="font-size:11px">🔗 摘要页</a>
       <a id="prm-pdf-btn" class="btn btn-ghost btn-sm" href="#" target="_blank" style="font-size:11px;border-color:#dc2626;color:#dc2626">📄 外链PDF</a>
-      <button class="btn btn-sm" style="font-size:11px;background:var(--primary-soft);color:var(--primary)" onclick="prm_startPomo()">⏱ 开始专注</button>
+      <button class="btn btn-sm" id="prm-pomo-btn" style="font-size:11px;background:var(--primary-soft);color:var(--primary);min-width:88px" onclick="prm_startPomo()">⏱ 开始专注</button>
       <button class="btn btn-sm" style="font-size:11px;background:#d1fae5;color:#065f46" onclick="prm_addToDaily()">📋 记入今日</button>
       <button class="btn btn-ghost btn-sm" onclick="closePaperReader()" style="font-size:15px;padding:2px 8px">×</button>
     </div>
