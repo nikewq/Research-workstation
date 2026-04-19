@@ -6051,6 +6051,8 @@ function saveAddPaper(){
 // ══════════════════════════════════════
 const _PRM_NOTES_KEY='_pnotes_v1'
 const _PRM_HL_KEY='_phl_v1'
+const _PRM_SESSION_KEY='_prm_session_v1'  // sessionStorage：记录当前打开的论文（刷新恢复）
+let _prmNotesTimer=null   // 笔记自动保存定时器
 let _prmPaper=null
 let _prmChatHistory=[]
 let _prmViewMode='auto'
@@ -6331,14 +6333,17 @@ function openPaperReader(id){
   // 渲染批注面板
   prm_renderHighlightsPanel()
   document.body.style.overflow='hidden'
+  // 保存 session：刷新后可恢复（清空由 closePaperReader 负责）
+  try{sessionStorage.setItem(_PRM_SESSION_KEY,JSON.stringify({id:p.id}))}catch{}
   // 注册 history state，使浏览器「返回」关闭 modal 而非离开 app
   history.pushState({prmOpen:true},'')
 }
 
 function closePaperReader(){
+  clearTimeout(_prmNotesTimer)
   prm_saveNotes()
+  try{sessionStorage.removeItem(_PRM_SESSION_KEY)}catch{}  // 用户主动关闭 → 清除 session
   document.getElementById('prm-iframe').src='about:blank'
-  // 释放 PDF 资源
   if(_prmPdfDoc){_prmPdfDoc.destroy();_prmPdfDoc=null}
   document.getElementById('prm-pdf-canvas-area').innerHTML=''
   _prmPdfPageRects={};_prmPdfSelRects=[];_prmPdfSelPage=0
@@ -6350,7 +6355,9 @@ function closePaperReader(){
 // 拦截浏览器返回键：关闭 modal 而非离开 app
 window.addEventListener('popstate',function(e){
   if(document.getElementById('paper-reader-modal').classList.contains('open')){
+    clearTimeout(_prmNotesTimer)
     prm_saveNotes()
+    try{sessionStorage.removeItem(_PRM_SESSION_KEY)}catch{}
     document.getElementById('prm-iframe').src='about:blank'
     if(_prmPdfDoc){_prmPdfDoc.destroy();_prmPdfDoc=null}
     document.getElementById('prm-pdf-canvas-area').innerHTML=''
@@ -6446,6 +6453,14 @@ function prm_switchTab(name,el){
 function prm_notesChanged(){
   const v=document.getElementById('prm-notes-area').value
   document.getElementById('prm-notes-count').textContent=v.length+'字'
+  // 自动静默保存（1.5s 防抖），刷新后笔记不丢失
+  clearTimeout(_prmNotesTimer)
+  _prmNotesTimer=setTimeout(()=>{
+    if(!_prmPaper)return
+    const all=_ldAllNotes()
+    if(v.trim())all[_prmPaper.id]=v;else delete all[_prmPaper.id]
+    _svAllNotes(all)
+  },1500)
 }
 
 function prm_saveNotes(){
@@ -7033,6 +7048,24 @@ async function searchProcureAI(){
 function _prefillFromAI(btn){
   try{const item=JSON.parse(btn.dataset.item);_fillProcureForm({name:item.name||'',brand:item.brand||'',price:item.price||'',platform:item.platform||'',rating:item.rating||'',sales:item.sales||'',userFeedback:item.userFeedback||'',deliveryDays:item.deliveryDays||'',shipFrom:item.shipFrom||'',category:item.category||'',url:item.url||'',notes:item.notes||''});switchProcureAddMode('manual');document.getElementById('procure-add-section')?.scrollIntoView({behavior:'smooth',block:'start'});toast('已预填，请完善后保存')}catch(_){}
 }
+
+// ── 刷新恢复：session 中有打开的论文则自动复原阅读器 ──
+// 等待所有脚本就绪后再执行（hash 路由的 setTimeout 也是 0，这里用 50ms 确保在其之后）
+setTimeout(function(){
+  try{
+    const raw=sessionStorage.getItem(_PRM_SESSION_KEY)
+    if(!raw)return
+    const {id}=JSON.parse(raw)
+    if(!id)return
+    // 先确保文献库页面就绪（renderPapersPage 会填充 _dpLibMap）
+    const p=_ldPapLib().find(x=>x.id===id)
+    if(!p)return
+    // 同步到 _dpLibMap
+    if(!window._dpLibMap)window._dpLibMap={}
+    window._dpLibMap[id]=p
+    openPaperReader(id)
+  }catch(e){}
+},50)
 </script>
 
 <!-- ── Floating Timer Bar ── -->
