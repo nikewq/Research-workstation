@@ -513,14 +513,17 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .pdf-ann-svg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
 #prm-pdf-page-info{font-size:11px;color:#ccc;text-align:center;padding:4px 0 8px;flex-shrink:0}
 /* ── Research Two-column Layout ── */
-.research-layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
-.research-list-col{min-width:0}
-.research-detail-col{min-width:0}
+.research-layout{display:flex;gap:0;align-items:start;position:relative}
+.research-list-col{width:360px;min-width:220px;flex-shrink:0;min-width:0;overflow:hidden}
+.research-detail-col{flex:1;min-width:0;margin-left:16px}
+.research-resize-handle{width:6px;flex-shrink:0;cursor:col-resize;align-self:stretch;position:relative;margin:0 4px;border-radius:3px;transition:background .15s;background:transparent}
+.research-resize-handle:hover,.research-resize-handle.dragging{background:var(--primary)}
+.research-resize-handle::after{content:'';position:absolute;inset:-4px 0;cursor:col-resize}
 .research-tab-bar{display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:9px;width:fit-content;margin-bottom:14px}
 .research-tab-btn{padding:5px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:all .15s}
 .research-tab-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.10)}
 .research-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;color:var(--text2);font-size:13px;gap:10px;background:var(--surface2);border-radius:12px;border:1.5px dashed var(--border)}
-@media(max-width:860px){.research-layout{grid-template-columns:1fr}}
+@media(max-width:860px){.research-layout{flex-direction:column}.research-resize-handle{display:none}.research-detail-col{margin-left:0;width:100%}}
 </style>
 </head>
 <body>
@@ -954,6 +957,9 @@ mark.hl-pink{background:#fecdd3;color:#881337}
         <div id="sub-list" style="max-height:calc(100vh - 300px);overflow-y:auto;padding-right:2px"></div>
       </div>
     </div>
+
+    <!-- ── 拖拽分隔条 ── -->
+    <div class="research-resize-handle" id="rs-resize-handle" title="拖拽调整宽度"></div>
 
     <!-- ── 右列：详情 ── -->
     <div class="research-detail-col">
@@ -5569,6 +5575,39 @@ function switchResearchTab(tab){
   if(pb){pb.classList.toggle('active',isPapers)}
   if(sb){sb.classList.toggle('active',!isPapers)}
 }
+
+// ── 文献列表左栏拖拽调宽 ──
+;(function(){
+  let dragging=false,startX=0,startW=0
+  document.addEventListener('mousedown',function(e){
+    const h=document.getElementById('rs-resize-handle')
+    if(!h||!h.contains(e.target))return
+    dragging=true
+    startX=e.clientX
+    const col=document.querySelector('.research-list-col')
+    startW=col?col.offsetWidth:360
+    h.classList.add('dragging')
+    document.body.style.cursor='col-resize'
+    document.body.style.userSelect='none'
+    e.preventDefault()
+  })
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return
+    const col=document.querySelector('.research-list-col')
+    if(!col)return
+    const maxW=Math.floor(window.innerWidth*0.65)
+    const newW=Math.max(220,Math.min(startW+(e.clientX-startX),maxW))
+    col.style.width=newW+'px'
+  })
+  document.addEventListener('mouseup',function(){
+    if(!dragging)return
+    dragging=false
+    const h=document.getElementById('rs-resize-handle')
+    if(h)h.classList.remove('dragging')
+    document.body.style.cursor=''
+    document.body.style.userSelect=''
+  })
+})()
 function closeReadingPanel(){
   const panel=document.getElementById('papers-reading-panel')
   const placeholder=document.getElementById('papers-reading-placeholder')
@@ -5936,7 +5975,7 @@ function renderPapersPage(){
     const notePreview=notes.replace(/[#*`>\-]/g,'').trim().slice(0,80)
     return`<div class="dp-lib-row" onclick="openPaperReader('${escHtml(p.id)}')">
       <div style="flex:1;min-width:0;overflow:hidden">
-        <div style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.title)}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--primary);line-height:1.4;word-break:break-word">${escHtml(p.title)}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px">${escHtml(p.area||'')} · ${escHtml(p.date||'')} · ${escHtml((p.authors||'').slice(0,40))}</div>
         ${notePreview?`<div class="dp-note-preview">📝 ${escHtml(notePreview)}${notes.length>80?'…':''}</div>`:''}
         ${hls.length?`<span class="dp-ann-badge">🖊 ${hls.length}条批注</span>`:''}
