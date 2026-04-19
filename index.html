@@ -567,6 +567,22 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .wr-preview-section{font-size:15px;font-weight:700;margin:18px 0 6px;padding-bottom:4px;border-bottom:1.5px solid var(--border)}
 .wr-comment{color:var(--text2);font-style:italic;font-size:12px}
 .wr-math-block{display:block;overflow-x:auto;text-align:center;margin:12px 0;padding:8px;background:var(--surface2);border-radius:6px}
+/* AI 写作面板 */
+.wr-ai-btn{position:relative;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:1px solid var(--primary);border-radius:4px;background:var(--primary-soft);color:var(--primary);font-size:11px;cursor:pointer;font-weight:600;transition:background .12s}
+.wr-ai-btn:hover{background:var(--primary);color:#fff}
+.wr-ai-menu{position:absolute;top:calc(100% + 4px);right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;min-width:160px;padding:4px 0;display:none}
+.wr-ai-menu.open{display:block}
+.wr-ai-menu-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;cursor:pointer;color:var(--text);transition:background .1s;white-space:nowrap}
+.wr-ai-menu-item:hover{background:var(--primary-soft);color:var(--primary)}
+#wr-ai-panel{flex-shrink:0;border-top:2px solid var(--primary);background:var(--card);display:none;flex-direction:column;max-height:260px}
+#wr-ai-panel.visible{display:flex}
+.wr-ai-panel-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+#wr-ai-result{flex:1;overflow-y:auto;padding:12px 14px;font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text);font-family:'JetBrains Mono','Fira Mono',Consolas,monospace}
+.wr-ai-loading{display:flex;align-items:center;gap:8px;padding:20px 14px;color:var(--text2);font-size:13px}
+.wr-ai-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:wr-ai-pulse 1.2s ease-in-out infinite}
+.wr-ai-dot:nth-child(2){animation-delay:.2s}
+.wr-ai-dot:nth-child(3){animation-delay:.4s}
+@keyframes wr-ai-pulse{0%,80%,100%{opacity:.25}40%{opacity:1}}
 @media(max-width:900px){.wr-preview-col{display:none}.wr-projects-col{width:200px}}
 /* ZIP file tree */
 .wr-zip-card{padding:7px 10px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px;background:var(--surface2);display:flex;align-items:center;gap:6px;font-size:12px}
@@ -1179,11 +1195,35 @@ mark.hl-pink{background:#fecdd3;color:#881337}
           <button class="wr-tb-btn" onclick="wrInsert('\\cite{','}')" title="引用">📎</button>
           <button class="wr-tb-btn" onclick="wrInsertTable()" title="插入表格">⊞</button>
           <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+          <!-- AI 写作按钮 -->
+          <div style="position:relative">
+            <button class="wr-ai-btn" id="wr-ai-toggle" onclick="wrToggleAiMenu(event)">✨ AI <span style="font-size:9px;opacity:.7">▾</span></button>
+            <div class="wr-ai-menu" id="wr-ai-menu">
+              <div class="wr-ai-menu-item" onclick="wrAiAction('polish')">✏️ 润色表达</div>
+              <div class="wr-ai-menu-item" onclick="wrAiAction('concise')">✂️ 精简句子</div>
+              <div class="wr-ai-menu-item" onclick="wrAiAction('expand')">📝 扩写段落</div>
+              <div class="wr-ai-menu-item" onclick="wrAiAction('grammar')">🔍 修正语法</div>
+              <div class="wr-ai-menu-item" onclick="wrAiAction('translate')">🌐 翻译成英文</div>
+              <div class="wr-ai-menu-item" onclick="wrAiAction('abstract')">📄 生成摘要</div>
+            </div>
+          </div>
+          <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
           <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_wrActiveZipId?wrSaveZipFile():wrSaveDoc()">💾 保存</button>
           <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_wrActiveZipId?wrExportZipProject():wrExportTex()">⬇ 导出</button>
           <button class="btn btn-ghost btn-sm" id="wr-del-btn" style="font-size:11px;color:#dc2626" onclick="_wrActiveZipId?wrCloseZipProject():wrDeleteDoc()">🗑</button>
         </div>
         <textarea id="wr-editor" placeholder="在此编写 LaTeX 内容...&#10;&#10;% 示例：&#10;\section{Introduction}&#10;This paper studies...&#10;&#10;% 行内公式：$E = mc^2$&#10;% 块级公式：&#10;$$\sum_{i=1}^{n} x_i = \mu$$" oninput="wrOnEdit(this)" onkeydown="wrHandleKey(event)"></textarea>
+        <!-- AI 结果面板（折叠在编辑器下方） -->
+        <div id="wr-ai-panel">
+          <div class="wr-ai-panel-header">
+            <span id="wr-ai-action-label" style="font-size:12px;font-weight:600;color:var(--primary)">✨ AI 建议</span>
+            <div style="flex:1"></div>
+            <button class="btn btn-primary btn-sm" style="font-size:11px" onclick="wrAiAccept()">✓ 接受替换</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;margin-left:4px" onclick="wrAiCopy()">📋 复制</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;margin-left:4px;color:var(--text2)" onclick="wrAiClose()">✕</button>
+          </div>
+          <div id="wr-ai-result"></div>
+        </div>
         <div style="padding:4px 12px;font-size:10px;color:var(--text2);display:flex;gap:12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
           <span id="wr-char-count">0 字符</span>
           <span id="wr-line-count">0 行</span>
@@ -6027,6 +6067,131 @@ function wrInsert(before,after){
 function wrInsertTable(){
   const tbl=`\n\\begin{table}[h]\n\\centering\n\\caption{表格标题}\n\\label{tab:example}\n\\begin{tabular}{|c|c|c|}\n\\hline\n列1 & 列2 & 列3 \\\\\\\\\n\\hline\n数据1 & 数据2 & 数据3 \\\\\\\\\n数据4 & 数据5 & 数据6 \\\\\\\\\n\\hline\n\\end{tabular}\n\\end{table}\n`
   wrInsert(tbl,'')
+}
+
+// ══════════════════════════════════════════════
+// ✨ AI 写作辅助
+// ══════════════════════════════════════════════
+
+let _wrAiSelStart=0,_wrAiSelEnd=0,_wrAiResult=''
+
+const _WR_AI_PROMPTS={
+  polish:{
+    label:'✏️ 润色表达',
+    sys:'You are an expert academic writing assistant. Polish the following LaTeX text to improve clarity, flow, and academic tone. Keep all LaTeX commands intact. Return ONLY the improved text, no explanations.',
+    user:(t)=>`Polish this LaTeX text:\n\n${t}`
+  },
+  concise:{
+    label:'✂️ 精简句子',
+    sys:'You are an expert academic writing editor. Make the following LaTeX text more concise without losing meaning. Keep all LaTeX commands intact. Return ONLY the revised text, no explanations.',
+    user:(t)=>`Make this more concise:\n\n${t}`
+  },
+  expand:{
+    label:'📝 扩写段落',
+    sys:'You are an expert academic writer. Expand the following LaTeX text with more detail, examples, or explanation. Keep all LaTeX commands and style. Return ONLY the expanded text, no explanations.',
+    user:(t)=>`Expand this text with more detail:\n\n${t}`
+  },
+  grammar:{
+    label:'🔍 修正语法',
+    sys:'You are a grammar expert. Fix all grammar, spelling, and punctuation errors in the following LaTeX text. Keep all LaTeX commands intact. Return ONLY the corrected text, no explanations.',
+    user:(t)=>`Fix grammar errors in this LaTeX text:\n\n${t}`
+  },
+  translate:{
+    label:'🌐 翻译成英文',
+    sys:'You are a professional academic translator. Translate the following text into academic English suitable for a research paper. If it is already in English, improve its academic tone. Keep LaTeX commands intact. Return ONLY the translation.',
+    user:(t)=>`Translate to academic English:\n\n${t}`
+  },
+  abstract:{
+    label:'📄 生成摘要',
+    sys:'You are an expert academic writer. Write a concise abstract (150-200 words) for the following research content. Format it as plain text (no LaTeX). Return ONLY the abstract.',
+    user:(t)=>`Write an academic abstract for:\n\n${t}`
+  }
+}
+
+function wrToggleAiMenu(e){
+  e.stopPropagation()
+  const menu=document.getElementById('wr-ai-menu')
+  if(!menu)return
+  menu.classList.toggle('open')
+  if(menu.classList.contains('open')){
+    const close=()=>{menu.classList.remove('open');document.removeEventListener('click',close)}
+    setTimeout(()=>document.addEventListener('click',close),10)
+  }
+}
+
+async function wrAiAction(type){
+  const menu=document.getElementById('wr-ai-menu')
+  if(menu)menu.classList.remove('open')
+
+  const ta=document.getElementById('wr-editor')
+  if(!ta)return
+  const sel=ta.value.slice(ta.selectionStart,ta.selectionEnd).trim()
+  let text=sel
+
+  if(!text){
+    // 无选中：取光标所在段落
+    const val=ta.value,pos=ta.selectionStart
+    let s=val.lastIndexOf('\n\n',pos)
+    s=s<0?0:s+2
+    let e=val.indexOf('\n\n',pos)
+    e=e<0?val.length:e
+    text=val.slice(s,e).trim()
+    _wrAiSelStart=s;_wrAiSelEnd=e
+  }else{
+    _wrAiSelStart=ta.selectionStart;_wrAiSelEnd=ta.selectionEnd
+  }
+
+  if(!text||text.length<5){toast('请选中需要处理的文本','warning');return}
+  if(text.length>8000){toast('选中文本过长（上限 8000 字符）','warning');return}
+
+  const cfg=_WR_AI_PROMPTS[type]
+  if(!cfg)return
+
+  // 显示面板 + loading 状态
+  const panel=document.getElementById('wr-ai-panel')
+  const resultEl=document.getElementById('wr-ai-result')
+  const labelEl=document.getElementById('wr-ai-action-label')
+  if(!panel||!resultEl)return
+  panel.classList.add('visible')
+  if(labelEl)labelEl.textContent=cfg.label
+  resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 处理中…</span></div>`
+  // 滚动使面板可见
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'})
+
+  const prompt=`${cfg.sys}\n\n${cfg.user(text)}`
+  const result=await _callAI(prompt,2000)
+
+  if(!result){
+    resultEl.innerHTML='<div style="padding:12px;color:#dc2626;font-size:13px">⚠️ AI 暂时不可用，请稍后重试</div>'
+    return
+  }
+  _wrAiResult=result
+  resultEl.textContent=result
+}
+
+function wrAiAccept(){
+  const ta=document.getElementById('wr-editor')
+  if(!ta||!_wrAiResult)return
+  const val=ta.value
+  ta.value=val.slice(0,_wrAiSelStart)+_wrAiResult+val.slice(_wrAiSelEnd)
+  ta.selectionStart=_wrAiSelStart
+  ta.selectionEnd=_wrAiSelStart+_wrAiResult.length
+  ta.focus()
+  _wrUpdateCounts(ta)
+  wrOnEdit(ta)
+  wrAiClose()
+  toast('已接受 AI 建议','success')
+}
+
+function wrAiCopy(){
+  if(!_wrAiResult)return
+  navigator.clipboard.writeText(_wrAiResult).then(()=>toast('已复制到剪贴板','success'))
+}
+
+function wrAiClose(){
+  const panel=document.getElementById('wr-ai-panel')
+  if(panel)panel.classList.remove('visible')
+  _wrAiResult=''
 }
 
 // ── Export .tex ──
