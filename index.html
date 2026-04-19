@@ -6420,9 +6420,15 @@ function prm_switchView(mode){
     document.getElementById('prm-fb-title').textContent=p.title
     document.getElementById('prm-fb-meta').textContent=[p.venue,p.date,(p.authors||'').slice(0,80)].filter(Boolean).join(' · ')
     prm_renderAbstractWithHighlights()
+    const saveBtn=p.pdf_url&&!p.has_local_pdf
+      ?`<button onclick="prm_fetchAndSavePdf()" style="padding:6px 14px;background:var(--primary-soft);color:var(--primary);border:1.5px solid var(--primary);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer" id="prm-save-local-btn">💾 保存到本地</button>`
+      :p.pdf_url&&p.has_local_pdf
+      ?`<button onclick="prm_switchView('local-pdf')" style="padding:6px 14px;background:var(--green-soft);color:var(--green);border:1.5px solid var(--green);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">✅ 已保存 · 打开阅读</button>`
+      :''
     const linksHtml=[
       p.url?`<a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 摘要页</a>`:'',
-      p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600">📄 在新标签页打开 PDF</a>`:''
+      p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600">📄 在新标签页打开 PDF</a>`:'',
+      saveBtn
     ].join('')
     document.getElementById('prm-fb-links').innerHTML=linksHtml
   }
@@ -6554,6 +6560,35 @@ function prm_addToDaily(){
   if(pomo.running){
     pomo.taskTitle='📖 '+p.title.slice(0,25)
     toast('已同步至心流任务名称')
+  }
+}
+
+// ── 一键从 pdf_url 下载并保存到 IndexedDB ──
+async function prm_fetchAndSavePdf(){
+  const p=_prmPaper;if(!p||!p.pdf_url)return
+  const btn=document.getElementById('prm-save-local-btn')
+  if(btn){btn.disabled=true;btn.textContent='⏳ 下载中...'}
+  toast('📥 正在下载 PDF，请稍候...')
+  try{
+    const resp=await fetch(p.pdf_url,{mode:'cors'})
+    if(!resp.ok)throw new Error(`HTTP ${resp.status}`)
+    const blob=await resp.blob()
+    if(!blob.type.includes('pdf')&&blob.size<1000)throw new Error('返回内容不是有效 PDF')
+    await _svPdfBlob(p.id,blob)
+    // 更新 paper 标记
+    const lib=_ldPapLib()
+    const idx=lib.findIndex(x=>x.id===p.id)
+    if(idx>=0){lib[idx].has_local_pdf=true;_svPapLib(lib)}
+    _prmPaper.has_local_pdf=true
+    if(window._dpLibMap&&window._dpLibMap[p.id])window._dpLibMap[p.id].has_local_pdf=true
+    document.getElementById('prm-local-pdf-btn').style.display='inline-block'
+    document.getElementById('prm-delete-pdf-btn').style.display='inline-block'
+    toast('✅ PDF 已保存到本地，正在打开...')
+    prm_switchView('local-pdf')
+  }catch(err){
+    if(btn){btn.disabled=false;btn.textContent='💾 保存到本地'}
+    // CORS 失败时引导手动导入
+    toast('⚠️ 自动下载失败（'+err.message+'）→ 请在新标签页打开 PDF 后手动导入','warn')
   }
 }
 
