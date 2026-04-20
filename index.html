@@ -2457,13 +2457,9 @@ function initApp() {
   updatePomoTaskSel();
   updateStats();
   populateSettingsForm();
-  if(!window._clockIv){
-    window._clockIv=setInterval(updateClock,1000);
+  if(!window._statsIv){
     window._statsIv=setInterval(()=>{updateStats();updatePhdDay();renderCheckin();},60000);
-    // Sync clock immediately when tab becomes visible (browser throttles timers in background tabs)
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateClock();});
   }
-  updateClock();
   document.getElementById('sub-date').value = today();
   updatePomoDisplay();
   _initLocalFolderUI();
@@ -4055,6 +4051,19 @@ function toast(msg,type='success'){
 //  BOOT
 // ══════════════════════════════════════
 initSetupWizard();
+
+// Clock — self-starting, independent of initApp()
+;(function(){
+  function _tick(){
+    const t=document.getElementById('clock-time');
+    if(t){const n=new Date();t.textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());}
+    const c=document.getElementById('clock-city');
+    if(c&&!c.textContent)c.textContent=_getCapitalCity();
+  }
+  _tick();
+  setInterval(_tick,1000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)_tick();});
+})();
 </script>
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <script>
