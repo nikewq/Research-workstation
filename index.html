@@ -3628,7 +3628,7 @@ function renderRefHistory(){
 // ══════════════════════════════════════
 function renderOverview(){
   renderIdentityCard();
-  _renderDailyQuote();
+  if(typeof _renderDailyQuote==='function')_renderDailyQuote();
   const tasks=ld(K.tasks).filter(t=>t.status!=='done').slice(0,5);
   const tEl=document.getElementById('ov-tasks');
   if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
@@ -4050,14 +4050,12 @@ function toast(msg,type='success'){
 // ══════════════════════════════════════
 //  BOOT
 // ══════════════════════════════════════
-initSetupWizard();
 
-// Clock — self-starting, independent of initApp()
+// Clock — runs first, before initApp, so errors below can't block it
 ;(function(){
   function _tick(){
     const n=new Date();
     const s=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
-    // try new span first, fall back to the clock wrapper itself
     const el=document.getElementById('clock-time')||document.getElementById('clock');
     if(el)el.textContent=s;
   }
@@ -4065,6 +4063,8 @@ initSetupWizard();
   setInterval(_tick,1000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)_tick();});
 })();
+
+initSetupWizard();
 </script>
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <script>
