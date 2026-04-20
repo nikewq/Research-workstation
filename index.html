@@ -809,7 +809,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
   <div class="page-title" id="ov-hello">今日概览</div>
   <div class="page-subtitle" id="ov-date"></div>
   <div class="checkin-bar">
-    <div class="clock" id="clock">00:00:00<div id="clock-city" style="font-size:10px;font-weight:500;color:var(--text2);text-align:center;margin-top:2px;letter-spacing:.5px"></div></div>
+    <div class="clock" id="clock"><span id="clock-time">00:00:00</span><div id="clock-city" style="font-size:10px;font-weight:500;color:var(--text2);text-align:center;margin-top:2px;letter-spacing:.5px"></div></div>
     <div style="flex:1">
       <div style="font-size:12px;color:var(--text2)">今日状态</div>
       <div style="font-size:14px;font-weight:600" id="ci-status">未签到</div>
@@ -2604,22 +2604,12 @@ function _getCapitalCity(){
     const p=tz.split('/');return p[p.length-1].replace(/_/g,' ')
   }catch(e){return''}
 }
-function updateClock() {
-  const n=new Date(), el=document.getElementById('clock')
-  if(!el)return
-  // Update time digits (first text node only, not the city child)
-  const timeStr=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`
-  // Use firstChild text node if exists, otherwise set directly
-  if(el.firstChild&&el.firstChild.nodeType===3){
-    el.firstChild.nodeValue=timeStr
-  } else {
-    el.childNodes[0]&&el.childNodes[0].nodeType===3
-      ?(el.childNodes[0].nodeValue=timeStr)
-      :(el.insertBefore(document.createTextNode(timeStr),el.firstChild))
-  }
-  // Set city label once
-  const cityEl=document.getElementById('clock-city')
-  if(cityEl&&!cityEl.textContent)cityEl.textContent=_getCapitalCity()
+function updateClock(){
+  const n=new Date()
+  const t=document.getElementById('clock-time')
+  if(t)t.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`
+  const c=document.getElementById('clock-city')
+  if(c&&!c.textContent)c.textContent=_getCapitalCity()
 }
 function pad(n){return String(n).padStart(2,'0')}
 const ROLE_CONFIG={
