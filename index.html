@@ -369,10 +369,17 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
 /* Submissions */
 .sub-item{background:var(--surface2);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--border)}
+.sub-item.status-draft{border-left-color:#94a3b8}
 .sub-item.status-submitted{border-left-color:var(--orange)}
-.sub-item.status-accepted{border-left-color:var(--green)}
+.sub-item.status-under_review{border-left-color:#3b82f6}
+.sub-item.status-with_editor{border-left-color:#8b5cf6}
+.sub-item.status-major_revision{border-left-color:#f97316}
+.sub-item.status-minor_revision{border-left-color:#eab308}
 .sub-item.status-revision{border-left-color:var(--primary)}
+.sub-item.status-accepted{border-left-color:var(--green)}
+.sub-item.status-published{border-left-color:#059669}
 .sub-item.status-rejected{border-left-color:var(--red)}
+.sub-item.status-withdrawn{border-left-color:#94a3b8}
 .sub-title{font-size:14px;font-weight:600}
 .sub-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text2)}
 
@@ -1139,10 +1146,15 @@ mark.hl-pink{background:#fecdd3;color:#881337}
           <div class="card-title">添加投稿</div>
           <div class="form-row c2">
             <div><label>论文标题</label><input id="sub-title" placeholder="论文标题..."></div>
-            <div><label>会议/期刊</label><input id="sub-venue" placeholder="如：NeurIPS 2026" oninput="_autoFillVenueUrl(this.value,'sub-url')"></div>
+            <div><label>会议/期刊 <span style="color:var(--text2);font-weight:400;font-size:11px">（输入后自动识别）</span></label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input id="sub-venue" placeholder="如：NeurIPS 2026 / IEEE TPAMI" style="flex:1" oninput="_autoFillVenueUrl(this.value,'sub-url','sub-venue-go')">
+                <button class="btn btn-ghost btn-sm" id="sub-venue-go" style="display:none;font-size:11px;white-space:nowrap" onclick="_openVenueUrl('sub-url','sub-venue')">🌐 跳转</button>
+              </div>
+            </div>
           </div>
           <div class="form-row c2">
-            <div><label>链接 <span style="color:var(--text2);font-weight:400;font-size:11px">（常见会议自动填充）</span></label>
+            <div><label>投稿链接 <span style="color:var(--text2);font-weight:400;font-size:11px">（自动填充或手动输入）</span></label>
               <div style="display:flex;gap:6px;align-items:center">
                 <input id="sub-url" placeholder="https://openreview.net/..." style="flex:1">
                 <button class="btn btn-ghost btn-sm" id="sub-url-go" style="display:none;font-size:11px;white-space:nowrap" onclick="window.open(document.getElementById('sub-url').value,'_blank')">🔗 打开</button>
@@ -1150,11 +1162,16 @@ mark.hl-pink{background:#fecdd3;color:#881337}
             </div>
             <div><label>状态</label>
               <select id="sub-status">
-                <option value="submitted">审核中</option>
-                <option value="revision">修改中</option>
-                <option value="accepted">录用</option>
-                <option value="rejected">拒稿</option>
-                <option value="withdrawn">撤稿</option>
+                <option value="draft">In Preparation · 准备中</option>
+                <option value="submitted" selected>Submitted · 已投稿</option>
+                <option value="under_review">Under Review · 审稿中</option>
+                <option value="with_editor">With Editor · 编辑处理中</option>
+                <option value="major_revision">Major Revision · 大修</option>
+                <option value="minor_revision">Minor Revision · 小修</option>
+                <option value="accepted">Accepted · 录用</option>
+                <option value="published">Published · 已发表</option>
+                <option value="rejected">Rejected · 拒稿</option>
+                <option value="withdrawn">Withdrawn · 撤稿</option>
               </select>
             </div>
           </div>
@@ -1713,17 +1730,28 @@ mark.hl-pink{background:#fecdd3;color:#881337}
     <input type="hidden" id="es-id">
     <div class="form-row"><div><label>论文标题</label><input id="es-title"></div></div>
     <div class="form-row c2">
-      <div><label>会议/期刊名称</label><input id="es-venue" oninput="_autoFillVenueUrl(this.value,'es-url')"></div>
+      <div><label>会议/期刊名称</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="es-venue" style="flex:1" oninput="_autoFillVenueUrl(this.value,'es-url','es-venue-go')">
+          <button class="btn btn-ghost btn-sm" id="es-venue-go" style="display:none;font-size:11px;white-space:nowrap" onclick="_openVenueUrl('es-url','es-venue')">🌐 跳转</button>
+        </div>
+      </div>
       <div><label>投稿/期刊链接</label><input id="es-url" placeholder="https://..."></div>
     </div>
     <div class="form-row c2">
       <div><label>状态</label>
         <select id="es-status">
-          <option value="submitted">审核中</option>
-          <option value="revision">修改中</option>
-          <option value="accepted">录用</option>
-          <option value="rejected">拒稿</option>
-          <option value="withdrawn">撤稿</option>
+          <option value="draft">In Preparation · 准备中</option>
+          <option value="submitted">Submitted · 已投稿</option>
+          <option value="under_review">Under Review · 审稿中</option>
+          <option value="with_editor">With Editor · 编辑处理中</option>
+          <option value="major_revision">Major Revision · 大修</option>
+          <option value="minor_revision">Minor Revision · 小修</option>
+          <option value="revision">Revision · 修改中</option>
+          <option value="accepted">Accepted · 录用</option>
+          <option value="published">Published · 已发表</option>
+          <option value="rejected">Rejected · 拒稿</option>
+          <option value="withdrawn">Withdrawn · 撤稿</option>
         </select>
       </div>
     </div>
@@ -3278,41 +3306,105 @@ function renderHabitStreaks(){
 // ══════════════════════════════════════
 //  SUBMISSIONS
 // ══════════════════════════════════════
-const SUB_LBL={submitted:'审核中',revision:'修改中',accepted:'✅ 录用',rejected:'❌ 拒稿',withdrawn:'撤稿'};
+const SUB_LBL={
+  draft:'In Preparation',
+  submitted:'Submitted',
+  under_review:'Under Review',
+  with_editor:'With Editor',
+  major_revision:'Major Revision',
+  minor_revision:'Minor Revision',
+  revision:'Revision',
+  accepted:'✅ Accepted',
+  published:'🎉 Published',
+  rejected:'❌ Rejected',
+  withdrawn:'Withdrawn',
+};
+const SUB_LBL_CN={
+  draft:'准备中', submitted:'已投稿', under_review:'审稿中',
+  with_editor:'编辑处理中', major_revision:'大修', minor_revision:'小修',
+  revision:'修改中', accepted:'录用', published:'已发表',
+  rejected:'拒稿', withdrawn:'撤稿',
+};
 
 // 常见会议/期刊 → 官网 / 投稿入口
 const _VENUE_URLS={
+  // Top AI/ML conferences
   neurips:'https://neurips.cc', nips:'https://neurips.cc',
   icml:'https://icml.cc', iclr:'https://iclr.cc',
+  aaai:'https://aaai.org', ijcai:'https://www.ijcai.org',
+  uai:'https://www.auai.org', aistats:'https://aistats.org',
+  // CV conferences
   cvpr:'https://cvpr.thecvf.com', iccv:'https://iccv.thecvf.com',
   eccv:'https://eccv.ecva.net', wacv:'https://wacv.thecvf.com',
-  aaai:'https://aaai.org', ijcai:'https://www.ijcai.org',
+  bmvc:'https://www.bmvc2024.org', siggraph:'https://www.siggraph.org',
+  miccai:'https://www.miccai.org',
+  // NLP/IR
   acl:'https://www.aclweb.org', emnlp:'https://www.emnlp.org',
+  naacl:'https://naacl.org', coling:'https://www.coling2025.org',
+  sigir:'https://sigir.org',
+  // Data/Multimedia
   acmmm:'https://acmmm.org', sigkdd:'https://www.kdd.org',
-  sigir:'https://sigir.org', www:'https://www2.org',
+  www:'https://www2.org', wsdm:'https://www.wsdm-conference.org',
+  // IEEE Journals
+  tpami:'https://www.computer.org/csdl/journal/tp',
+  tnnls:'https://cis.ieee.org/publications/t-neural-networks-and-learning-systems',
+  tip:'https://www.signalprocessingsociety.org/publications/periodicals/image-processing',
+  tgrs:'https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=36',
+  tcsvt:'https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=76',
+  tmm:'https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=6046',
+  tkde:'https://www.computer.org/csdl/journal/tk',
+  tits:'https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=6979',
+  // Springer / Elsevier Journals
+  ijcv:'https://link.springer.com/journal/11263',
+  'machine learning':'https://link.springer.com/journal/10994',
+  'pattern recognition':'https://www.sciencedirect.com/journal/pattern-recognition',
+  'neural networks':'https://www.sciencedirect.com/journal/neural-networks',
+  'information sciences':'https://www.sciencedirect.com/journal/information-sciences',
+  'knowledge-based systems':'https://www.sciencedirect.com/journal/knowledge-based-systems',
+  'expert systems':'https://www.sciencedirect.com/journal/expert-systems-with-applications',
+  // Top Science Journals
   nature:'https://www.nature.com/authors/submit',
   science:'https://www.science.org/content/page/submit-science',
   'nature communications':'https://www.nature.com/ncomms/submit',
-  tpami:'https://www.computer.org/csdl/journal/tp',
-  ijcv:'https://link.springer.com/journal/11263',
+  'nature machine intelligence':'https://www.nature.com/natmachintell/author-instructions',
+  'science advances':'https://www.science.org/journal/sciadv',
+  cell:'https://www.cell.com/cell/authors',
+  // ML/AI Journals
   jmlr:'https://jmlr.org/authors.html',
+  tmlr:'https://jmlr.org/tmlr/',
+  'transactions on machine learning':'https://jmlr.org/tmlr/',
+  // Preprint / Submission systems
   openreview:'https://openreview.net',
   arxiv:'https://arxiv.org/submit',
+  'acm dl':'https://dl.acm.org',
+  acm:'https://dl.acm.org',
 }
-function _autoFillVenueUrl(venueStr, urlInputId){
+function _autoFillVenueUrl(venueStr, urlInputId, venueBtnId){
   const urlInput=document.getElementById(urlInputId); if(!urlInput)return
-  const vl=venueStr.toLowerCase()
+  const vl=venueStr.toLowerCase().trim()
   const match=Object.entries(_VENUE_URLS).find(([k])=>vl.includes(k))
   if(match&&!urlInput.value){ urlInput.value=match[1]; urlInput.style.color='var(--primary)' }
-  // 显示"打开"按钮
+  // 显示 venue 跳转按钮
+  const venueBtn=venueBtnId?document.getElementById(venueBtnId):null
+  if(venueBtn) venueBtn.style.display=(match||urlInput.value)?'inline-flex':'none'
+  // 显示 url 打开按钮
   const goBtn=document.getElementById('sub-url-go')
-  if(goBtn) goBtn.style.display=urlInput.value?'':'none'
+  if(goBtn&&urlInputId==='sub-url') goBtn.style.display=urlInput.value?'inline-flex':'none'
+}
+function _openVenueUrl(urlInputId, venueInputId){
+  const urlInput=document.getElementById(urlInputId)
+  const venueInput=document.getElementById(venueInputId)
+  const url=urlInput&&urlInput.value.trim()
+  if(url){window.open(url,'_blank');return}
+  // fallback: search Google Scholar
+  const venue=venueInput?venueInput.value.trim():''
+  if(venue) window.open('https://scholar.google.com/scholar?q='+encodeURIComponent(venue),'_blank')
 }
 // URL 输入框变化时也更新按钮显隐
 document.addEventListener('input',e=>{
   if(e.target.id==='sub-url'){
     const goBtn=document.getElementById('sub-url-go')
-    if(goBtn) goBtn.style.display=e.target.value?'':'none'
+    if(goBtn) goBtn.style.display=e.target.value?'inline-flex':'none'
   }
 })
 
@@ -3358,34 +3450,39 @@ function saveEditSub(){
   s.notes=document.getElementById('es-notes').value;
   sv(K.subs,list);closeModal('editSubModal');renderSubmissions();renderOverview();
 }
+const _REVIEW_STATUSES=new Set(['submitted','under_review','with_editor'])
+const _REVISION_STATUSES=new Set(['major_revision','minor_revision','revision'])
 function renderSubmissions(){
   const list=ld(K.subs),el=document.getElementById('sub-list');
   document.getElementById('ss-total').textContent=list.length;
-  document.getElementById('ss-sub').textContent=list.filter(s=>s.status==='submitted').length;
-  document.getElementById('ss-acc').textContent=list.filter(s=>s.status==='accepted').length;
-  document.getElementById('ss-rev').textContent=list.filter(s=>s.status==='revision').length;
+  document.getElementById('ss-sub').textContent=list.filter(s=>_REVIEW_STATUSES.has(s.status)).length;
+  document.getElementById('ss-acc').textContent=list.filter(s=>s.status==='accepted'||s.status==='published').length;
+  document.getElementById('ss-rev').textContent=list.filter(s=>_REVISION_STATUSES.has(s.status)).length;
   if(!el)return;
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">📄</div><p>暂无投稿记录</p></div>';return;}
   el.innerHTML=list.map(s=>{
-    const venueHtml=s.url
-      ?`<a href="${escHtml(s.url)}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:500" title="打开 ${escHtml(s.venue)}">🏛 ${escHtml(s.venue)} ↗</a>`
-      :`<span>🏛 ${escHtml(s.venue)}</span>`
+    const venueLink=s.url
+      ?`<a href="${escHtml(s.url)}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:500">🏛 ${escHtml(s.venue)} ↗</a>`
+      :s.venue?`<span style="cursor:pointer;color:var(--primary)" onclick="window.open('https://scholar.google.com/scholar?q='+encodeURIComponent('${escHtml(s.venue).replace(/'/g,"\\'")}'),'_blank')" title="Google Scholar 搜索">🏛 ${escHtml(s.venue)} 🔍</span>`
+      :''
     const daysLeft=s.decisionDate?Math.ceil((new Date(s.decisionDate)-new Date())/86400000):null
     const daysTag=daysLeft!==null
-      ?`<span style="font-size:11px;color:${daysLeft<=7?'#ef4444':daysLeft<=30?'#f59e0b':'var(--text2)'}">⏳ ${daysLeft>0?'还有'+daysLeft+'天':'已到期'}</span>`
+      ?`<span style="font-size:11px;color:${daysLeft<=7?'#ef4444':daysLeft<=30?'#f59e0b':'var(--text2)'}">⏳ ${daysLeft>0?'还有'+daysLeft+'天':'已过期'}</span>`
       :''
+    const statusEn=SUB_LBL[s.status]||s.status
+    const statusCn=SUB_LBL_CN[s.status]||''
     return `<div class="sub-item status-${s.status}">
       <div class="flex items-center gap-8">
         <div style="flex:1">
           <div class="sub-title">${escHtml(s.title)}</div>
           <div class="sub-meta" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px">
-            ${venueHtml}
+            ${venueLink}
             ${s.submitDate?`<span>📅 ${s.submitDate}</span>`:''}
             ${daysTag}
           </div>
         </div>
         <div class="flex gap-8 items-center">
-          <span class="status status-${s.status}">${SUB_LBL[s.status]||s.status}</span>
+          <span class="status status-${s.status}" title="${statusCn}">${statusEn}</span>
           <button class="btn btn-ghost btn-sm" onclick="openEditSub('${s.id}')">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="delSub('${s.id}')">🗑</button>
         </div>
@@ -3493,7 +3590,7 @@ function renderOverview(){
     const daysTag=daysLeft!==null?`<span style="font-size:10px;color:${daysLeft<=7?'#ef4444':daysLeft<=30?'#f59e0b':'var(--text2)'}">⏳ ${daysLeft>0?daysLeft+'天后':'已到期'}</span>`:''
     return `<div style="padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:8px;border-left:3px solid var(--status-${s.status},var(--border))">
       <div style="font-size:13px;font-weight:500;margin-bottom:4px;line-height:1.3">${escHtml(s.title)}</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${venueHtml}<span class="status status-${s.status}">${SUB_LBL[s.status]}</span>${daysTag}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${venueHtml}<span class="status status-${s.status}" title="${SUB_LBL_CN[s.status]||''}">${SUB_LBL[s.status]||s.status}</span>${daysTag}</div>
     </div>`
   }).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">📄</div><p>暂无投稿记录</p></div>';
 
