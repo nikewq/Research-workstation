@@ -7612,15 +7612,16 @@ async function fetchDailyPapers(){
   const cfg=getCfg()
   const summaryPrompt=`你是顶会论文速读助手。以下是 ${batch.length} 篇论文，用户研究方向：${areas.join('、')}。
 
-对每篇论文：
+对每篇论文，根据其标题、摘要和关键词：
 1. score(1-30)：与研究方向的相关性评分，越高越相关
 2. summary：4-5条中文摘要，格式"- **字段**: 内容"，字段为：解决的问题/研究方法/创新点/主要结果/数据集
+3. area：从用户研究方向（${areas.join('、')}）中选择与论文摘要最匹配的一个方向名称，若均不相关则填"其他"
 
-返回 JSON 数组，每项：{"id":"...","score":数字,"summary":"..."}
+返回 JSON 数组，每项：{"id":"...","score":数字,"summary":"...","area":"..."}
 只返回 JSON。
 
 论文：
-${batch.map((p,i)=>`${i}.{"id":"${p.id}","title":"${(p.title||'').slice(0,80)}","abstract":"${(p.abstract||'').slice(0,250)}"}`).join('\n')}`
+${batch.map((p,i)=>`${i}.{"id":"${p.id}","title":"${(p.title||'').slice(0,100)}","abstract":"${(p.abstract||'').slice(0,400)}"}`).join('\n')}`
   try{
     const aiResp=await _callAI(summaryPrompt,3200)
     if(aiResp){
@@ -7628,7 +7629,7 @@ ${batch.map((p,i)=>`${i}.{"id":"${p.id}","title":"${(p.title||'').slice(0,80)}",
       if(Array.isArray(summaries)){
         summaries.forEach(s=>{
           const paper=allPapers.find(p=>p.id===s.id)
-          if(paper){paper.score=Number(s.score)||15;paper.summary=s.summary||''}
+          if(paper){paper.score=Number(s.score)||15;paper.summary=s.summary||'';if(s.area)paper.area=s.area}
         })
       }
     }
