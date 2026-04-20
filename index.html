@@ -1633,6 +1633,7 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
           <optgroup label="🆓 注册即免费">
             <option value="glm">智谱 GLM 🇨🇳（Flash 免费）</option>
             <option value="qwen">通义千问 🇨🇳</option>
+            <option value="doubao">豆包 Doubao 🇨🇳（关闭 VPN）</option>
             <option value="groq">Groq（极快）</option>
             <option value="gemini">Google Gemini</option>
             <option value="openrouter">OpenRouter 免费模型</option>
@@ -1642,7 +1643,6 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
             <option value="deepseek">DeepSeek</option>
             <option value="openai">OpenAI</option>
             <option value="moonshot">Moonshot Kimi</option>
-            <option value="doubao">豆包 Doubao 🇨🇳（需代理）</option>
           </optgroup>
           <optgroup label="🖥 本地部署（需先安装软件）">
             <option value="ollama">Ollama</option>
@@ -4605,9 +4605,9 @@ const _AI_PROVIDERS={
             base:'https://dashscope.aliyuncs.com/compatible-mode/v1', defModel:'qwen-turbo', needsUrl:false, needsKey:true,
             hint:'🇨🇳 阿里云百炼 | 前往 <a href="https://bailian.console.aliyun.com" target="_blank">bailian.console.aliyun.com</a> 注册获取 API Key，qwen-turbo 有免费额度',
             models:['qwen-turbo','qwen-plus','qwen-long','qwen-max']},
-  doubao:  {name:'豆包 Doubao 🇨🇳（需代理）',
-            base:'https://ark.volces.com/api/v3',          defModel:'doubao-1-5-lite-32k',      needsUrl:true,  needsKey:true,
-            hint:'⚠️ 火山引擎 API <b>不支持浏览器直连</b>（CORS 限制），需配合反向代理使用。请在"网络地址"填入你的代理 URL，或改用智谱 GLM / 通义千问（均支持直连）',
+  doubao:  {name:'豆包 Doubao 🇨🇳',
+            base:'https://ark.volces.com/api/v3',          defModel:'doubao-1-5-lite-32k',      needsUrl:false, needsKey:true,
+            hint:'🇨🇳 字节跳动·火山引擎 | 前往 <a href="https://console.volcengine.com/ark" target="_blank">console.volcengine.com/ark</a> 注册获取 API Key（Lite 模型免费）。<b>注意：需关闭 VPN</b>，该服务仅限大陆网络访问，境外 IP 会连接失败',
             models:['doubao-1-5-lite-32k','doubao-1-5-pro-32k','doubao-1-5-thinking-pro-32k','doubao-lite-32k','doubao-pro-32k']},
   openrouter:{name:'OpenRouter 免费模型',
             base:'https://openrouter.ai/api/v1',           defModel:'meta-llama/llama-3.2-3b-instruct:free', needsUrl:false, needsKey:true,
