@@ -7649,8 +7649,14 @@ function _renderDpResults(papers){
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/^- (.+)$/gm,'<li>$1</li>')
     .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul style="padding-left:0;list-style:none">$1</ul>')
-  el.innerHTML=papers.map((p,i)=>`
-    <div class="dp-paper">
+  const lib=_ldPapLib()
+  const inLib=new Set(lib.map(p=>p.id))
+  el.innerHTML=papers.map((p,i)=>{
+    const saved=inLib.has(p.id)
+    const saveBtn=saved
+      ?`<button class="dp-link" id="dp-save-btn-${escHtml(p.id)}" style="border-color:#16a34a;color:#16a34a;background:rgba(22,163,74,.08);cursor:default" disabled>✅ 已存入库</button>`
+      :`<button class="dp-link" id="dp-save-btn-${escHtml(p.id)}" style="border-color:var(--primary);color:var(--primary)" onclick="_saveSinglePaper('${escHtml(p.id)}')">📥 存入库</button>`
+    return`<div class="dp-paper">
       <div class="dp-title"><a href="${escHtml(p.url)}" target="_blank">${escHtml(p.title)}</a></div>
       <div class="dp-meta">
         <span class="dp-area-chip">${escHtml(p.area)}</span>
@@ -7665,9 +7671,30 @@ function _renderDpResults(papers){
         <a class="dp-link" href="${escHtml(p.url)}" target="_blank">🔗 Abstract</a>
         ${p.pdf_url?`<a class="dp-link" href="${escHtml(p.pdf_url)}" target="_blank" style="border-color:#dc2626;color:#dc2626">📄 PDF</a>`:''}
         ${p.code_url?`<a class="dp-link" href="${escHtml(p.code_url)}" target="_blank" style="border-color:#16a34a;color:#16a34a">💻 Code</a>`:''}
+        ${saveBtn}
       </div>
       ${p.summary?`<div class="dp-summary open">${md2h(p.summary)}</div>`:''}
-    </div>`).join('')
+    </div>`
+  }).join('')
+}
+
+function _saveSinglePaper(paperId){
+  const papers=window._dpCurrentPapers;if(!papers?.length)return
+  const p=papers.find(x=>x.id===paperId);if(!p)return
+  const lib=_ldPapLib()
+  if(lib.some(x=>x.id===paperId)){toast('该论文已在文献库中','warn');return}
+  _svPapLib([p,...lib].slice(0,500))
+  // 更新按钮状态
+  const btn=document.getElementById('dp-save-btn-'+paperId)
+  if(btn){
+    btn.textContent='✅ 已存入库'
+    btn.style.borderColor='#16a34a'
+    btn.style.color='#16a34a'
+    btn.style.background='rgba(22,163,74,.08)'
+    btn.disabled=true
+    btn.onclick=null
+  }
+  toast(`📚 已保存：${p.title?.slice(0,30)}…`)
 }
 
 // 下载为 HTML（同样式）
