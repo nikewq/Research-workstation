@@ -737,8 +737,8 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 <aside id="sidebar">
   <div class="logo">
     <div class="logo-text">
-      <h1 id="sidebar-title"><span id="sidebar-role-emoji">🎓</span> <span id="sidebar-role-label">科研工作台</span></h1>
-      <div class="subtitle" id="sidebar-field">博士科研工作台</div>
+      <h1 id="sidebar-title"><span id="sidebar-role-emoji"></span><span id="sidebar-role-label">我的科研空间</span></h1>
+      <div class="subtitle" id="sidebar-field">请设置研究方向</div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="收起/展开菜单">‹</button>
   </div>
@@ -2433,14 +2433,14 @@ function updatePhdDay(){
   if(lbl) lbl.textContent=role.label;
   if(ei) ei.textContent=role.emoji;
   if(ni) ni.textContent=role.name;
-  // 侧边栏标题：[role]科研工作台
+  // 侧边栏标题：[用户名] 的科研空间
   const titleEmoji=document.getElementById('sidebar-role-emoji');
   const titleLabel=document.getElementById('sidebar-role-label');
-  if(titleEmoji) titleEmoji.textContent=role.emoji;
-  if(titleLabel) titleLabel.textContent=role.name.replace('生','')+'科研工作台';
-  // subtitle 显示研究领域，否则显示角色工作台
+  if(titleEmoji) titleEmoji.textContent='';
+  if(titleLabel) titleLabel.textContent=(cfg.name||'我')+'的科研空间';
+  // subtitle 显示研究方向
   const sf=document.getElementById('sidebar-field');
-  if(sf) sf.textContent=cfg.field||(role.name.replace('生','')+'科研工作台');
+  if(sf) sf.textContent=cfg.field||'请设置研究方向';
 }
 let _pendingRole=null;
 function openRoleModal(){
