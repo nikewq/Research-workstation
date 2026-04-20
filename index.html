@@ -1812,6 +1812,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
         <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('movie',this)" id="etab-movie">🎬 电影</button>
         <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('novel',this)" id="etab-novel">📚 小说</button>
         <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('anime',this)" id="etab-anime">✨ 动漫</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchEntertainTab('podcast',this)" id="etab-podcast">🎙 播客</button>
       </div>
 
       <input id="entertain-custom-req" placeholder="🔍 可选：输入具体要求后刷新，如「科幻」「2024年」「悬疑推理」…" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%;margin-bottom:10px;box-sizing:border-box" onkeydown="if(event.key==='Enter')fetchEntertain(null,true)">
@@ -4679,11 +4680,17 @@ const _entertainMeta = {
           notTypes:['真人电影','真人剧集','剧集','电视剧','小说','书'],
           fallbackUrl: t=>`https://movie.douban.com/subject_search?search_text=${encodeURIComponent(t)}&cat=1002`,
           prompt:'B站/爱奇艺正规引进或国产的动漫/番剧（必须是动漫/动画，严禁推荐真人剧集或电影）',
-          sites:[['B站番剧','https://www.bilibili.com/anime/'],['豆瓣动画','https://movie.douban.com/tag/#/?sort=S&range=8,10&tags=%E5%8A%A8%E7%94%BB'],['爱奇艺动漫','https://www.iqiyi.com/']]}
+          sites:[['B站番剧','https://www.bilibili.com/anime/'],['豆瓣动画','https://movie.douban.com/tag/#/?sort=S&range=8,10&tags=%E5%8A%A8%E7%94%BB'],['爱奇艺动漫','https://www.iqiyi.com/']]},
+  podcast:{label:'播客',   emoji:'🎙', color:'#8b5cf6',
+          rankUrl:'https://www.xiaoyuzhoufm.com/',
+          notTypes:['电影','剧集','电视剧','动漫','小说'],
+          fallbackUrl: t=>`https://www.xiaoyuzhoufm.com/search?keyword=${encodeURIComponent(t)}`,
+          prompt:'小宇宙/喜马拉雅/得到等平台上近期口碑好的中文播客节目或音频课程（可以是科技/人文/商业/科学/脱口秀等各类型，必须是音频播客，严禁推荐视频/剧集/电影）',
+          sites:[['小宇宙','https://www.xiaoyuzhoufm.com/'],['喜马拉雅','https://www.ximalaya.com/'],['得到','https://www.dedao.cn/']]}
 }
 
 // URL 安全白名单：只允许主流正规平台
-const _SAFE_ENTERTAIN_DOMAINS = ['douban.com','bilibili.com','iqiyi.com','youku.com','v.qq.com','mgtv.com','maoyan.com','fanqienovel.com','qidian.com','weread.qq.com','weread.weixin.qq.com']
+const _SAFE_ENTERTAIN_DOMAINS = ['douban.com','bilibili.com','iqiyi.com','youku.com','v.qq.com','mgtv.com','maoyan.com','fanqienovel.com','qidian.com','weread.qq.com','weread.weixin.qq.com','xiaoyuzhoufm.com','ximalaya.com','dedao.cn','igetget.com']
 function _sanitizeEntertainUrl(url){
   if(!url || !url.startsWith('http')) return ''
   try{
@@ -4711,7 +4718,7 @@ function _extractJSONArray(raw){
 
 function switchEntertainTab(cat, btn){
   _entertainCat = cat
-  ;['tv','movie','novel','anime'].forEach(c=>{
+  ;['tv','movie','novel','anime','podcast'].forEach(c=>{
     const b=document.getElementById('etab-'+c)
     if(b) b.className = c===cat ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'
   })
