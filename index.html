@@ -1498,6 +1498,23 @@ mark.hl-pink{background:#fecdd3;color:#881337}
       <input id="new-proj-color" type="color" value="#7c3aed" style="width:44px;padding:4px;cursor:pointer">
       <button class="btn btn-ghost" onclick="addProject()">添加</button>
     </div>
+    <!-- 本地文件夹 -->
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:600">💾 本地保存文件夹</span>
+        <span id="local-folder-badge" style="display:none;font-size:10px;background:var(--primary);color:#fff;padding:2px 7px;border-radius:20px">已连接</span>
+      </div>
+      <div id="local-folder-tip" style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.6">
+        💡 建议在电脑上新建一个文件夹（如 <b>我的科研空间</b>），选择后工作台内容将按项目自动分类保存到本地。
+      </div>
+      <div id="local-folder-path" style="display:none;font-size:12px;background:var(--surface2);border-radius:6px;padding:6px 10px;margin-bottom:8px;color:var(--text2);word-break:break-all">
+        📂 <span id="local-folder-name"></span>
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-ghost" style="font-size:12px" onclick="selectLocalFolder()">📁 选择文件夹</button>
+        <button id="sync-folder-btn" class="btn btn-ghost" style="font-size:12px;display:none" onclick="syncToLocalFolder()">⬆️ 同步到本地</button>
+      </div>
+    </div>
   </div>
   <div class="settings-section">
     <h3>🔬 研究方向标签</h3>
@@ -2315,6 +2332,7 @@ function initApp() {
   updateClock();
   document.getElementById('sub-date').value = today();
   updatePomoDisplay();
+  _initLocalFolderUI();
 }
 
 // ══════════════════════════════════════
@@ -7672,16 +7690,17 @@ let _prmPdfPageRects={}  // {pageNum:{width,height}} for ratio calc
 let _prmPdfSelRects=[]   // rects from current PDF text selection (page-ratio coords)
 let _prmPdfSelPage=0
 
-// ── IndexedDB (PDF blob storage) ──
-const _IDB_NAME='phd_app_db',_IDB_VER=1,_IDB_STORE='pdf_blobs'
+// ── IndexedDB (PDF blob storage + folder handles) ──
+const _IDB_NAME='phd_app_db',_IDB_VER=2,_IDB_STORE='pdf_blobs',_IDB_FOLDER_STORE='folder_handles'
 let _pdfDbConn=null
 function _pdfDb(){
   if(_pdfDbConn)return Promise.resolve(_pdfDbConn)
   return new Promise((res,rej)=>{
     const req=indexedDB.open(_IDB_NAME,_IDB_VER)
     req.onupgradeneeded=e=>{
-      if(!e.target.result.objectStoreNames.contains(_IDB_STORE))
-        e.target.result.createObjectStore(_IDB_STORE)
+      const db=e.target.result
+      if(!db.objectStoreNames.contains(_IDB_STORE)) db.createObjectStore(_IDB_STORE)
+      if(!db.objectStoreNames.contains(_IDB_FOLDER_STORE)) db.createObjectStore(_IDB_FOLDER_STORE)
     }
     req.onsuccess=e=>{_pdfDbConn=e.target.result;res(_pdfDbConn)}
     req.onerror=e=>rej(e.target.error)
@@ -7711,6 +7730,128 @@ async function _deletePdfBlob(pid){
     tx.objectStore(_IDB_STORE).delete(pid)
     tx.oncomplete=res;tx.onerror=e=>rej(e.target.error)
   })
+}
+
+// ══════════════════════════════════════
+//  LOCAL FOLDER (File System Access API)
+// ══════════════════════════════════════
+async function _getFolderHandle(){
+  const db=await _pdfDb()
+  return new Promise((res)=>{
+    const tx=db.transaction(_IDB_FOLDER_STORE,'readonly')
+    const req=tx.objectStore(_IDB_FOLDER_STORE).get('root')
+    req.onsuccess=()=>res(req.result||null)
+    req.onerror=()=>res(null)
+  })
+}
+async function _setFolderHandle(handle){
+  const db=await _pdfDb()
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(_IDB_FOLDER_STORE,'readwrite')
+    tx.objectStore(_IDB_FOLDER_STORE).put(handle,'root')
+    tx.oncomplete=res;tx.onerror=e=>rej(e.target.error)
+  })
+}
+async function _initLocalFolderUI(){
+  const handle=await _getFolderHandle()
+  const badge=document.getElementById('local-folder-badge')
+  const pathEl=document.getElementById('local-folder-path')
+  const nameEl=document.getElementById('local-folder-name')
+  const syncBtn=document.getElementById('sync-folder-btn')
+  const tipEl=document.getElementById('local-folder-tip')
+  if(handle){
+    if(badge){badge.style.display='inline-block'}
+    if(nameEl){nameEl.textContent=handle.name}
+    if(pathEl){pathEl.style.display='block'}
+    if(syncBtn){syncBtn.style.display='inline-flex'}
+    if(tipEl){tipEl.style.display='none'}
+  }
+}
+async function selectLocalFolder(){
+  if(!window.showDirectoryPicker){
+    alert('你的浏览器不支持本地文件夹功能，请使用 Chrome 或 Edge。');return
+  }
+  try{
+    const handle=await window.showDirectoryPicker({mode:'readwrite'})
+    await _setFolderHandle(handle)
+    await _initLocalFolderUI()
+    toast('✅ 文件夹已连接：'+handle.name)
+  }catch(e){
+    if(e.name!=='AbortError') toast('❌ 文件夹选择失败')
+  }
+}
+async function syncToLocalFolder(){
+  const handle=await _getFolderHandle()
+  if(!handle){toast('请先选择本地文件夹');return}
+  // Verify permission
+  const perm=await handle.queryPermission({mode:'readwrite'})
+  if(perm!=='granted'){
+    const req=await handle.requestPermission({mode:'readwrite'})
+    if(req!=='granted'){toast('❌ 未获得文件夹写入权限');return}
+  }
+  const cfg=getCfg()
+  let count=0
+  try{
+    // 1. 每个项目建子文件夹，保存任务
+    const ganttProjects=ld(K.gantt)
+    const tasks=ld(K.tasks)
+    const cfgProjects=cfg.projects||[]
+    const allProjNames=new Set([...ganttProjects.map(p=>p.name),...cfgProjects.map(p=>p.name)])
+    for(const name of allProjNames){
+      if(!name)continue
+      const safeN=name.replace(/[\\/:*?"<>|]/g,'_')
+      const projDir=await handle.getDirectoryHandle(safeN,{create:true})
+      // 保存甘特图任务
+      const gp=ganttProjects.find(p=>p.name===name)
+      if(gp&&gp.tasks?.length){
+        const fh=await projDir.getFileHandle('甘特图任务.json',{create:true})
+        const w=await fh.createWritable()
+        await w.write(JSON.stringify(gp.tasks,null,2))
+        await w.close();count++
+      }
+      // 保存关联的普通任务
+      const ptasks=tasks.filter(t=>t.proj===name)
+      if(ptasks.length){
+        const fh=await projDir.getFileHandle('任务列表.json',{create:true})
+        const w=await fh.createWritable()
+        await w.write(JSON.stringify(ptasks,null,2))
+        await w.close();count++
+      }
+    }
+    // 2. 写作草稿
+    const docs=ld(K.wrDocs)
+    if(docs.length){
+      const wrDir=await handle.getDirectoryHandle('写作草稿',{create:true})
+      for(const doc of docs){
+        const title=(doc.title||'无标题').replace(/[\\/:*?"<>|]/g,'_')
+        const fh=await wrDir.getFileHandle(`${title}.tex`,{create:true})
+        const w=await fh.createWritable()
+        await w.write(doc.content||'')
+        await w.close();count++
+      }
+    }
+    // 3. 反思日记
+    const reflections=ld('phd_reflections')||[]
+    if(reflections.length){
+      const refDir=await handle.getDirectoryHandle('反思日记',{create:true})
+      const fh=await refDir.getFileHandle('日记.json',{create:true})
+      const w=await fh.createWritable()
+      await w.write(JSON.stringify(reflections,null,2))
+      await w.close();count++
+    }
+    // 4. 全量备份 JSON
+    const backup={version:'2.0',exportedAt:new Date().toISOString()}
+    Object.entries(K).forEach(([k,v])=>{try{const r=localStorage.getItem(v);if(r!==null)backup[k]=JSON.parse(r)}catch(_){}})
+    const fh=await handle.getFileHandle('科研空间备份.json',{create:true})
+    const w=await fh.createWritable()
+    await w.write(JSON.stringify(backup,null,2))
+    await w.close();count++
+    localStorage.setItem('_last_export',Date.now().toString())
+    toast(`✅ 已同步 ${count} 个文件到 ${handle.name}/`)
+  }catch(e){
+    console.error(e)
+    toast('❌ 同步失败：'+e.message)
+  }
 }
 
 // ── PDF.js lazy loader ──
