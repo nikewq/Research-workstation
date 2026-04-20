@@ -1616,7 +1616,8 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
     <div style="background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(5,150,105,0.08));border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.7">
       ✨ <b>无需注册即可使用：</b>默认已接入 <b>Pollinations AI</b>（免费·无限制）。<br>
       想要更快/更强？选择下方免费选项并填入你的 Key：<br>
-      &nbsp;• <b>豆包</b> — <a href="https://console.volcengine.com/ark" target="_blank" style="color:var(--primary)">console.volcengine.com/ark</a> 注册免费，Lite 模型 <b>0 元/token</b><br>
+      &nbsp;• <b>智谱 GLM</b> — <a href="https://open.bigmodel.cn" target="_blank" style="color:var(--primary)">open.bigmodel.cn</a> 注册免费，<b>GLM-4-Flash 0元/token</b>，国内直连推荐<br>
+      &nbsp;• <b>通义千问</b> — <a href="https://bailian.console.aliyun.com" target="_blank" style="color:var(--primary)">bailian.console.aliyun.com</a> 阿里云，qwen-turbo 有免费额度<br>
       &nbsp;• <b>Groq</b> — <a href="https://console.groq.com" target="_blank" style="color:var(--primary)">console.groq.com</a> 注册秒得免费 Key，速度极快<br>
       &nbsp;• <b>Gemini</b> — <a href="https://aistudio.google.com" target="_blank" style="color:var(--primary)">aistudio.google.com</a> 免费额度慷慨<br>
       &nbsp;• <b>OpenRouter</b> — <a href="https://openrouter.ai" target="_blank" style="color:var(--primary)">openrouter.ai</a> 含多个完全免费的开源模型
@@ -1630,7 +1631,8 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
             <option value="pollinations">Pollinations AI ✨</option>
           </optgroup>
           <optgroup label="🆓 注册即免费">
-            <option value="doubao">豆包 Doubao 🇨🇳（Lite 免费）</option>
+            <option value="glm">智谱 GLM 🇨🇳（Flash 免费）</option>
+            <option value="qwen">通义千问 🇨🇳</option>
             <option value="groq">Groq（极快）</option>
             <option value="gemini">Google Gemini</option>
             <option value="openrouter">OpenRouter 免费模型</option>
@@ -1640,6 +1642,7 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
             <option value="deepseek">DeepSeek</option>
             <option value="openai">OpenAI</option>
             <option value="moonshot">Moonshot Kimi</option>
+            <option value="doubao">豆包 Doubao 🇨🇳（需代理）</option>
           </optgroup>
           <optgroup label="🖥 本地部署（需先安装软件）">
             <option value="ollama">Ollama</option>
@@ -4594,9 +4597,17 @@ const _AI_PROVIDERS={
             base:'https://text.pollinations.ai/openai',    defModel:'openai',          needsUrl:true,  needsKey:false,
             models:['openai','mistral','llama','claude']},
   // ── 注册即免费 ─────────────────────────────────────
-  doubao:  {name:'豆包 Doubao',
-            base:'https://ark.volces.com/api/v3',          defModel:'doubao-1-5-lite-32k',      needsUrl:false, needsKey:true,
-            hint:'🇨🇳 字节跳动·火山引擎 | 前往 <a href="https://console.volcengine.com/ark" target="_blank">console.volcengine.com/ark</a> 注册获取 API Key（免费，<b>Lite 模型 0 元/token</b>）',
+  glm:     {name:'智谱 GLM 🇨🇳',
+            base:'https://open.bigmodel.cn/api/paas/v4',   defModel:'glm-4-flash',              needsUrl:false, needsKey:true,
+            hint:'🇨🇳 智谱 AI | 前往 <a href="https://open.bigmodel.cn" target="_blank">open.bigmodel.cn</a> 注册（免费），<b>GLM-4-Flash 完全免费·0元/token</b>，无需信用卡',
+            models:['glm-4-flash','glm-4-air','glm-4-airx','glm-4','glm-4-long']},
+  qwen:    {name:'通义千问 Qwen 🇨🇳',
+            base:'https://dashscope.aliyuncs.com/compatible-mode/v1', defModel:'qwen-turbo', needsUrl:false, needsKey:true,
+            hint:'🇨🇳 阿里云百炼 | 前往 <a href="https://bailian.console.aliyun.com" target="_blank">bailian.console.aliyun.com</a> 注册获取 API Key，qwen-turbo 有免费额度',
+            models:['qwen-turbo','qwen-plus','qwen-long','qwen-max']},
+  doubao:  {name:'豆包 Doubao 🇨🇳（需代理）',
+            base:'https://ark.volces.com/api/v3',          defModel:'doubao-1-5-lite-32k',      needsUrl:true,  needsKey:true,
+            hint:'⚠️ 火山引擎 API <b>不支持浏览器直连</b>（CORS 限制），需配合反向代理使用。请在"网络地址"填入你的代理 URL，或改用智谱 GLM / 通义千问（均支持直连）',
             models:['doubao-1-5-lite-32k','doubao-1-5-pro-32k','doubao-1-5-thinking-pro-32k','doubao-lite-32k','doubao-pro-32k']},
   openrouter:{name:'OpenRouter 免费模型',
             base:'https://openrouter.ai/api/v1',           defModel:'meta-llama/llama-3.2-3b-instruct:free', needsUrl:false, needsKey:true,
