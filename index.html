@@ -2457,8 +2457,12 @@ function initApp() {
   updatePomoTaskSel();
   updateStats();
   populateSettingsForm();
-  setInterval(updateClock, 1000);
-  setInterval(() => { updateStats(); updatePhdDay(); renderCheckin(); }, 60000);
+  if(!window._clockIv){
+    window._clockIv=setInterval(updateClock,1000);
+    window._statsIv=setInterval(()=>{updateStats();updatePhdDay();renderCheckin();},60000);
+    // Sync clock immediately when tab becomes visible (browser throttles timers in background tabs)
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateClock();});
+  }
   updateClock();
   document.getElementById('sub-date').value = today();
   updatePomoDisplay();
