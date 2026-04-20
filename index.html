@@ -8961,10 +8961,16 @@ async function _prmRenderPdfPage(pdfjsLib,page,container,scale){
     span.style.left=tx[4]+'px'
     span.style.top=(tx[5]-fontSize)+'px'
     span.style.fontSize=fontSize+'px'
+    span.style.height=fontSize+'px'
     if(item.width){
       const scaledW=Math.abs(item.width)*vp.scale
-      const natW=item.str.length*fontSize*0.55
-      if(natW>2&&Math.abs(scaledW/natW-1)>0.15)span.style.transform=`scaleX(${scaledW/natW})`
+      if(scaledW>0){
+        // Set explicit width = PDF glyph bounds so pointer-events hit area
+        // exactly matches the visible word — no scaleX which leaves layout
+        // box at wrong size and causes "misfire" onto adjacent spans
+        span.style.width=scaledW+'px'
+        span.style.overflow='hidden'
+      }
     }
     span.textContent=item.str
     textDiv.appendChild(span)
