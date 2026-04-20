@@ -122,6 +122,36 @@
   --red:#d45a4a;--red-soft:rgba(212,90,74,.15);
   --blue:#64c4b8;--blue-soft:rgba(100,196,184,.15);
 }
+:root[data-theme="henu"]{
+  /* 河南大学校园绿 #006638（CMYK C100 M0 Y100 K30 官方VI）辅助暖金 #d4a020 */
+  --bg:#030c07;--surface:#071410;--surface2:#0c1e16;--border:#133222;
+  --text:#d0ecd8;--text2:#4a9060;
+  --primary:#006638;--primary-soft:rgba(0,102,56,.15);--primary-bg:rgba(0,102,56,.08);
+  --green:#006638;--green-soft:rgba(0,102,56,.15);
+  --orange:#d4a020;--orange-soft:rgba(212,160,32,.15);
+  --red:#c8102e;--red-soft:rgba(200,16,46,.15);
+  --blue:#1a4a7a;--blue-soft:rgba(26,74,122,.15);
+}
+:root[data-theme="whu"]{
+  /* 珞珈蓝 RGB(0,37,84)=#002554 + 珞珈绿 RGB(17,87,64)=#115740 官方实测 */
+  --bg:#010508;--surface:#041018;--surface2:#071a28;--border:#0c2a44;
+  --text:#ccdcf0;--text2:#3a78b8;
+  --primary:#1a4e90;--primary-soft:rgba(26,78,144,.15);--primary-bg:rgba(26,78,144,.08);
+  --green:#115740;--green-soft:rgba(17,87,64,.15);
+  --orange:#d48030;--orange-soft:rgba(212,128,48,.15);
+  --red:#c82828;--red-soft:rgba(200,40,40,.15);
+  --blue:#1a4e90;--blue-soft:rgba(26,78,144,.15);
+}
+:root[data-theme="hit"]{
+  /* 哈工大航天蓝 RGB(0,58,122)=#003a7a 官方VI */
+  --bg:#020810;--surface:#041220;--surface2:#071c30;--border:#0c2c50;
+  --text:#cce0f8;--text2:#3a78b8;
+  --primary:#1e5aa8;--primary-soft:rgba(30,90,168,.15);--primary-bg:rgba(30,90,168,.08);
+  --green:#1e7a4a;--green-soft:rgba(30,122,74,.15);
+  --orange:#e07a30;--orange-soft:rgba(224,122,48,.15);
+  --red:#c02828;--red-soft:rgba(192,40,40,.15);
+  --blue:#1e5aa8;--blue-soft:rgba(30,90,168,.15);
+}
 /* ── Light Mode Overrides ── */
 /* 默认主题 浅色 */
 :root[data-mode="light"]{
@@ -177,6 +207,21 @@
 :root[data-mode="light"][data-theme="sustech"]{
   --bg:#fffaf5;--surface:#ffffff;--surface2:#fff2e6;--border:#ffd8a8;
   --text:#1a0800;--text2:#884818;
+}
+/* henu 浅色 */
+:root[data-mode="light"][data-theme="henu"]{
+  --bg:#f3faf5;--surface:#ffffff;--surface2:#e4f4ea;--border:#b8dfc8;
+  --text:#001a08;--text2:#1a6038;
+}
+/* whu 浅色 */
+:root[data-mode="light"][data-theme="whu"]{
+  --bg:#f2f5fb;--surface:#ffffff;--surface2:#e4eef8;--border:#b8ccec;
+  --text:#00081e;--text2:#1a3870;
+}
+/* hit 浅色 */
+:root[data-mode="light"][data-theme="hit"]{
+  --bg:#f0f4fb;--surface:#ffffff;--surface2:#e2edf8;--border:#b4caec;
+  --text:#00081c;--text2:#183878;
 }
 /* ── Theme Picker Cards ── */
 .theme-section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);opacity:.55;margin:4px 0 8px;padding-left:1px}
@@ -5918,6 +5963,7 @@ const SCHOOL_COLORS_DB={
   '中国科学技术大学':{p:'#cc1b1b',hint:'中科大红'},
   '厦门大学':        {p:'#003087',hint:'厦大蓝'},
   '山东大学':        {p:'#9c0c13',hint:'山大红 Pantone 201C RGB(156,12,19) 官方实测'},
+  '河南大学':        {p:'#006638',hint:'校园绿 CMYK C100 M0 Y100 K30 官方VI，辅助暖金 #d4a020'},
   '武汉大学':        {p:'#002554',green:'#115740',hint:'珞珈蓝 RGB(0,37,84) + 珞珈绿 RGB(17,87,64) 官方实测'},
   '华中科技大学':    {p:'#d20b17',blue:'#004b84',hint:'华科红 RGB(210,11,23) + 华科蓝 RGB(0,75,132) 2024新版VI官方发布'},
   '湖南大学':        {p:'#8b0000',hint:'湖大红 CMYK C40 M100 Y100 K10 官方校色，非绿'},
@@ -6015,6 +6061,9 @@ const THEMES=[
   {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020b1c', primary:'#0e419c'},
   {id:'zju',     name:'浙大·蓝金',  desc:'浙江大学', bg:'#020a14', primary:'#c8a952'},
   {id:'sustech', name:'南科·橙火',  desc:'南方科技大学', bg:'#0d0a06', primary:'#e8783c'},
+  {id:'henu',    name:'河大·校园绿', desc:'河南大学',    bg:'#030c07', primary:'#006638'},
+  {id:'whu',     name:'珞珈·深蓝',  desc:'武汉大学',    bg:'#010508', primary:'#1a4e90'},
+  {id:'hit',     name:'哈工·航天蓝', desc:'哈尔滨工业大学', bg:'#020810', primary:'#1e5aa8'},
 ];
 const _CSS_VARS=['--bg','--surface','--surface2','--border','--text','--text2','--primary','--primary-soft','--primary-bg','--green','--green-soft','--orange','--orange-soft','--red','--red-soft','--blue','--blue-soft'];
 let _pendingCustomVars=null;
