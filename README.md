@@ -55,8 +55,9 @@
 
 | 服务 | 用途 |
 |------|------|
-| [Semantic Scholar API](https://www.semanticscholar.org/product/api) | 论文搜索与元数据获取（免费） |
-| [Crossref API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/) | 期刊论文元数据补充检索（免费） |
+| [OpenAlex API](https://openalex.org/) | 每日文献聚合主力数据源，CORS 友好，无需 Key（免费） |
+| [Semantic Scholar API](https://www.semanticscholar.org/product/api) | 论文搜索与元数据获取，降级备用（免费） |
+| [Crossref API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/) | 期刊论文元数据补充检索，三级降级兜底（免费） |
 | [arXiv](https://arxiv.org/) | 论文预印本直链与 PDF |
 | [Pollinations AI](https://pollinations.ai/) | 默认免费 AI 接口（无需注册） |
 
