@@ -4075,13 +4075,11 @@ initSetupWizard();
 const _SB_URL = 'https://fbaznbvlymfqtycqlmjz.supabase.co'
 const _SB_KEY_SYNC = 'sb_publishable_BvP_LZ0d_-HMcykIaoUCNw_xKkxKwzz'
 
-// 生成同步码：形如 MAPLE42（词+2位数）
-const _SYNC_WORDS = ['MAPLE','KIWI','FERN','SAGE','IRIS','MANGO','OLIVE',
-  'BERRY','DAISY','BASIL','CLOVER','POPPY','WILLOW','LEMON','CEDAR']
+// 生成同步码：8字节加密随机 → Base36，约1.8万亿种可能，碰撞概率可忽略
 function _genSyncCode(){
-  const w = _SYNC_WORDS[Math.floor(Math.random()*_SYNC_WORDS.length)]
-  const n = String(Math.floor(Math.random()*90)+10)
-  return w + n
+  const buf = new Uint8Array(8)
+  crypto.getRandomValues(buf)
+  return Array.from(buf).map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,12).toUpperCase()
 }
 function _getOrCreateSyncCode(){
   let code = localStorage.getItem('_sync_code')
