@@ -210,16 +210,17 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 #nav-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .logo{padding:0 16px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
 .logo-text{min-width:0;overflow:hidden}
-.logo h1{font-size:15px;font-weight:700;color:var(--primary);white-space:nowrap}
-.logo .subtitle{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap}
+.logo h1{font-size:15px;font-weight:800;color:var(--primary);white-space:nowrap;letter-spacing:-0.01em}
+.logo .subtitle{font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap;letter-spacing:0.04em;opacity:.8}
 #sidebar-toggle{background:none;border:none;cursor:pointer;color:var(--text2);padding:3px 5px;border-radius:6px;font-size:15px;flex-shrink:0;margin-top:2px;line-height:1;transition:background .15s,color .15s}
 #sidebar-toggle:hover{background:var(--surface2);color:var(--primary)}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:var(--text2);transition:background .15s,color .15s;font-size:13px;border-left:2px solid transparent;white-space:nowrap;overflow:hidden}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;color:var(--text2);transition:background .15s,color .15s;font-size:13px;font-weight:400;letter-spacing:0.03em;border-left:3px solid transparent;white-space:nowrap;overflow:hidden}
 .nav-item:hover{background:var(--surface2);color:var(--text)}
-.nav-item.active{background:var(--primary-bg);color:var(--primary);border-left-color:var(--primary);font-weight:600}
-.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-item.active{background:var(--primary-bg);color:var(--primary);border-left-color:var(--primary);font-weight:600;letter-spacing:0.01em}
+.nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;opacity:.85}
+.nav-item.active .nav-icon{opacity:1}
 .nav-label{overflow:hidden;transition:opacity .15s,max-width .22s ease;max-width:140px;opacity:1}
-.nav-group{padding:12px 16px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);white-space:nowrap;overflow:hidden;transition:opacity .15s}
+.nav-group{padding:13px 18px 4px;font-size:10px;font-weight:700;letter-spacing:0.12em;color:var(--text2);opacity:.55;white-space:nowrap;overflow:hidden;transition:opacity .15s}
 .sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);overflow:hidden}
 /* ── Nav item tooltip when collapsed ── */
 #sidebar.nav-collapsed .nav-item{position:relative}
@@ -230,8 +231,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 #sidebar.nav-collapsed .logo{justify-content:center;padding-bottom:12px}
 #sidebar.nav-collapsed .nav-group{opacity:0;height:0;padding:0;margin:0}
 #sidebar.nav-collapsed .nav-label{opacity:0;max-width:0}
-#sidebar.nav-collapsed .nav-item{padding:10px 0;justify-content:center;gap:0;border-left-color:transparent}
-#sidebar.nav-collapsed .nav-item.active{border-left-color:transparent;background:var(--primary-bg)}
+#sidebar.nav-collapsed .nav-item{padding:10px 0;justify-content:center;gap:0;border-left-color:transparent!important}
+#sidebar.nav-collapsed .nav-item.active{border-left-color:transparent!important;background:var(--primary-bg)}
 #sidebar.nav-collapsed .mode-toggle{display:none}
 .lang-toggle{display:flex;align-items:center;gap:4px;padding:8px 16px;margin:2px 0}
 .lang-btn{font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s}
@@ -241,10 +242,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 #sidebar.nav-collapsed .sidebar-bottom-text{display:none}
 #sidebar.nav-collapsed .sidebar-bottom{display:flex;flex-direction:column;align-items:center;padding:10px 0}
 #main{transition:margin-left .22s ease}
-.phd-counter{font-size:11px;color:var(--text2);text-align:center}
-.phd-counter span{font-size:22px;font-weight:700;color:var(--primary);display:block}
-.companion-counter{font-size:11px;color:var(--text2);text-align:center;margin-top:6px;opacity:.7}
-.role-badge{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid var(--primary);cursor:pointer;transition:.15s;font-size:12px;color:var(--primary)}
+.phd-counter{font-size:10px;color:var(--text2);text-align:center;letter-spacing:0.06em;opacity:.75}
+.phd-counter span{font-size:22px;font-weight:800;color:var(--primary);display:block;letter-spacing:-0.02em}
+.companion-counter{font-size:10px;color:var(--text2);text-align:center;margin-top:6px;opacity:.6;letter-spacing:0.04em}
+.role-badge{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid var(--primary);cursor:pointer;transition:.15s;font-size:11.5px;color:var(--primary);letter-spacing:0.02em}
 .role-badge:hover{background:var(--primary);color:#fff}
 .role-option{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:10px;flex-direction:row}
 .role-option:hover,.role-option.selected{border-color:var(--primary);background:rgba(var(--primary-rgb,99,102,241),.08)}
@@ -567,9 +568,14 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 @media(max-width:860px){.research-layout{flex-direction:column}.research-resize-handle{display:none}.research-detail-col{margin-left:0;width:100%}}
 /* ── Writing Panel ── */
 .wr-layout{display:flex;gap:0;align-items:stretch;height:calc(100vh - 180px);overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--card)}
-.wr-projects-col{width:260px;min-width:200px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--surface2)}
+.wr-projects-col{width:260px;min-width:140px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;background:var(--surface2)}
 .wr-editor-col{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
-.wr-preview-col{width:42%;min-width:240px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--card)}
+.wr-preview-col{width:42%;min-width:200px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;background:var(--card)}
+.wr-resizer{width:4px;flex-shrink:0;background:var(--border);cursor:col-resize;position:relative;transition:background .15s}
+.wr-resizer::after{content:'';position:absolute;inset:0 -5px;cursor:col-resize}
+.wr-resizer:hover,.wr-resizer.wr-res-active{background:var(--primary)}
+body.wr-resizing{cursor:col-resize!important;user-select:none!important}
+body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 .wr-doc-item{padding:8px 12px;cursor:pointer;font-size:12px;border-radius:6px;margin:1px 0;transition:background .12s;color:var(--text)}
 .wr-doc-item:hover{background:var(--card)}
 .wr-doc-item.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
@@ -581,7 +587,9 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .wr-editor-toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--surface2)}
 .wr-tb-btn{padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;transition:background .12s;line-height:1}
 .wr-tb-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
-#wr-editor{font-family:'JetBrains Mono','Fira Mono',Consolas,monospace;flex:1;resize:none;padding:16px;font-size:13px;line-height:1.7;border:none;outline:none;background:var(--bg);color:var(--text);tab-size:2}
+#wr-editor{font-family:'JetBrains Mono','Fira Mono',Consolas,monospace;flex:1;resize:none;padding:16px;font-size:13px;line-height:1.7;border:none;outline:none;background:#ffffff;color:#1a1a1a;tab-size:2;caret-color:#7c3aed;transition:box-shadow .2s}
+#wr-editor.wr-ai-pending{box-shadow:inset 3px 0 0 #7c3aed,inset 0 0 0 1px rgba(124,58,237,.15);outline:none}
+#wr-editor.wr-ai-pending::selection{background:rgba(124,58,237,.22);color:#1a1a1a}
 #wr-preview-area{padding:16px;font-size:14px;line-height:1.8;overflow-y:auto;flex:1;color:var(--text)}
 #wr-preview-area h2{font-size:15px;font-weight:700;margin:18px 0 6px;padding-bottom:4px;border-bottom:1.5px solid var(--border);color:var(--text)}
 #wr-preview-area h3{font-size:13px;font-weight:700;margin:14px 0 4px;color:var(--text)}
@@ -591,11 +599,19 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 /* AI 写作面板 */
 .wr-ai-btn{position:relative;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:1px solid var(--primary);border-radius:4px;background:var(--primary-soft);color:var(--primary);font-size:11px;cursor:pointer;font-weight:600;transition:background .12s}
 .wr-ai-btn:hover{background:var(--primary);color:#fff}
-.wr-ai-menu{position:absolute;top:calc(100% + 4px);right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;min-width:160px;padding:4px 0;display:none}
+.wr-ai-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:900;min-width:160px;padding:4px 0;display:none}
 .wr-ai-menu.open{display:block}
 .wr-ai-menu-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;cursor:pointer;color:var(--text);transition:background .1s;white-space:nowrap}
 .wr-ai-menu-item:hover{background:var(--primary-soft);color:var(--primary)}
 #wr-ai-panel{flex-shrink:0;border-top:2px solid var(--primary);background:var(--card);display:none;flex-direction:column;max-height:260px}
+.wr-ai-quote{font-size:11px;color:var(--text2);padding:5px 12px;background:var(--surface2);border-left:2px solid var(--primary);margin:6px 12px 0;border-radius:0 4px 4px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:'JetBrains Mono',monospace}
+/* 预览区内置翻译面板 */
+#wr-trans-panel{flex-shrink:0;border-top:1px dashed var(--border);display:flex;flex-direction:column;min-height:36px;max-height:45%;background:var(--card)}
+.wr-trans-head{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;user-select:none}
+.wr-trans-head:hover{background:var(--hover,var(--surface2))}
+#wr-trans-body{flex:1;overflow-y:auto;padding:12px 14px;font-size:13px;line-height:1.85;color:var(--text);white-space:pre-wrap;word-break:break-word;display:none}
+#wr-trans-body.open{display:block}
+.wr-trans-loading{display:flex;align-items:center;gap:8px;padding:8px 0;color:var(--text2);font-size:12px}
 #wr-ai-panel.visible{display:flex}
 .wr-ai-panel-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
 #wr-ai-result{flex:1;overflow-y:auto;padding:12px 14px;font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text);font-family:'JetBrains Mono','Fira Mono',Consolas,monospace}
@@ -604,6 +620,16 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .wr-ai-dot:nth-child(2){animation-delay:.2s}
 .wr-ai-dot:nth-child(3){animation-delay:.4s}
 @keyframes wr-ai-pulse{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.wr-prev-mode-btn{padding:3px 10px;font-size:10px;font-weight:600;background:transparent;color:var(--text2);border:none;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}
+.wr-prev-mode-btn.active{background:var(--primary);color:#fff}
+.wr-prev-mode-btn:not(.active):hover{background:var(--surface2);color:var(--text)}
+/* 选中浮动工具栏 */
+#wr-sel-bar{display:none;position:fixed;z-index:800;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.13),0 1px 4px rgba(0,0,0,.08);padding:4px 6px;flex-direction:row;align-items:center;gap:2px;user-select:none;animation:wr-sel-pop .12s ease-out}
+#wr-sel-bar.show{display:flex}
+@keyframes wr-sel-pop{from{opacity:0;transform:translateY(4px) scale(.97)}to{opacity:1;transform:none}}
+.wr-sel-btn{display:flex;align-items:center;gap:4px;padding:5px 10px;border:none;background:transparent;font-size:12px;font-weight:500;color:#374151;cursor:pointer;border-radius:6px;white-space:nowrap;transition:background .1s,color .1s}
+.wr-sel-btn:hover{background:#f3f0ff;color:#7c3aed}
+.wr-sel-div{width:1px;height:16px;background:#e5e7eb;flex-shrink:0}
 @media(max-width:900px){.wr-preview-col{display:none}.wr-projects-col{width:200px}}
 /* ZIP file tree */
 .wr-zip-card{padding:7px 10px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px;background:var(--surface2);display:flex;align-items:center;gap:6px;font-size:12px}
@@ -1235,6 +1261,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
         </div>
         <div id="wr-docs-list" style="flex:1;overflow-y:auto;padding:0 8px 8px"></div>
       </div>
+      <div class="wr-resizer" id="wr-res-left"></div>
       <!-- 中列：编辑器 -->
       <div class="wr-editor-col">
         <div class="wr-editor-toolbar">
@@ -1264,20 +1291,21 @@ mark.hl-pink{background:#fecdd3;color:#881337}
             </div>
           </div>
           <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
-          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_wrActiveZipId?wrSaveZipFile():wrSaveDoc()">💾 保存</button>
-          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_wrActiveZipId?wrExportZipProject():wrExportTex()">⬇ 导出</button>
-          <button class="btn btn-ghost btn-sm" id="wr-del-btn" style="font-size:11px;color:#dc2626" onclick="_wrActiveZipId?wrCloseZipProject():wrDeleteDoc()">🗑</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrSaveCurrent()">💾 保存</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrExportCurrent()">⬇ 导出</button>
+          <button class="btn btn-ghost btn-sm" id="wr-del-btn" style="font-size:11px;color:#dc2626" onclick="wrDeleteCurrent()">🗑</button>
         </div>
         <textarea id="wr-editor" placeholder="在此编写 LaTeX 内容...&#10;&#10;% 示例：&#10;\section{Introduction}&#10;This paper studies...&#10;&#10;% 行内公式：$E = mc^2$&#10;% 块级公式：&#10;$$\sum_{i=1}^{n} x_i = \mu$$" oninput="wrOnEdit(this)" onkeydown="wrHandleKey(event)"></textarea>
         <!-- AI 结果面板（折叠在编辑器下方） -->
         <div id="wr-ai-panel">
-          <div class="wr-ai-panel-header">
+          <div class="wr-ai-panel-header" id="wr-ai-panel-header">
             <span id="wr-ai-action-label" style="font-size:12px;font-weight:600;color:var(--primary)">✨ AI 建议</span>
             <div style="flex:1"></div>
-            <button class="btn btn-primary btn-sm" style="font-size:11px" onclick="wrAiAccept()">✓ 接受替换</button>
+            <button id="wr-ai-accept-btn" class="btn btn-primary btn-sm" style="font-size:11px;transition:background .2s,color .2s" onclick="wrAiAccept()">✓ 接受替换</button>
             <button class="btn btn-ghost btn-sm" style="font-size:11px;margin-left:4px" onclick="wrAiCopy()">📋 复制</button>
             <button class="btn btn-ghost btn-sm" style="font-size:11px;margin-left:4px;color:var(--text2)" onclick="wrAiClose()">✕</button>
           </div>
+          <div id="wr-ai-quote-bar" class="wr-ai-quote" style="display:none"></div>
           <div id="wr-ai-result"></div>
         </div>
         <div style="padding:4px 12px;font-size:10px;color:var(--text2);display:flex;gap:12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
@@ -1286,13 +1314,57 @@ mark.hl-pink{background:#fecdd3;color:#881337}
           <span id="wr-save-status" style="color:var(--green)"></span>
         </div>
       </div>
+      <div class="wr-resizer" id="wr-res-right"></div>
       <!-- 右列：预览 -->
       <div class="wr-preview-col">
-        <div style="padding:8px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-          <span>预览</span>
-          <span style="font-size:10px;font-weight:400">KaTeX 数学渲染</span>
+        <div style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div style="display:flex;border:1px solid var(--border);border-radius:5px;overflow:hidden;flex-shrink:0">
+            <button id="wr-prev-render-btn" class="wr-prev-mode-btn active" onclick="wrSetPreviewMode('render')">原文</button>
+            <button id="wr-prev-trans-btn" class="wr-prev-mode-btn" onclick="wrSetPreviewMode('translate')">🌐 译文</button>
+          </div>
+          <span id="wr-prev-subtitle" style="font-size:10px;font-weight:400;color:var(--text2)">KaTeX 数学渲染</span>
+          <button id="wr-prev-retrans-btn" onclick="wrRetranslate()" style="display:none;margin-left:auto;padding:2px 8px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text2);cursor:pointer">↺ 重新翻译</button>
         </div>
         <div id="wr-preview-area"></div>
+        <!-- 翻译面板（固定在预览下方） -->
+        <div id="wr-trans-panel">
+          <div class="wr-trans-head" id="wr-trans-head" onclick="wrTransToggle()">
+            <span id="wr-trans-icon">▶</span>
+            <span>🌐 中文翻译</span>
+            <span id="wr-trans-hint" style="font-weight:400;margin-left:4px;font-size:10px;color:var(--text2)">点击展开</span>
+            <div style="flex:1"></div>
+            <button id="wr-trans-go-btn" onclick="event.stopPropagation();wrTranslatePreview()" style="display:none;padding:2px 8px;font-size:10px;border:1px solid var(--primary);border-radius:4px;background:var(--primary-soft);color:var(--primary);cursor:pointer;font-weight:600">↺ 翻译</button>
+          </div>
+          <div id="wr-trans-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 写作选中浮动 AI 工具栏 -->
+  <div id="wr-sel-bar" onmousedown="event.preventDefault()">
+    <button class="wr-sel-btn" onclick="wrSelAct('polish')">✏️ 润色</button>
+    <div class="wr-sel-div"></div>
+    <button class="wr-sel-btn" onclick="wrSelAct('concise')">✂️ 精简</button>
+    <div class="wr-sel-div"></div>
+    <button class="wr-sel-btn" onclick="wrSelAct('expand')">📝 扩写</button>
+    <div class="wr-sel-div"></div>
+    <button class="wr-sel-btn" onclick="wrSelAct('grammar')">🔍 语法</button>
+    <div class="wr-sel-div"></div>
+    <button class="wr-sel-btn" onclick="wrSelAct('translate')">🌐 翻译</button>
+    <div class="wr-sel-div"></div>
+    <button class="wr-sel-btn" onclick="wrSelAct('abstract')">📄 摘要</button>
+  </div>
+
+  <!-- 写作模块：草稿命名保存弹窗 -->
+  <div id="wr-save-modal" style="display:none;position:fixed;inset:0;z-index:1600;background:rgba(0,0,0,.5);align-items:center;justify-content:center" onclick="if(event.target===this)wrSaveModalClose()">
+    <div style="background:var(--card);border-radius:14px;padding:24px;width:360px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">💾 保存草稿</div>
+      <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">草稿名称</label>
+      <input id="wr-save-name-input" type="text" placeholder="输入草稿名称…" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid var(--primary);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text);outline:none" onkeydown="if(event.key==='Enter')wrSaveModalConfirm();if(event.key==='Escape')wrSaveModalClose()">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost btn-sm" onclick="wrSaveModalClose()">取消</button>
+        <button class="btn btn-primary btn-sm" onclick="wrSaveModalConfirm()">保存</button>
       </div>
     </div>
   </div>
@@ -1475,6 +1547,17 @@ mark.hl-pink{background:#fecdd3;color:#881337}
     <div class="card"><div class="card-title">任务项目分布</div><div class="chart-wrap"><canvas id="ch-projs"></canvas></div></div>
     <div class="card"><div class="card-title">工作时长趋势 (h)</div><div class="chart-wrap"><canvas id="ch-hours"></canvas></div></div>
   </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-title" style="display:flex;align-items:center;gap:8px">
+      🐟 近7天时间构成
+      <span style="font-size:11px;font-weight:400;color:var(--text2)">（签到在线 = 专注 + 摸鱼）</span>
+      <span style="margin-left:auto;display:flex;gap:12px;font-size:11px;font-weight:400">
+        <span style="color:#ef4444">■ 心流专注</span>
+        <span style="color:#10b981">■ 摸鱼时光</span>
+      </span>
+    </div>
+    <div class="chart-wrap" style="height:160px"><canvas id="ch-fish"></canvas></div>
+  </div>
 </div>
 
 <!-- ── Settings ── -->
@@ -1533,6 +1616,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
     <div style="background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(5,150,105,0.08));border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.7">
       ✨ <b>无需注册即可使用：</b>默认已接入 <b>Pollinations AI</b>（免费·无限制）。<br>
       想要更快/更强？选择下方免费选项并填入你的 Key：<br>
+      &nbsp;• <b>豆包</b> — <a href="https://console.volcengine.com/ark" target="_blank" style="color:var(--primary)">console.volcengine.com/ark</a> 注册免费，Lite 模型 <b>0 元/token</b><br>
       &nbsp;• <b>Groq</b> — <a href="https://console.groq.com" target="_blank" style="color:var(--primary)">console.groq.com</a> 注册秒得免费 Key，速度极快<br>
       &nbsp;• <b>Gemini</b> — <a href="https://aistudio.google.com" target="_blank" style="color:var(--primary)">aistudio.google.com</a> 免费额度慷慨<br>
       &nbsp;• <b>OpenRouter</b> — <a href="https://openrouter.ai" target="_blank" style="color:var(--primary)">openrouter.ai</a> 含多个完全免费的开源模型
@@ -1544,11 +1628,9 @@ mark.hl-pink{background:#fecdd3;color:#881337}
           <option value="">── 自动（演示 Key / Pollinations）──</option>
           <optgroup label="✅ 完全免费 · 无需 Key">
             <option value="pollinations">Pollinations AI ✨</option>
-            <option value="ollama">Ollama（本地）</option>
-            <option value="lmstudio">LM Studio（本地）</option>
-            <option value="jan">Jan（本地）</option>
           </optgroup>
           <optgroup label="🆓 注册即免费">
+            <option value="doubao">豆包 Doubao 🇨🇳（Lite 免费）</option>
             <option value="groq">Groq（极快）</option>
             <option value="gemini">Google Gemini</option>
             <option value="openrouter">OpenRouter 免费模型</option>
@@ -1559,10 +1641,16 @@ mark.hl-pink{background:#fecdd3;color:#881337}
             <option value="openai">OpenAI</option>
             <option value="moonshot">Moonshot Kimi</option>
           </optgroup>
+          <optgroup label="🖥 本地部署（需先安装软件）">
+            <option value="ollama">Ollama</option>
+            <option value="lmstudio">LM Studio</option>
+            <option value="jan">Jan</option>
+          </optgroup>
           <optgroup label="🔧 高级">
             <option value="custom">自定义 URL</option>
           </optgroup>
         </select>
+        <div id="ai-provider-hint" style="display:none;margin-top:6px;font-size:11.5px;padding:6px 9px;border-radius:6px;line-height:1.6"></div>
       </div>
       <div id="ai-key-wrap">
         <label>API Key</label>
@@ -1587,6 +1675,9 @@ mark.hl-pink{background:#fecdd3;color:#881337}
       <button class="btn btn-ghost" onclick="testAIConnection()">🔌 测试连接</button>
       <button class="btn btn-ghost" onclick="clearAISettings()" id="ai-clear-btn" style="display:none">清除</button>
       <span id="ai-test-tip" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div style="margin-top:10px;font-size:11.5px;color:var(--text2);background:rgba(0,0,0,0.04);border-radius:7px;padding:8px 11px;line-height:1.7;border-left:3px solid var(--primary);opacity:.85">
+      💡 <b>注意：</b>不同 AI 模型因训练数据、架构设计和参数规模各异，在润色、摘要、翻译、代码等任务上的表现<b>可能存在明显差异</b>。若某个功能效果不理想，建议切换模型重试。一般而言，参数量更大的模型（如 Pro / Plus 系列）在复杂学术写作任务上更稳定。
     </div>
   </div>
   <div class="settings-section">
@@ -2466,6 +2557,9 @@ function initApp() {
   updatePomoDisplay();
   _initLocalFolderUI();
   _applyInitLang();
+  // 恢复刷新前的计时器状态
+  _pomoRestore();
+  _restoreScanTimer();
 }
 
 // ══════════════════════════════════════
@@ -3260,6 +3354,133 @@ function _daysAgo(n){
 //  POMODORO
 // ══════════════════════════════════════
 let pomo={running:false,isBreak:false,secs:25*60,iv:null,round:0,taskId:'',taskTitle:''};
+// ── Pomo 状态持久化（localStorage，刷新/硬刷新均保留；关闭标签页后清除）──
+const _POMO_LS='phd_pomo_running_v2'  // localStorage key（刷新安全）
+let _pomoSaveTick=0  // 每5秒写一次，减少写频次
+
+function _pomoGetWorkDur(){return parseInt(document.getElementById('pomo-work')?.value||25)}
+function _pomoGetBreakDur(){return parseInt(document.getElementById('pomo-break')?.value||5)}
+
+function _pomoSaveRunning(){
+  try{
+    localStorage.setItem(_POMO_LS,JSON.stringify({
+      deadline:Date.now()+pomo.secs*1000,  // 截止时间戳
+      savedAt:Date.now(),
+      isBreak:pomo.isBreak,
+      taskId:pomo.taskId,
+      taskTitle:pomo.taskTitle,
+      round:pomo.round,
+      workDur:_pomoGetWorkDur(),
+      breakDur:_pomoGetBreakDur()
+    }))
+  }catch(_){}
+}
+function _pomoSavePaused(){
+  try{
+    localStorage.setItem(_POMO_LS,JSON.stringify({
+      secs:pomo.secs,
+      savedAt:Date.now(),
+      isBreak:pomo.isBreak,
+      taskId:pomo.taskId,
+      taskTitle:pomo.taskTitle,
+      round:pomo.round,
+      paused:true,
+      workDur:_pomoGetWorkDur(),
+      breakDur:_pomoGetBreakDur()
+    }))
+  }catch(_){}
+}
+function _pomoClearSS(){
+  try{localStorage.removeItem(_POMO_LS)}catch(_){}
+  // 兼容旧 sessionStorage key
+  try{sessionStorage.removeItem('phd_pomo_ss')}catch(_){}
+}
+
+function _pomoStartInterval(workDur){
+  // 抽出公用的 interval 逻辑，_pomoRestore 和 togglePomo 均调用
+  pomo.iv=setInterval(()=>{
+    if(pomo.secs>0){
+      pomo.secs--;
+      updatePomoDisplay();
+      // 每5秒刷新 deadline（防止刷新时 deadline 过期）
+      _pomoSaveTick++;
+      if(_pomoSaveTick>=5){_pomoSaveTick=0;_pomoSaveRunning();}
+    }else{
+      // 计时结束
+      if(!pomo.isBreak){
+        const list=ld(K.pomos)
+        list.push({id:uid(),date:today(),taskId:pomo.taskId,taskTitle:pomo.taskTitle,
+          dur:workDur||_pomoGetWorkDur(),
+          ts:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})})
+        sv(K.pomos,list);pomo.round=(pomo.round+1)%4;
+        toast('🌊 心流完成！');
+        renderPomoLog&&renderPomoLog();updateStats&&updateStats();
+        if(pomo.taskId){const tasks=ld(K.tasks),t=tasks.find(t=>t.id===pomo.taskId);if(t){t.pomos=(t.pomos||0)+1;sv(K.tasks,tasks);}}
+      }else{toast('✅ 休息结束！继续加油！');}
+      pomo.isBreak=!pomo.isBreak;
+      pomo.secs=(pomo.isBreak?_pomoGetBreakDur():_pomoGetWorkDur())*60;
+      updatePomoDisplay();
+      if(!pomo.isBreak){
+        // 休息也结束了 → 停止，清除状态
+        clearInterval(pomo.iv);pomo.running=false;pomo.iv=null;_pomoClearSS();
+        const b=document.getElementById('pomo-btn');if(b)b.textContent='▶ 开始';
+      }else{
+        // 进入休息 → 继续计时
+        _pomoSaveRunning();
+      }
+    }
+  },1000)
+}
+
+function _pomoRestore(){
+  try{
+    // 优先读 localStorage（新版），再检查旧 sessionStorage
+    let raw=localStorage.getItem(_POMO_LS)
+    if(!raw)raw=sessionStorage.getItem('phd_pomo_ss')
+    if(!raw)return
+    const s=JSON.parse(raw)
+
+    // 已暂停 → 恢复显示，不启动计时
+    if(s.paused){
+      pomo.secs=s.secs||0;pomo.isBreak=!!s.isBreak;
+      pomo.taskId=s.taskId||'';pomo.taskTitle=s.taskTitle||'';pomo.round=s.round||0;
+      updatePomoDisplay()
+      const b=document.getElementById('pomo-btn');if(b)b.textContent='▶ 继续'
+      return
+    }
+
+    // 运行中 → 计算剩余时间
+    const rem=Math.ceil((s.deadline-Date.now())/1000)
+
+    if(rem<=0){
+      if(!s.isBreak){
+        // 工作阶段在刷新期间到期 → 补记录
+        const list=ld(K.pomos)
+        list.push({id:uid(),date:today(),taskId:s.taskId||'',taskTitle:s.taskTitle||'',
+          dur:s.workDur||25,
+          ts:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})})
+        sv(K.pomos,list)
+        renderPomoLog&&renderPomoLog();updateStats&&updateStats();
+        toast('🌊 心流已完成（刷新期间到期，已自动记录）','success')
+      }
+      _pomoClearSS();return
+    }
+
+    // 恢复运行状态
+    pomo.secs=rem;pomo.isBreak=!!s.isBreak;
+    pomo.taskId=s.taskId||'';pomo.taskTitle=s.taskTitle||'';pomo.round=s.round||0;
+    pomo.running=true;_pomoSaveTick=0;
+    _pomoStartInterval(s.workDur||25)
+    updatePomoDisplay()
+    const b=document.getElementById('pomo-btn');if(b)b.textContent='⏸ 暂停'
+    toast('⏱ 心流计时已恢复','info')
+  }catch(e){_pomoClearSS()}
+}
+
+// 刷新/关闭前确保状态被保存
+window.addEventListener('pagehide',()=>{
+  if(pomo.running)_pomoSaveRunning()
+})
 function updatePomoDisplay(){
   const m=Math.floor(pomo.secs/60),s=pomo.secs%60;
   const el=document.getElementById('pomo-display'),lbl=document.getElementById('pomo-label');
@@ -3270,32 +3491,21 @@ function updatePomoDisplay(){
   document.title=pomo.running?`${pad(m)}:${pad(s)} 🍅 PhD Workstation`:'PhD Workstation';
 }
 function togglePomo(){
-  if(pomo.running){clearInterval(pomo.iv);pomo.running=false;document.getElementById('pomo-btn').textContent='▶ 继续';}
-  else{
+  if(pomo.running){
+    clearInterval(pomo.iv);pomo.running=false;pomo.iv=null;
+    document.getElementById('pomo-btn').textContent='▶ 继续';
+    _pomoSavePaused();
+  }else{
     pomo.running=true;document.getElementById('pomo-btn').textContent='⏸ 暂停';
     const sel=document.getElementById('pomo-task-sel');
     if(sel){pomo.taskId=sel.value;pomo.taskTitle=sel.options[sel.selectedIndex]?.text||'';}
-    pomo.iv=setInterval(()=>{
-      if(pomo.secs>0){pomo.secs--;updatePomoDisplay();}
-      else{
-        if(!pomo.isBreak){
-          const list=ld(K.pomos);
-          list.push({id:uid(),date:today(),taskId:pomo.taskId,taskTitle:pomo.taskTitle,
-            dur:parseInt(document.getElementById('pomo-work')?.value||25),ts:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
-          sv(K.pomos,list);pomo.round=(pomo.round+1)%4;
-          toast('🌊 心流完成！');renderPomoLog();updateStats();
-          if(pomo.taskId){const tasks=ld(K.tasks),t=tasks.find(t=>t.id===pomo.taskId);if(t){t.pomos=(t.pomos||0)+1;sv(K.tasks,tasks);}}
-        }else{toast('✅ 休息结束！继续加油！');}
-        pomo.isBreak=!pomo.isBreak;
-        pomo.secs=(pomo.isBreak?parseInt(document.getElementById('pomo-break')?.value||5):parseInt(document.getElementById('pomo-work')?.value||25))*60;
-        updatePomoDisplay();
-        if(!pomo.isBreak){clearInterval(pomo.iv);pomo.running=false;document.getElementById('pomo-btn').textContent='▶ 开始';}
-      }
-    },1000);
+    _pomoSaveTick=0;
+    _pomoStartInterval(_pomoGetWorkDur());
+    _pomoSaveRunning();  // 立即写入 localStorage，确保刷新可恢复
   }
   updatePomoDisplay();
 }
-function resetPomo(){clearInterval(pomo.iv);pomo={running:false,isBreak:false,secs:parseInt(document.getElementById('pomo-work')?.value||25)*60,iv:null,round:pomo.round,taskId:'',taskTitle:''};document.getElementById('pomo-btn').textContent='▶ 开始';updatePomoDisplay();}
+function resetPomo(){clearInterval(pomo.iv);pomo={running:false,isBreak:false,secs:parseInt(document.getElementById('pomo-work')?.value||25)*60,iv:null,round:pomo.round,taskId:'',taskTitle:''};document.getElementById('pomo-btn').textContent='▶ 开始';_pomoClearSS();updatePomoDisplay();}
 function renderPomoLog(){
   const el=document.getElementById('pomo-log');if(!el)return;
   const list=ld(K.pomos).filter(p=>p.date===today()).reverse();
@@ -3700,6 +3910,14 @@ function renderCharts(){
   const wh=days.map(d=>{const c=cks.find(ch=>ch.date===d);if(!c||!c.ci)return 0;
     const m=c.totalMins!=null?c.totalMins:_ciMins(c);return m>0?Math.round(m/60*10)/10:0;});
   new Chart(document.getElementById('ch-hours'),{type:'line',data:{labels,datasets:[{data:wh,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',fill:true,tension:.4,pointRadius:4}]},options:cOpts});
+  // 摸鱼时光 stacked bar
+  const focusData=days.map(d=>Math.round(pomos.filter(p=>p.date===d).reduce((s,p)=>s+(p.dur||25),0)/60*10)/10);
+  const fishData=days.map((d,i)=>Math.max(0,Math.round((wh[i]*60-pomos.filter(p=>p.date===d).reduce((s,p)=>s+(p.dur||25),0))/60*10)/10));
+  const fishOpts=Object.assign({},cOpts,{scales:{x:cOpts.scales.x,y:Object.assign({},cOpts.scales.y,{stacked:true})},plugins:{legend:{display:false}}});
+  new Chart(document.getElementById('ch-fish'),{type:'bar',data:{labels,datasets:[
+    {label:'心流专注',data:focusData,backgroundColor:'rgba(239,68,68,.5)',borderColor:'#ef4444',borderWidth:1,borderRadius:4,stack:'s'},
+    {label:'摸鱼时光',data:fishData,backgroundColor:'rgba(16,185,129,.4)',borderColor:'#10b981',borderWidth:1,borderRadius:4,stack:'s'}
+  ]},options:fishOpts});
 }
 
 // ══════════════════════════════════════
@@ -3759,9 +3977,23 @@ function onAIProviderChange(keepModel=false){
   const baseWrap=document.getElementById('ai-base-wrap')
   const baseInp=document.getElementById('ai-base-inp')
   const keyWrap=document.getElementById('ai-key-wrap')
+  const hintEl=document.getElementById('ai-provider-hint')
   if(!sel) return
   const pv=sel.value
   const def=_AI_PROVIDERS[pv]
+  // 显示/隐藏 hint
+  if(hintEl){
+    if(def?.hint){
+      hintEl.innerHTML=def.hint
+      hintEl.style.display='block'
+      const isLocal=def.needsKey===false&&def.base?.startsWith('http://localhost')
+      hintEl.style.background=isLocal?'rgba(239,68,68,0.08)':'rgba(16,185,129,0.07)'
+      hintEl.style.color=isLocal?'#b91c1c':'var(--text2)'
+      hintEl.style.border=isLocal?'1px solid rgba(239,68,68,0.2)':'1px solid rgba(16,185,129,0.2)'
+    }else{
+      hintEl.style.display='none'
+    }
+  }
   if(def&&modelSel){
     const models=def.models||[]
     modelSel.innerHTML=models.map(m=>`<option value="${escHtml(m)}">${escHtml(m)}</option>`).join('')
@@ -3840,28 +4072,65 @@ function clearAISettings(){
   const tip=document.getElementById('ai-test-tip')
   if(tip){tip.textContent='已清除，将使用演示 Key';tip.style.color='var(--text2)'}
 }
+// 仅供测试连接使用，失败时抛出带 HTTP 状态码的详细错误
+async function _callAIWithDetail(cfg,prompt,maxTokens){
+  const provDef=_AI_PROVIDERS[cfg.provider]||{}
+  const _throwErr=async(r)=>{
+    let msg=`HTTP ${r.status}`
+    const statusHints={400:'请求格式错误（检查模型名称）',401:'API Key 无效或已过期',403:'权限不足',404:'模型不存在或 URL 错误',429:'请求过于频繁（触发限速）',500:'服务商服务器错误',503:'服务暂时不可用'}
+    if(statusHints[r.status]) msg+=`（${statusHints[r.status]}）`
+    try{const body=await r.json();const detail=body.error?.message||body.message||body.error;if(detail)msg+=': '+String(detail).slice(0,100)}catch(_){}
+    throw new Error(msg)
+  }
+  if(provDef.apiType==='anthropic'||cfg.provider==='claude'){
+    const apiBase=(cfg.base||'https://api.anthropic.com').replace(/\/+$/,'')
+    const r=await fetch(`${apiBase}/v1/messages`,{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:cfg.model,max_tokens:maxTokens,temperature:0.4,messages:[{role:'user',content:prompt}]})
+    })
+    if(!r.ok) await _throwErr(r)
+    const d=await r.json()
+    return d.content?.[0]?.text?.trim()||null
+  }
+  if(cfg.provider==='gemini'){
+    const r=await fetch(`${cfg.base}/models/${cfg.model}:generateContent?key=${cfg.key}`,{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:maxTokens,temperature:0.4}})
+    })
+    if(!r.ok) await _throwErr(r)
+    const d=await r.json()
+    return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||null
+  }
+  const base=cfg.base||provDef.base||''
+  const headers={'Content-Type':'application/json'}
+  if(provDef.needsKey!==false&&cfg.key) headers['Authorization']='Bearer '+cfg.key
+  const r=await fetch(`${base}/chat/completions`,{method:'POST',headers,
+    body:JSON.stringify({model:cfg.model,messages:[{role:'user',content:prompt}],temperature:0.4,max_tokens:maxTokens})
+  })
+  if(!r.ok) await _throwErr(r)
+  const d=await r.json()
+  return d.choices?.[0]?.message?.content?.trim()||null
+}
 async function testAIConnection(){
   const tip=document.getElementById('ai-test-tip')
   if(tip){tip.textContent='测试中…';tip.style.color='var(--text2)'}
-  // 临时保存当前表单到 cfg，不覆盖 localStorage
   const pv=document.getElementById('ai-provider-sel')?.value
   const key=document.getElementById('ai-key-inp')?.value.trim()
   const model=_getSelectedModel()
   const base=document.getElementById('ai-base-inp')?.value.trim()
   const provNeedsKey2=_AI_PROVIDERS[pv]?.needsKey!==false
-  if(!pv||(provNeedsKey2&&!key)){if(tip){tip.textContent='请先选择服务商（无需 Key 的可直接测试）';tip.style.color='#ef4444'};return}
+  if(!pv){if(tip){tip.textContent='请先选择 AI 服务商';tip.style.color='#ef4444'};return}
+  if(provNeedsKey2&&!key){if(tip){tip.textContent='请输入 API Key';tip.style.color='#ef4444'};return}
   const defModel=_AI_PROVIDERS[pv]?.defModel||''
   const testCfg={provider:pv,key,model:model||defModel,base:base||_AI_PROVIDERS[pv]?.base||''}
-  // 临时替换
   const oldCfg=localStorage.getItem('_ai_cfg')
   localStorage.setItem('_ai_cfg',JSON.stringify(testCfg))
   try{
-    const reply=await _callAI('用一句话回答：1+1等于多少？',100)
+    const reply=await _callAIWithDetail(testCfg,'用一句话回答：1+1等于多少？',100)
     if(reply){if(tip){tip.textContent=`✅ 连接成功："${reply.slice(0,40)}"`;tip.style.color='#10b981'}}
-    else{if(tip){tip.textContent='❌ 无响应，请检查 Key / 模型名 / URL';tip.style.color='#ef4444'}}
-  }catch(e){if(tip){tip.textContent='❌ 请求失败：'+(e?.message||'网络错误');tip.style.color='#ef4444'}}
+    else{if(tip){tip.textContent='❌ 无响应，请检查模型名称是否正确';tip.style.color='#ef4444'}}
+  }catch(e){if(tip){tip.textContent='❌ '+(e?.message||'网络错误');tip.style.color='#ef4444'}}
   finally{
-    // 恢复旧配置（保存按钮才是真正保存）
     if(oldCfg) localStorage.setItem('_ai_cfg',oldCfg); else localStorage.removeItem('_ai_cfg')
   }
 }
@@ -4325,6 +4594,10 @@ const _AI_PROVIDERS={
             base:'https://text.pollinations.ai/openai',    defModel:'openai',          needsUrl:true,  needsKey:false,
             models:['openai','mistral','llama','claude']},
   // ── 注册即免费 ─────────────────────────────────────
+  doubao:  {name:'豆包 Doubao',
+            base:'https://ark.volces.com/api/v3',          defModel:'doubao-1-5-lite-32k',      needsUrl:false, needsKey:true,
+            hint:'🇨🇳 字节跳动·火山引擎 | 前往 <a href="https://console.volcengine.com/ark" target="_blank">console.volcengine.com/ark</a> 注册获取 API Key（免费，<b>Lite 模型 0 元/token</b>）',
+            models:['doubao-1-5-lite-32k','doubao-1-5-pro-32k','doubao-1-5-thinking-pro-32k','doubao-lite-32k','doubao-pro-32k']},
   openrouter:{name:'OpenRouter 免费模型',
             base:'https://openrouter.ai/api/v1',           defModel:'meta-llama/llama-3.2-3b-instruct:free', needsUrl:false, needsKey:true,
             models:['meta-llama/llama-3.2-3b-instruct:free','mistralai/mistral-7b-instruct:free','google/gemma-3-4b-it:free','qwen/qwen3-8b:free']},
@@ -4344,14 +4617,19 @@ const _AI_PROVIDERS={
   moonshot:{name:'Kimi',
             base:'https://api.moonshot.cn/v1',             defModel:'moonshot-v1-8k',           needsUrl:false, needsKey:true,
             models:['moonshot-v1-8k','moonshot-v1-32k','moonshot-v1-128k']},
-  // ── 本地 / 插件 ────────────────────────────────────
+  // ── 本地部署（需先安装软件）────────────────────────
   ollama:  {name:'Ollama (本地)',
             base:'http://localhost:11434/v1',               defModel:'llama3.2',                 needsUrl:true,  needsKey:false,
+            hint:'⚠️ 需要先在本机安装并启动 <a href="https://ollama.com" target="_blank">Ollama</a>，且已通过 <code>ollama pull 模型名</code> 下载模型',
             models:['llama3.2','llama3.1','qwen2.5','gemma2','phi3','mistral','deepseek-r1']},
   lmstudio:{name:'LM Studio (本地)',
-            base:'http://localhost:1234/v1',                defModel:'',                         needsUrl:true,  needsKey:false, models:[]},
+            base:'http://localhost:1234/v1',                defModel:'',                         needsUrl:true,  needsKey:false,
+            hint:'⚠️ 需要先安装 <a href="https://lmstudio.ai" target="_blank">LM Studio</a> 并在本地启动服务（默认端口 1234），然后在 LM Studio 中加载一个模型',
+            models:[]},
   jan:     {name:'Jan (本地)',
-            base:'http://localhost:1337/v1',                defModel:'',                         needsUrl:true,  needsKey:false, models:[]},
+            base:'http://localhost:1337/v1',                defModel:'',                         needsUrl:true,  needsKey:false,
+            hint:'⚠️ 需要先安装 <a href="https://jan.ai" target="_blank">Jan</a> 并在本地启动服务（默认端口 1337），然后在 Jan 中下载并运行一个模型',
+            models:[]},
   custom:  {name:'自定义 URL',
             base:'',                                        defModel:'',                         needsUrl:true,  needsKey:true,  models:[]},
   // ── Anthropic Claude（原生格式，非 OpenAI 兼容）────────
@@ -5177,6 +5455,17 @@ window.switchPage=function(p){
 // 摸鱼限时系统
 // ══════════════════════════════════════
 let _pendingUrl=null, _scanTimerId=null, _scanSecsLeft=0
+const _SCAN_SS='phd_scan_ss'
+function _scanSaveDeadline(deadline){try{sessionStorage.setItem(_SCAN_SS,String(deadline))}catch(_){}}
+function _scanClearSS(){try{sessionStorage.removeItem(_SCAN_SS)}catch(_){}}
+function _restoreScanTimer(){
+  try{
+    const raw=sessionStorage.getItem(_SCAN_SS);if(!raw)return
+    const rem=Math.ceil((Number(raw)-Date.now())/1000)
+    if(rem>0)_startScanTimer(rem)
+    else{_scanClearSS();_fireScanAlarm()}
+  }catch(_){_scanClearSS()}
+}
 const _SCAN_ALARMS=[
   '🚨 摸鱼超时警报！论文第三章正在向你发出灵魂拷问……',
   '⏰ 时间到！你的鱼已经摸完了，导师的眼神飘过来了。',
@@ -5210,6 +5499,7 @@ function _startScanTimer(secs){
   _scanSecsLeft=secs
   _updateTimerDisp()
   document.getElementById('scan-timer-bar').classList.add('show')
+  _scanSaveDeadline(Date.now()+secs*1000)
   _scanTimerId=setInterval(()=>{
     _scanSecsLeft--
     _updateTimerDisp()
@@ -5229,6 +5519,7 @@ function _updateTimerDisp(){
 function _cancelScanTimer(){
   if(_scanTimerId){clearInterval(_scanTimerId);_scanTimerId=null}
   document.getElementById('scan-timer-bar')?.classList.remove('show')
+  _scanClearSS()
 }
 function _fireScanAlarm(){
   const msg=_SCAN_ALARMS[Math.floor(Math.random()*_SCAN_ALARMS.length)]
@@ -6414,15 +6705,56 @@ let _wrPreviewTimer=null
 let _wrPanelInited=false
 let _katexLoaded=false
 let _katexLoading=false
+let _wrPreviewMode='render'
+let _wrTransCache={src:'',html:''}
+
+function initWrResizers(){
+  const layout=document.querySelector('.wr-layout')
+  const projCol=document.querySelector('.wr-projects-col')
+  const prevCol=document.querySelector('.wr-preview-col')
+  const resL=document.getElementById('wr-res-left')
+  const resR=document.getElementById('wr-res-right')
+  if(!layout||!projCol||!prevCol||!resL||!resR)return
+  // restore saved widths
+  try{const s=JSON.parse(localStorage.getItem('wr_col_w')||'{}');if(s.l)projCol.style.width=s.l;if(s.r)prevCol.style.width=s.r}catch(_){}
+  function attachResize(handle,col,dir){
+    handle.addEventListener('mousedown',e=>{
+      e.preventDefault()
+      const sx=e.clientX,sw=col.offsetWidth
+      handle.classList.add('wr-res-active')
+      document.body.classList.add('wr-resizing')
+      const minW=140,maxW=layout.offsetWidth*0.55
+      const onMove=e=>{col.style.width=Math.max(minW,Math.min(maxW,sw+(e.clientX-sx)*dir))+'px'}
+      const onUp=()=>{
+        handle.classList.remove('wr-res-active')
+        document.body.classList.remove('wr-resizing')
+        document.removeEventListener('mousemove',onMove)
+        document.removeEventListener('mouseup',onUp)
+        try{const s=JSON.parse(localStorage.getItem('wr_col_w')||'{}');if(col===projCol)s.l=col.style.width;else s.r=col.style.width;localStorage.setItem('wr_col_w',JSON.stringify(s))}catch(_){}
+      }
+      document.addEventListener('mousemove',onMove)
+      document.addEventListener('mouseup',onUp)
+    })
+  }
+  attachResize(resL,projCol,1)   // drag right → projects-col widens
+  attachResize(resR,prevCol,-1)  // drag right → preview-col narrows
+}
 
 function initWritingPanel(){
   if(_wrPanelInited)return
   _wrPanelInited=true
+  initWrResizers()
+  _wrSelBarInit()
   renderOlProjectsList()
   renderWrZipProjects()
   renderWrDocsList()
   _ensureKatex()
   _wrUpdateAiBtnLabel()
+  // 自动打开第一篇草稿（若无 ZIP 项目激活）
+  if(!_wrActiveZipId&&!_wrCurrentDocId){
+    const docs=ld(WR_DOCS_KEY)||[]
+    if(docs.length>0)wrOpenDoc(docs[0].id)
+  }
 }
 
 // ── Docs list ──
@@ -6498,24 +6830,86 @@ function wrOpenDoc(id){
   if(saveStatus)saveStatus.textContent=''
 }
 
-// ── Save doc ──
-function wrSaveDoc(){
-  if(!_wrCurrentDocId)return
+// ── Toolbar button wrappers ──
+function wrSaveCurrent(){
+  if(typeof _wrActiveZipId!=='undefined'&&_wrActiveZipId){wrSaveZipFile();return}
+  // 弹出命名对话框
+  const modal=document.getElementById('wr-save-modal')
+  const input=document.getElementById('wr-save-name-input')
+  if(!modal||!input)return
+  // 预填充：已有草稿用其标题，否则用标题栏内容或默认名
+  const titleEl=document.getElementById('wr-doc-title')
   const docs=ld(WR_DOCS_KEY)||[]
-  const idx=docs.findIndex(x=>x.id===_wrCurrentDocId)
-  if(idx===-1)return
+  let defaultName=''
+  if(_wrCurrentDocId){
+    const cur=docs.find(x=>x.id===_wrCurrentDocId)
+    defaultName=cur?cur.title:''
+  }
+  if(!defaultName)defaultName=(titleEl&&titleEl.value.trim())||('新草稿 '+(docs.length+1))
+  input.value=defaultName
+  modal.style.display='flex'
+  setTimeout(()=>{input.focus();input.select()},50)
+}
+function wrSaveModalClose(){
+  const modal=document.getElementById('wr-save-modal')
+  if(modal)modal.style.display='none'
+}
+function wrSaveModalConfirm(){
+  const input=document.getElementById('wr-save-name-input')
+  const name=(input&&input.value.trim())
+  if(!name){input&&input.focus();return}
+  wrSaveModalClose()
+  wrSaveDoc(name)
+}
+function wrExportCurrent(){
+  if(typeof _wrActiveZipId!=='undefined'&&_wrActiveZipId)wrExportZipProject()
+  else wrExportTex()
+}
+function wrDeleteCurrent(){
+  if(typeof _wrActiveZipId!=='undefined'&&_wrActiveZipId)wrCloseZipProject()
+  else wrDeleteDoc()
+}
+
+// ── Save doc (name: 由命名弹窗传入；自动保存时不传) ──
+function wrSaveDoc(name){
   const editorEl=document.getElementById('wr-editor')
   const titleEl=document.getElementById('wr-doc-title')
+  const docs=ld(WR_DOCS_KEY)||[]
+
+  if(!_wrCurrentDocId){
+    // 新草稿
+    if(!editorEl)return
+    const finalTitle=name||(titleEl&&titleEl.value.trim())||('新草稿 '+(docs.length+1))
+    const d={id:uid(),title:finalTitle,content:editorEl.value,created:today(),updated:today()}
+    docs.unshift(d)
+    sv(WR_DOCS_KEY,docs)
+    _wrCurrentDocId=d.id
+    if(titleEl)titleEl.value=finalTitle
+    renderWrDocsList()
+    _wrShowSaveStatus()
+    if(name)toast('📄 已保存「'+finalTitle+'」','success')
+    return
+  }
+
+  // 更新已有草稿
+  const idx=docs.findIndex(x=>x.id===_wrCurrentDocId)
+  if(idx===-1)return
+  if(name)docs[idx].title=name
   docs[idx].content=editorEl?editorEl.value:docs[idx].content
-  docs[idx].title=titleEl?titleEl.value:docs[idx].title
+  if(!name&&titleEl&&titleEl.value)docs[idx].title=titleEl.value
   docs[idx].updated=today()
   sv(WR_DOCS_KEY,docs)
+  if(name&&titleEl)titleEl.value=docs[idx].title
   renderWrDocsList()
-  const saveStatus=document.getElementById('wr-save-status')
-  if(saveStatus){
-    saveStatus.textContent='✓ 已保存'
-    setTimeout(()=>{if(saveStatus)saveStatus.textContent=''},2000)
-  }
+  _wrShowSaveStatus()
+  if(name)toast('💾 已保存「'+docs[idx].title+'」','success')
+}
+
+function _wrShowSaveStatus(){
+  const s=document.getElementById('wr-save-status')
+  if(!s)return
+  s.textContent='✓ 已保存'
+  setTimeout(()=>{if(s)s.textContent=''},2000)
 }
 
 // ── Delete doc ──
@@ -6807,12 +7201,152 @@ const _WR_AI_PROMPTS={
   }
 }
 
+function wrSetPreviewMode(mode){
+  if(_wrPreviewMode===mode)return
+  _wrPreviewMode=mode
+  const rb=document.getElementById('wr-prev-render-btn')
+  const tb=document.getElementById('wr-prev-trans-btn')
+  const sub=document.getElementById('wr-prev-subtitle')
+  const reBtn=document.getElementById('wr-prev-retrans-btn')
+  if(rb)rb.classList.toggle('active',mode==='render')
+  if(tb)tb.classList.toggle('active',mode==='translate')
+  if(sub)sub.textContent=mode==='render'?'KaTeX 数学渲染':'AI 翻译（中文）'
+  if(reBtn)reBtn.style.display=mode==='translate'?'':'none'
+  if(mode==='render')wrRenderPreview()
+  else wrShowTranslation()
+}
+
+async function wrShowTranslation(){
+  const ta=document.getElementById('wr-editor')
+  const preEl=document.getElementById('wr-preview-area')
+  if(!ta||!preEl)return
+  const src=ta.value.trim()
+  if(!src){preEl.innerHTML='<div style="color:var(--text2);font-size:13px;text-align:center;padding-top:40px">编辑器内容为空</div>';return}
+  if(_wrTransCache.src===src&&_wrTransCache.html){preEl.innerHTML=_wrTransCache.html;return}
+  preEl.innerHTML=`<div style="padding:16px;color:var(--text2);font-size:13px;display:flex;align-items:center;gap:8px"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 翻译中…</span></div>`
+  const prompt=`你是专业的学术论文翻译专家。请将以下 LaTeX 格式的学术内容翻译成中文。
+要求：
+1. 翻译准确流畅，符合中文学术表达习惯
+2. \\section{...}、\\subsection{...} 等标题翻译后单独成行，前面加"【节】"标记
+3. 数学公式（$...$、$$...$$、\\[...\\] 等）保持原样不翻译
+4. 忽略其他 LaTeX 命令，只输出正文内容的中文翻译
+5. 只输出翻译结果，不要任何解释
+
+内容：
+${src.slice(0,8000)}`
+  const result=await _wrCallAI(prompt,3000)
+  if(_wrPreviewMode!=='translate')return
+  if(!result){preEl.innerHTML='<div style="padding:16px;color:#dc2626;font-size:13px">⚠️ AI 翻译失败，请检查 AI 配置后重试</div>';return}
+  const html='<div style="padding:16px;font-size:14px;line-height:1.9;color:var(--text);white-space:pre-wrap;word-break:break-word">'+escHtml(result)+'</div>'
+  _wrTransCache={src,html}
+  preEl.innerHTML=html
+}
+
+function wrRetranslate(){
+  _wrTransCache={src:'',html:''}
+  wrShowTranslation()
+}
+
+// ── 预览区内置翻译面板 ──
+let _wrTransPanelOpen=false
+let _wrTransPanelCache={src:'',text:''}
+function wrTransToggle(){
+  _wrTransPanelOpen=!_wrTransPanelOpen
+  const body=document.getElementById('wr-trans-body')
+  const icon=document.getElementById('wr-trans-icon')
+  const hint=document.getElementById('wr-trans-hint')
+  const goBtn=document.getElementById('wr-trans-go-btn')
+  if(!body)return
+  body.classList.toggle('open',_wrTransPanelOpen)
+  if(icon)icon.textContent=_wrTransPanelOpen?'▼':'▶'
+  if(hint)hint.textContent=_wrTransPanelOpen?'':'点击展开'
+  if(goBtn)goBtn.style.display=_wrTransPanelOpen?'':'none'
+  if(_wrTransPanelOpen&&!body.textContent.trim())wrTranslatePreview()
+}
+async function wrTranslatePreview(){
+  const ta=document.getElementById('wr-editor')
+  const body=document.getElementById('wr-trans-body')
+  if(!ta||!body)return
+  const src=ta.value.trim()
+  if(!src){body.textContent='编辑器内容为空';return}
+  if(_wrTransPanelCache.src===src&&_wrTransPanelCache.text){body.textContent=_wrTransPanelCache.text;return}
+  body.innerHTML=`<div class="wr-trans-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>翻译中…</span></div>`
+  const prompt=`你是专业学术翻译。将以下 LaTeX 内容翻译为中文学术表达：
+1. \\section{} 等标题翻译后加【】标记
+2. 数学公式（$...$、$$...$$）保持原样
+3. 只输出翻译结果，不加解释
+\n${src.slice(0,8000)}`
+  const result=await _wrCallAI(prompt,3000)
+  if(!result){body.textContent='⚠️ 翻译失败，请检查 AI 配置';return}
+  _wrTransPanelCache={src,text:result}
+  body.textContent=result
+}
+
+// ── 选中浮动工具栏 ──
+function _wrSelBarInit(){
+  const ta=document.getElementById('wr-editor')
+  const bar=document.getElementById('wr-sel-bar')
+  if(!ta||!bar||bar._wrInited)return
+  bar._wrInited=true
+  const BAR_W=326,BAR_H=40
+  let _mx=0,_my=0
+  function hide(){bar.classList.remove('show')}
+  function show(x,y){
+    const vw=window.innerWidth
+    let lx=x-BAR_W/2,ty=y-BAR_H-14
+    if(lx<8)lx=8
+    if(lx+BAR_W>vw-8)lx=vw-BAR_W-8
+    if(ty<8)ty=y+18
+    bar.style.left=lx+'px'
+    bar.style.top=ty+'px'
+    bar.classList.add('show')
+  }
+  ta.addEventListener('mousemove',e=>{_mx=e.clientX;_my=e.clientY})
+  // document-level mouseup catches drag that ends outside textarea
+  document.addEventListener('mouseup',e=>{
+    if(document.activeElement!==ta&&!bar.contains(e.target))return
+    const cx=e.clientX||_mx,cy=e.clientY||_my
+    _mx=cx;_my=cy
+    setTimeout(()=>{
+      if(document.activeElement!==ta)return
+      const s=ta.selectionStart,en=ta.selectionEnd
+      if(en-s>2)show(cx,cy)
+      else hide()
+    },20)
+  })
+  // keyboard selection (Shift+arrows, Ctrl+A)
+  ta.addEventListener('keyup',e=>{
+    if(e.shiftKey||(e.ctrlKey&&e.key.toLowerCase()==='a')){
+      setTimeout(()=>{
+        const s=ta.selectionStart,en=ta.selectionEnd
+        if(en-s>2)show(_mx||300,_my||300)
+        else hide()
+      },20)
+    } else if(!e.shiftKey){
+      setTimeout(()=>{if(ta.selectionStart===ta.selectionEnd)hide()},20)
+    }
+  })
+  ta.addEventListener('blur',()=>setTimeout(hide,180))
+  document.addEventListener('mousedown',e=>{
+    if(!bar.contains(e.target)&&e.target!==ta)hide()
+  })
+}
+function wrSelAct(type){
+  document.getElementById('wr-sel-bar')?.classList.remove('show')
+  wrAiAction(type)
+}
+
 function wrToggleAiMenu(e){
   e.stopPropagation()
   const menu=document.getElementById('wr-ai-menu')
+  const btn=document.getElementById('wr-ai-toggle')
   if(!menu)return
   menu.classList.toggle('open')
   if(menu.classList.contains('open')){
+    // position below the AI button (fixed, avoids overflow:hidden clipping)
+    const r=btn?btn.getBoundingClientRect():{bottom:0,left:0}
+    menu.style.top=(r.bottom+4)+'px'
+    menu.style.left=Math.min(r.left,window.innerWidth-170)+'px'
     const close=()=>{menu.classList.remove('open');document.removeEventListener('click',close)}
     setTimeout(()=>document.addEventListener('click',close),10)
   }
@@ -6846,15 +7380,24 @@ async function wrAiAction(type){
   const cfg=_WR_AI_PROMPTS[type]
   if(!cfg)return
 
+  // 标记编辑器进入 AI pending 状态（紫色左边框高亮）
+  ta.classList.add('wr-ai-pending')
+
   // 显示面板 + loading 状态
   const panel=document.getElementById('wr-ai-panel')
   const resultEl=document.getElementById('wr-ai-result')
   const labelEl=document.getElementById('wr-ai-action-label')
+  const quoteBar=document.getElementById('wr-ai-quote-bar')
   if(!panel||!resultEl)return
   panel.classList.add('visible')
   if(labelEl)labelEl.textContent=cfg.label
+  // 显示选中文本摘要
+  if(quoteBar){
+    const snippet=text.slice(0,120).replace(/\s+/g,' ')+(text.length>120?'…':'')
+    quoteBar.textContent='📌 '+snippet
+    quoteBar.style.display='block'
+  }
   resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 处理中…</span></div>`
-  // 滚动使面板可见
   panel.scrollIntoView({behavior:'smooth',block:'nearest'})
 
   const prompt=`${cfg.sys}\n\n${cfg.user(text)}`
@@ -6866,11 +7409,33 @@ async function wrAiAction(type){
   }
   _wrAiResult=result
   resultEl.textContent=result
+  // 结果到达后恢复选区高亮
+  ta.focus()
+  ta.setSelectionRange(_wrAiSelStart,_wrAiSelEnd)
 }
 
+let _wrAiPendingAccept=false
+let _wrAiPendingTimer=null
 function wrAiAccept(){
+  if(!_wrAiResult)return
+  const btn=document.getElementById('wr-ai-accept-btn')
+  if(!_wrAiPendingAccept){
+    // 第一次点击：进入确认状态
+    _wrAiPendingAccept=true
+    if(btn){btn.textContent='✅ 确认替换？';btn.style.background='#059669';btn.style.borderColor='#059669'}
+    clearTimeout(_wrAiPendingTimer)
+    _wrAiPendingTimer=setTimeout(()=>{
+      _wrAiPendingAccept=false
+      if(btn){btn.textContent='✓ 接受替换';btn.style.background='';btn.style.borderColor=''}
+    },4000)
+    return
+  }
+  // 第二次点击：执行替换
+  clearTimeout(_wrAiPendingTimer)
+  _wrAiPendingAccept=false
+  if(btn){btn.textContent='✓ 接受替换';btn.style.background='';btn.style.borderColor=''}
   const ta=document.getElementById('wr-editor')
-  if(!ta||!_wrAiResult)return
+  if(!ta)return
   const val=ta.value
   ta.value=val.slice(0,_wrAiSelStart)+_wrAiResult+val.slice(_wrAiSelEnd)
   ta.selectionStart=_wrAiSelStart
@@ -6879,7 +7444,8 @@ function wrAiAccept(){
   _wrUpdateCounts(ta)
   wrOnEdit(ta)
   wrAiClose()
-  toast('已接受 AI 建议','success')
+  document.getElementById('wr-editor')?.classList.remove('wr-ai-pending')
+  toast('✅ 已替换原文','success')
 }
 
 function wrAiCopy(){
@@ -6891,6 +7457,15 @@ function wrAiClose(){
   const panel=document.getElementById('wr-ai-panel')
   if(panel)panel.classList.remove('visible')
   _wrAiResult=''
+  // reset pending accept state
+  clearTimeout(_wrAiPendingTimer)
+  _wrAiPendingAccept=false
+  const btn=document.getElementById('wr-ai-accept-btn')
+  if(btn){btn.textContent='✓ 接受替换';btn.style.background='';btn.style.borderColor=''}
+  // 清除编辑器高亮 + quote bar
+  document.getElementById('wr-editor')?.classList.remove('wr-ai-pending')
+  const qb=document.getElementById('wr-ai-quote-bar')
+  if(qb)qb.style.display='none'
 }
 
 // ── Export .tex ──
@@ -7039,6 +7614,7 @@ function _wrExpandDefs(raw,cmds,envs){
 }
 
 function wrRenderPreview(){
+  if(_wrPreviewMode==='translate')return
   const ta=document.getElementById('wr-editor')
   const preEl=document.getElementById('wr-preview-area')
   if(!ta||!preEl)return
@@ -8677,6 +9253,7 @@ function prm_startPomo(){
   },100)
   pomo.iv=setInterval(_prmPomoTick,1000)
   _prmPomoIv=pomo.iv  // 标记已启动
+  _pomoSaveRunning()
   _prmUpdatePomoBtn()
   toast('🌊 心流计时开始（'+workMins+'分钟）· 阅读愉快！')
 }
@@ -8702,12 +9279,12 @@ function _prmPomoTick(){
     pomo.secs=(pomo.isBreak?parseInt(document.getElementById('pomo-break')?.value||5):parseInt(document.getElementById('pomo-work')?.value||25))*60
     updatePomoDisplay()
     if(!pomo.isBreak){
-      clearInterval(pomo.iv);pomo.running=false;_prmPomoIv=null
+      clearInterval(pomo.iv);pomo.running=false;pomo.iv=null;_prmPomoIv=null;_pomoClearSS()
       const btn=document.getElementById('prm-pomo-btn')
       if(btn){btn.textContent='⏱ 开始专注';btn.style.background='var(--primary-soft)';btn.style.color='var(--primary)'}
       document.getElementById('pomo-btn')&&(document.getElementById('pomo-btn').textContent='▶ 开始')
     }else{
-      _prmUpdatePomoBtn()
+      _pomoSaveRunning();_prmUpdatePomoBtn()
     }
   }
 }
