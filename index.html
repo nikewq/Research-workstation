@@ -1616,7 +1616,26 @@ mark.hl-pink{background:#fecdd3;color:#881337}
   </div>
   <div class="settings-section">
     <h3>⚠️ 危险区域</h3>
-    <button class="btn btn-danger" onclick="resetAll()">🗑 清除所有数据（重新设置）</button>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
+      以下操作仅清除保存在<b>本浏览器本地</b>的数据，与任何服务器或 GitHub 无关。建议操作前先<b>导出备份</b>。
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px">🧹 清除浏览历史</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">清除今日概览签到记录、摸鱼侦察局缓存、娱乐推荐缓存。个人设置与项目数据不受影响。</div>
+        <button class="btn btn-ghost" style="font-size:12px;color:#f59e0b;border-color:#f59e0b" onclick="clearHistory()">🧹 清除历史缓存</button>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px">📂 清除个人内容</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">清除任务、习惯记录、文献库、写作草稿、反思日记、实验记录。保留基本设置和 AI 配置。</div>
+        <button class="btn btn-ghost" style="font-size:12px;color:#ef4444;border-color:#ef4444" onclick="clearPersonalContent()">📂 清除个人内容</button>
+      </div>
+      <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px 14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px;color:#ef4444">🗑 重置工作台</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">清除全部本地数据并重新进入初始设置。此操作不可恢复。</div>
+        <button class="btn btn-danger" style="font-size:12px" onclick="resetAll()">🗑 清除全部并重置</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3760,10 +3779,30 @@ function addAreaFromSettings(){
   const cfg=getCfg();if(!cfg.areas)cfg.areas=[];cfg.areas.push(val);saveCfg(cfg);
   document.getElementById('new-area-tag').value='';renderAreaTagsSettings();
 }
+function clearHistory(){
+  if(!confirm('确认清除浏览历史缓存？（签到记录、摸鱼/娱乐缓存）'))return;
+  // 签到记录
+  localStorage.removeItem('phd_checkins');
+  // 摸鱼侦察局缓存（今日及近7天）
+  Object.keys(localStorage).filter(k=>k.startsWith('_intel_')||k.startsWith('_entertain_')).forEach(k=>localStorage.removeItem(k));
+  toast('🧹 历史缓存已清除');
+}
+function clearPersonalContent(){
+  if(!confirm('确认清除个人内容？（任务、习惯、文献、草稿、日记等）\n\n建议先导出备份！'))return;
+  const personalKeys=[K.tasks,K.habits,K.habitDefs,K.checkins,K.refs,K.pomos,K.wrDocs,K.wrOlProj,K.wrZip,'phd_reflections','phd_experiments','phd_notes'];
+  personalKeys.forEach(k=>{ if(k) localStorage.removeItem(k); });
+  toast('📂 个人内容已清除');
+  setTimeout(()=>location.reload(),800);
+}
 function resetAll(){
-  if(!confirm('确认清除所有数据？此操作不可恢复！'))return;
+  if(!confirm('⚠️ 此操作将清除本浏览器内保存的全部本地数据并重新进入设置向导。\n\n数据仅存于本地，清除后无法恢复，建议先导出备份。\n\n确认继续？'))return;
   Object.values(K).forEach(k=>localStorage.removeItem(k));
   localStorage.removeItem('phd_habit_defs');
+  localStorage.removeItem('phd_reflections');
+  localStorage.removeItem('phd_experiments');
+  localStorage.removeItem('phd_notes');
+  localStorage.removeItem('_phd_lang');
+  Object.keys(localStorage).filter(k=>k.startsWith('_intel_')||k.startsWith('_entertain_')).forEach(k=>localStorage.removeItem(k));
   location.reload();
 }
 
