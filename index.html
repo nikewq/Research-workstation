@@ -231,6 +231,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 #sidebar.nav-collapsed .nav-item{padding:10px 0;justify-content:center;gap:0;border-left-color:transparent}
 #sidebar.nav-collapsed .nav-item.active{border-left-color:transparent;background:var(--primary-bg)}
 #sidebar.nav-collapsed .mode-toggle{display:none}
+.lang-toggle{display:flex;align-items:center;gap:4px;padding:8px 16px;margin:2px 0}
+.lang-btn{font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s}
+.lang-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+#sidebar.nav-collapsed .lang-toggle{justify-content:center;padding:8px 0}
+#sidebar.nav-collapsed .lang-btn{font-size:10px;padding:2px 5px}
 #sidebar.nav-collapsed .sidebar-bottom-text{display:none}
 #sidebar.nav-collapsed .sidebar-bottom{display:flex;flex-direction:column;align-items:center;padding:10px 0}
 #main{transition:margin-left .22s ease}
@@ -743,29 +748,33 @@ mark.hl-pink{background:#fecdd3;color:#881337}
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="收起/展开菜单">‹</button>
   </div>
   <div id="nav-scroll">
-    <div class="nav-group">主要</div>
-    <div class="nav-item active" data-page="overview" data-label="今日概览"><span class="nav-icon">📊</span><span class="nav-label">今日概览</span></div>
-    <div class="nav-item" data-page="tasks" data-label="任务管理"><span class="nav-icon">✅</span><span class="nav-label">任务管理</span></div>
-    <div class="nav-item" data-page="focus" data-label="心流时光"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" style="vertical-align:-3px"><path d="M12 3L6 16A6 6 0 0018 16Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 19Q10 17 12 19Q14 21 16 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">心流时光</span></div>
-    <div class="nav-item" data-page="habits" data-label="习惯打卡"><span class="nav-icon">🔥</span><span class="nav-label">习惯打卡</span></div>
-    <div class="nav-group">科研</div>
-    <div class="nav-item" data-page="submissions" data-label="文献 & 投稿"><span class="nav-icon">📖</span><span class="nav-label">文献 & 投稿</span></div>
-    <div class="nav-item" data-page="gantt" data-label="项目甘特图"><span class="nav-icon">📅</span><span class="nav-label">项目甘特图</span></div>
-    <div class="nav-item" data-page="tools" data-label="工具面板"><span class="nav-icon">⚡</span><span class="nav-label">工具面板</span></div>
-    <div class="nav-item" data-page="reflection" data-label="反思日记"><span class="nav-icon">🌙</span><span class="nav-label">反思日记</span></div>
-    <div class="nav-item" data-page="stats" data-label="统计图表"><span class="nav-icon">📈</span><span class="nav-label">统计图表</span></div>
-    <div class="nav-item" data-page="intel" data-label="摸鱼侦察局"><span class="nav-icon">📡</span><span class="nav-label">摸鱼侦察局</span></div>
-    <div class="nav-item" data-page="procure" data-label="采购清单"><span class="nav-icon">🛒</span><span class="nav-label">采购清单</span></div>
-    <div class="nav-group">设置</div>
-    <div class="nav-item" data-page="settings" data-label="个人设置"><span class="nav-icon">⚙️</span><span class="nav-label">个人设置</span></div>
-    <div class="nav-item" onclick="openThemeModal()" data-label="界面主题"><span class="nav-icon">🎨</span><span class="nav-label">界面主题</span></div>
+    <div class="nav-group" data-i18n="g.main">主要</div>
+    <div class="nav-item active" data-page="overview" data-label="今日概览" data-label-key="nav.overview"><span class="nav-icon">📊</span><span class="nav-label" data-i18n="nav.overview">今日概览</span></div>
+    <div class="nav-item" data-page="tasks" data-label="任务管理" data-label-key="nav.tasks"><span class="nav-icon">✅</span><span class="nav-label" data-i18n="nav.tasks">任务管理</span></div>
+    <div class="nav-item" data-page="focus" data-label="心流时光" data-label-key="nav.focus"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" style="vertical-align:-3px"><path d="M12 3L6 16A6 6 0 0018 16Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 19Q10 17 12 19Q14 21 16 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label" data-i18n="nav.focus">心流时光</span></div>
+    <div class="nav-item" data-page="habits" data-label="习惯打卡" data-label-key="nav.habits"><span class="nav-icon">🔥</span><span class="nav-label" data-i18n="nav.habits">习惯打卡</span></div>
+    <div class="nav-group" data-i18n="g.research">科研</div>
+    <div class="nav-item" data-page="submissions" data-label="文献 & 投稿" data-label-key="nav.papers"><span class="nav-icon">📖</span><span class="nav-label" data-i18n="nav.papers">文献 & 投稿</span></div>
+    <div class="nav-item" data-page="gantt" data-label="项目甘特图" data-label-key="nav.gantt"><span class="nav-icon">📅</span><span class="nav-label" data-i18n="nav.gantt">项目甘特图</span></div>
+    <div class="nav-item" data-page="tools" data-label="工具面板" data-label-key="nav.tools"><span class="nav-icon">⚡</span><span class="nav-label" data-i18n="nav.tools">工具面板</span></div>
+    <div class="nav-item" data-page="reflection" data-label="反思日记" data-label-key="nav.reflection"><span class="nav-icon">🌙</span><span class="nav-label" data-i18n="nav.reflection">反思日记</span></div>
+    <div class="nav-item" data-page="stats" data-label="统计图表" data-label-key="nav.stats"><span class="nav-icon">📈</span><span class="nav-label" data-i18n="nav.stats">统计图表</span></div>
+    <div class="nav-item" data-page="intel" data-label="摸鱼侦察局" data-label-key="nav.intel"><span class="nav-icon">📡</span><span class="nav-label" data-i18n="nav.intel">摸鱼侦察局</span></div>
+    <div class="nav-item" data-page="procure" data-label="采购清单" data-label-key="nav.procure"><span class="nav-icon">🛒</span><span class="nav-label" data-i18n="nav.procure">采购清单</span></div>
+    <div class="nav-group" data-i18n="g.system">设置</div>
+    <div class="nav-item" data-page="settings" data-label="个人设置" data-label-key="nav.settings"><span class="nav-icon">⚙️</span><span class="nav-label" data-i18n="nav.settings">个人设置</span></div>
+    <div class="nav-item" onclick="openThemeModal()" data-label="界面主题" data-label-key="nav.theme"><span class="nav-icon">🎨</span><span class="nav-label" data-i18n="nav.theme">界面主题</span></div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="lang-btn-zh" onclick="setLang('zh')">中文</button>
+      <button class="lang-btn" id="lang-btn-en" onclick="setLang('en')">EN</button>
+    </div>
     <div class="mode-toggle" onclick="toggleMode()" title="切换深色/浅色模式">
       <div class="mode-toggle-track"><div class="mode-toggle-thumb"></div></div>
-      <span id="mode-label">深色模式</span>
+      <span id="mode-label" data-i18n="ui.darkmode">深色模式</span>
     </div>
-    <div class="nav-item" onclick="openSyncModal()" data-label="云同步"><span class="nav-icon">☁️</span><span class="nav-label">云同步</span></div>
-    <div class="nav-item" id="exportBtn" data-label="导出数据"><span class="nav-icon">💾</span><span class="nav-label">导出数据</span></div>
-    <div class="nav-item" id="importBtn" data-label="导入数据"><span class="nav-icon">📥</span><span class="nav-label">导入数据</span></div>
+    <div class="nav-item" onclick="openSyncModal()" data-label="云同步" data-label-key="nav.sync"><span class="nav-icon">☁️</span><span class="nav-label" data-i18n="nav.sync">云同步</span></div>
+    <div class="nav-item" id="exportBtn" data-label="导出数据" data-label-key="nav.export"><span class="nav-icon">💾</span><span class="nav-label" data-i18n="nav.export">导出数据</span></div>
+    <div class="nav-item" id="importBtn" data-label="导入数据" data-label-key="nav.import"><span class="nav-icon">📥</span><span class="nav-label" data-i18n="nav.import">导入数据</span></div>
     <input type="file" id="importFile" accept=".json" style="display:none">
   </div>
   <div class="sidebar-bottom">
@@ -876,7 +885,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
 <!-- ── Tasks ── -->
 <div class="page" id="page-tasks">
-  <div class="page-title">任务管理</div>
+  <div class="page-title" data-i18n="page.tasks">任务管理</div>
   <div class="page-subtitle" id="tasks-subtitle">管理你的科研任务</div>
   <div class="card mb-16">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -956,7 +965,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
 <!-- ── Focus ── -->
 <div class="page" id="page-focus">
-  <div class="page-title">心流时光</div>
+  <div class="page-title" data-i18n="page.focus">心流时光</div>
   <div class="page-subtitle">番茄工作法</div>
   <div class="grid-2">
     <div class="card">
@@ -982,7 +991,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
 <!-- ── Habits ── -->
 <div class="page" id="page-habits">
-  <div class="page-title">习惯打卡</div>
+  <div class="page-title" data-i18n="page.habits">习惯打卡</div>
   <div class="page-subtitle">每日坚持，积累复利</div>
   <div class="grid-2">
     <div>
@@ -1378,7 +1387,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
 <!-- ── Tools ── -->
 <div class="page" id="page-tools">
-  <div class="page-title">工具面板</div>
+  <div class="page-title" data-i18n="page.tools">工具面板</div>
   <div class="page-subtitle">点击卡片复制命令，或打开链接</div>
   <div class="card mb-16" style="background:var(--primary-bg);border-color:var(--primary)">
     <div style="font-size:13px">💡 添加你常用的命令行工具、Claude技能、脚本或网址。点击即复制/打开。</div>
@@ -1431,7 +1440,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
 <!-- ── Reflection ── -->
 <div class="page" id="page-reflection">
-  <div class="page-title">反思日记</div>
+  <div class="page-title" data-i18n="page.reflection">反思日记</div>
   <div class="page-subtitle">每晚记录，感知成长</div>
   <div class="grid-2">
     <div class="card">
@@ -1462,7 +1471,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
 <!-- ── Stats ── -->
 <div class="page" id="page-stats">
-  <div class="page-title">统计图表</div>
+  <div class="page-title" data-i18n="page.stats">统计图表</div>
   <div class="page-subtitle">数据驱动科研节奏</div>
   <div class="grid-2 mb-16">
     <div class="card"><div class="card-title">近7天完成任务</div><div class="chart-wrap"><canvas id="ch-tasks"></canvas></div></div>
@@ -1476,7 +1485,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 
 <!-- ── Settings ── -->
 <div class="page" id="page-settings">
-  <div class="page-title">个人设置</div>
+  <div class="page-title" data-i18n="page.settings">个人设置</div>
   <div class="page-subtitle">修改你的基本信息和配置</div>
   <div class="settings-section">
     <h3>👤 基本信息</h3>
@@ -2141,6 +2150,104 @@ const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2
 const today = () => localDate(new Date());
 const escHtml = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
+// ══════════════════════════════════════
+//  I18N - BILINGUAL SUPPORT
+// ══════════════════════════════════════
+const _I18N = {
+  zh: {
+    'nav.overview':'今日概览','nav.tasks':'任务管理','nav.focus':'心流时光',
+    'nav.habits':'习惯打卡','nav.papers':'文献 & 投稿','nav.gantt':'项目甘特图',
+    'nav.tools':'工具面板','nav.reflection':'反思日记','nav.stats':'统计图表',
+    'nav.intel':'摸鱼侦察局','nav.procure':'采购清单','nav.settings':'个人设置',
+    'nav.theme':'界面主题','nav.sync':'云同步','nav.export':'导出数据','nav.import':'导入数据',
+    'g.main':'主要','g.research':'科研','g.system':'设置',
+    'page.tasks':'任务管理','page.focus':'心流时光','page.habits':'习惯打卡',
+    'page.reflection':'反思日记','page.stats':'统计图表','page.tools':'工具面板',
+    'page.procure':'采购清单','page.gantt':'项目甘特图','page.intel':'摸鱼侦察局',
+    'page.papers':'文献 & 投稿','page.settings':'个人设置',
+    'ui.darkmode':'深色模式','ui.lightmode':'浅色模式',
+    'ui.add':'添加','ui.save':'保存','ui.cancel':'取消','ui.delete':'删除',
+    'ui.edit':'编辑','ui.confirm':'确认','ui.close':'关闭','ui.all':'全部',
+    'ui.todo':'待做','ui.done':'已完成','ui.export':'导出','ui.import':'导入',
+    'ui.start':'开始','ui.pause':'暂停','ui.reset':'重置',
+    'btn.checkin':'🟢 上班签到','btn.checkout':'🔴 下班签出',
+    'btn.addtask':'➕ 添加','btn.publish':'发布',
+    'lbl.today':'今日概览','lbl.pending':'待做任务','lbl.submissions':'投稿追踪',
+    'lbl.habits.today':'今日习惯',
+    'settings.basic':'基本信息','settings.projects':'项目管理',
+    'settings.research':'研究方向标签','settings.ai':'AI 模型设置',
+    'settings.data':'数据管理','settings.localfolder':'本地保存文件夹',
+    'settings.name':'你的称呼','settings.field':'研究方向','settings.univ':'所在机构',
+    'settings.start':'开始时间',
+    'task.title':'任务标题','task.project':'所属项目','task.due':'截止日期',
+    'task.priority':'优先级','task.priority.high':'🔴 高','task.priority.mid':'🟡 中','task.priority.low':'🟢 低',
+    'focus.work':'专注时间','focus.break':'休息时间','focus.session':'番茄数',
+    'stats.total':'总计','stats.week':'本周','stats.month':'本月',
+    'pomo.start':'▶ 开始','pomo.pause':'⏸ 暂停','pomo.reset':'↺ 重置',
+  },
+  en: {
+    'nav.overview':'Overview','nav.tasks':'Tasks','nav.focus':'Focus Flow',
+    'nav.habits':'Habits','nav.papers':'Papers & Submissions','nav.gantt':'Gantt Chart',
+    'nav.tools':'Tools','nav.reflection':'Reflections','nav.stats':'Statistics',
+    'nav.intel':'Leisure Scout','nav.procure':'Procurement','nav.settings':'Settings',
+    'nav.theme':'Themes','nav.sync':'Cloud Sync','nav.export':'Export','nav.import':'Import',
+    'g.main':'Main','g.research':'Research','g.system':'System',
+    'page.tasks':'Task Management','page.focus':'Focus Flow','page.habits':'Habit Tracker',
+    'page.reflection':'Reflections','page.stats':'Statistics','page.tools':'Tools',
+    'page.procure':'Procurement','page.gantt':'Gantt Chart','page.intel':'Leisure Scout',
+    'page.papers':'Papers & Submissions','page.settings':'Settings',
+    'ui.darkmode':'Dark Mode','ui.lightmode':'Light Mode',
+    'ui.add':'Add','ui.save':'Save','ui.cancel':'Cancel','ui.delete':'Delete',
+    'ui.edit':'Edit','ui.confirm':'Confirm','ui.close':'Close','ui.all':'All',
+    'ui.todo':'To-do','ui.done':'Done','ui.export':'Export','ui.import':'Import',
+    'ui.start':'Start','ui.pause':'Pause','ui.reset':'Reset',
+    'btn.checkin':'🟢 Check In','btn.checkout':'🔴 Check Out',
+    'btn.addtask':'➕ Add','btn.publish':'Post',
+    'lbl.today':'Today\'s Overview','lbl.pending':'Pending Tasks','lbl.submissions':'Submission Tracker',
+    'lbl.habits.today':'Today\'s Habits',
+    'settings.basic':'Basic Info','settings.projects':'Projects',
+    'settings.research':'Research Tags','settings.ai':'AI Settings',
+    'settings.data':'Data Management','settings.localfolder':'Local Save Folder',
+    'settings.name':'Your Name','settings.field':'Research Field','settings.univ':'Institution',
+    'settings.start':'Start Date',
+    'task.title':'Task Title','task.project':'Project','task.due':'Due Date',
+    'task.priority':'Priority','task.priority.high':'🔴 High','task.priority.mid':'🟡 Medium','task.priority.low':'🟢 Low',
+    'focus.work':'Focus Duration','focus.break':'Break Duration','focus.session':'Sessions',
+    'stats.total':'Total','stats.week':'This Week','stats.month':'This Month',
+    'pomo.start':'▶ Start','pomo.pause':'⏸ Pause','pomo.reset':'↺ Reset',
+  }
+}
+let _lang = localStorage.getItem('_phd_lang') || 'zh'
+function t(key) { return (_I18N[_lang] || _I18N.zh)[key] ?? _I18N.zh[key] ?? key }
+function setLang(lang) {
+  _lang = lang
+  localStorage.setItem('_phd_lang', lang)
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = t(el.dataset.i18n)
+    if (v) el.textContent = v
+  })
+  document.querySelectorAll('[data-label-key]').forEach(el => {
+    el.dataset.label = t(el.dataset.labelKey)
+  })
+  const zh = document.getElementById('lang-btn-zh')
+  const en = document.getElementById('lang-btn-en')
+  if (zh) zh.classList.toggle('active', lang === 'zh')
+  if (en) en.classList.toggle('active', lang === 'en')
+  const ml = document.getElementById('mode-label')
+  if (ml) ml.textContent = document.body.classList.contains('light') ? t('ui.lightmode') : t('ui.darkmode')
+  const pomoBtn = document.getElementById('pomo-btn')
+  if (pomoBtn && typeof pomo !== 'undefined') {
+    pomoBtn.textContent = pomo.running ? t('pomo.pause') : t('pomo.start')
+  }
+}
+function _applyInitLang() {
+  if (_lang !== 'zh') setLang(_lang)
+  else {
+    const zh = document.getElementById('lang-btn-zh')
+    if (zh) zh.classList.add('active')
+  }
+}
+
 function getCfg() {
   return {
     name: '', field: '', univ: '', startDate: '',
@@ -2333,6 +2440,7 @@ function initApp() {
   document.getElementById('sub-date').value = today();
   updatePomoDisplay();
   _initLocalFolderUI();
+  _applyInitLang();
 }
 
 // ══════════════════════════════════════
