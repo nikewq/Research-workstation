@@ -3695,6 +3695,7 @@ function _loadS2KeyUI(){
 }
 
 function clearAISettings(){
+  if(!confirm('确认清除 AI 配置？将恢复为自动模式（Pollinations 免费）。')) return
   localStorage.removeItem('_ai_cfg')
   _aiKeyCache=null; sessionStorage.removeItem('_gk')
   document.getElementById('ai-provider-sel').value=''
@@ -3816,30 +3817,27 @@ document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('cli
 // ══════════════════════════════════════
 //  IMPORT / EXPORT
 // ══════════════════════════════════════
+// 额外需要备份的设置键（主题/语言/深色模式等，不在K对象中）
+const _EXTRA_BACKUP_KEYS=['_mode','_theme','_theme_custom','_phd_lang','_nav_collapsed','_sync_code','_s2_api_key','phd_reflections','phd_experiments','phd_notes']
 document.getElementById('exportBtn').addEventListener('click',()=>{
-  const data={version:'2.0',exportedAt:new Date().toISOString(),appUrl:'https://nikewq.github.io/Research-workstation/'};
+  const data={version:'2.1',exportedAt:new Date().toISOString(),appUrl:'https://nikewq.github.io/Research-workstation/'};
   Object.entries(K).forEach(([k,v])=>{
-    try{
-      const raw=localStorage.getItem(v)
-      if(raw!==null) data[k]=JSON.parse(raw)
-    }catch(_){}
+    try{const raw=localStorage.getItem(v);if(raw!==null)data[k]=JSON.parse(raw)}catch(_){}
+  });
+  _EXTRA_BACKUP_KEYS.forEach(k=>{
+    const raw=localStorage.getItem(k);if(raw!==null)data['__'+k]=raw  // 原始字符串存储
   });
   data.habit_defs=getHabitDefs();
-  // PDF blobs 存在 IndexedDB，不含在 JSON 内 — 提示用户
   const zipSize=JSON.stringify(data.wrZip||'').length
-  if(zipSize>500000){
-    // ZIP 项目超 500KB，单独提示
-    toast('⚠️ ZIP 项目较大，已包含在备份中，文件可能较大','warn')
-  }
+  if(zipSize>500000) toast('⚠️ ZIP 项目较大，已包含在备份中，文件可能较大','warn')
   const json=JSON.stringify(data,null,2)
   const b=new Blob([json],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
   a.download=`phd-workstation-backup-${today()}.json`;a.click();
   URL.revokeObjectURL(a.href);
-  // 记录最后备份时间
   localStorage.setItem('_phd_last_backup',Date.now().toString())
   _dismissDataBanner()
-  toast('💾 全量数据已导出！（含文献库、写作草稿、AI配置等）');
+  toast('💾 全量数据已导出！（含主题、语言、AI配置等所有设置）');
 });
 document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change',e=>{
@@ -3847,15 +3845,21 @@ document.getElementById('importFile').addEventListener('change',e=>{
   const r=new FileReader();
   r.onload=ev=>{try{
     const d=JSON.parse(ev.target.result);
-    if(!confirm(`导入备份将覆盖当前所有数据（备份时间：${d.exportedAt||'未知'}）。\n\n建议先导出当前数据再导入。确定继续？`))return
+    // 基本结构校验
+    if(typeof d!=='object'||d===null||!d.exportedAt) throw new Error('文件格式无效，不是有效的备份文件')
+    if(!confirm(`导入备份将覆盖当前所有数据\n备份时间：${d.exportedAt}\n版本：${d.version||'1.x'}\n\n建议先导出当前数据再导入。确定继续？`))return
     if(d.habit_defs)saveHabitDefs(d.habit_defs);
     Object.entries(K).forEach(([k,v])=>{
       if(d[k]!==undefined) localStorage.setItem(v,JSON.stringify(d[k]))
     });
+    // 恢复额外设置键
+    _EXTRA_BACKUP_KEYS.forEach(k=>{
+      if(d['__'+k]!==undefined) localStorage.setItem(k,d['__'+k])
+    });
     localStorage.setItem('_phd_last_backup',Date.now().toString())
     toast('📥 导入成功！正在重新加载…');
     setTimeout(()=>location.reload(),1200);
-  }catch(err){toast('导入失败：'+err.message,'error');}};
+  }catch(err){toast('❌ 导入失败：'+err.message,'error');}};
   r.readAsText(f);e.target.value='';
 });
 
@@ -4185,6 +4189,7 @@ async function _getActiveCfg(){
   if(sb){_aiKeyCache=sb;return{provider:'groq',base:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile',key:sb}}
   try{
     const r=await fetch(`${_SB_URL}/rest/v1/site_config?key=eq.groq_key&select=value`,{headers:{'apikey':_SB_KEY,'Authorization':'Bearer '+_SB_KEY}})
+    if(!r.ok) throw new Error('fetch key failed')
     const d=await r.json();const k=d[0]?.value
     if(k){_aiKeyCache=k;sessionStorage.setItem('_gk',k);return{provider:'groq',base:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile',key:k}}
   }catch(_){}
@@ -4228,6 +4233,7 @@ async function _callAI(prompt,maxTokens=800){
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:maxTokens,temperature:0.4}})
       })
+      if(!r.ok) return null
       const d=await r.json()
       return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||null
     }
@@ -4312,7 +4318,7 @@ async function _generateAndShow(item){
   const reply=await _callGroq(item._domId, item.msg, item.tag)
   const el=document.getElementById(elId)
   if(!el) return
-  if(!reply){el.remove();return}
+  if(!reply){el.innerHTML='<div style="font-size:12px;color:var(--text2);padding:6px 0">💬 AI 暂时无法回复，请稍后再试</div>';return}
   el.classList.remove('ai-loading')
   el.innerHTML=`<div class="ai-reply-hd">💬 来自过来人 <span>· AI 生成</span></div>${escHtml(reply)}`
 }
@@ -6468,6 +6474,7 @@ async function _wrCallAI(prompt,maxTokens=2000){
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:maxTokens,temperature:0.4}})
       })
+      if(!r.ok) return null
       const d=await r.json()
       return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||null
     }
