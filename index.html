@@ -330,7 +330,7 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 
 /* Check-in */
 .checkin-bar{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:16px}
-.clock{font-size:24px;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;min-width:80px}
+.clock{font-size:24px;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;min-width:80px;display:flex;flex-direction:column;align-items:center;line-height:1.2}
 
 /* Tasks */
 .task-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:8px;border:1px solid transparent;transition:border-color .15s}
@@ -809,7 +809,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
   <div class="page-title" id="ov-hello">今日概览</div>
   <div class="page-subtitle" id="ov-date"></div>
   <div class="checkin-bar">
-    <div class="clock" id="clock">00:00:00</div>
+    <div class="clock" id="clock">00:00:00<div id="clock-city" style="font-size:10px;font-weight:500;color:var(--text2);text-align:center;margin-top:2px;letter-spacing:.5px"></div></div>
     <div style="flex:1">
       <div style="font-size:12px;color:var(--text2)">今日状态</div>
       <div style="font-size:14px;font-weight:600" id="ci-status">未签到</div>
@@ -2551,9 +2551,75 @@ setTimeout(function(){
 // ══════════════════════════════════════
 //  CLOCK & COUNTERS
 // ══════════════════════════════════════
+function _getCapitalCity(){
+  try{
+    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone
+    const m={'Asia/Shanghai':'北京','Asia/Chongqing':'北京','Asia/Harbin':'北京',
+      'Asia/Urumqi':'乌鲁木齐',
+      'Asia/Hong_Kong':'香港','Asia/Macau':'澳门','Asia/Taipei':'台北',
+      'Asia/Tokyo':'东京','Asia/Seoul':'首尔',
+      'Asia/Singapore':'新加坡','Asia/Kuala_Lumpur':'吉隆坡',
+      'Asia/Bangkok':'曼谷','Asia/Jakarta':'雅加达','Asia/Phnom_Penh':'金边',
+      'Asia/Kolkata':'新德里','Asia/Dhaka':'达卡','Asia/Kathmandu':'加德满都',
+      'Asia/Karachi':'伊斯兰堡','Asia/Tashkent':'塔什干','Asia/Almaty':'阿斯塔纳',
+      'Asia/Tehran':'德黑兰','Asia/Dubai':'阿布扎比','Asia/Riyadh':'利雅得',
+      'Asia/Kuwait':'科威特城','Asia/Baghdad':'巴格达','Asia/Beirut':'贝鲁特',
+      'Asia/Jerusalem':'耶路撒冷','Asia/Amman':'安曼','Asia/Istanbul':'安卡拉',
+      'Asia/Tbilisi':'第比利斯','Asia/Yerevan':'埃里温','Asia/Baku':'巴库',
+      'Asia/Yangon':'内比都','Asia/Ho_Chi_Minh':'河内','Asia/Manila':'马尼拉',
+      'Asia/Ulaanbaatar':'乌兰巴托','Asia/Pyongyang':'平壤','Asia/Kabul':'喀布尔',
+      'Europe/London':'伦敦','Europe/Dublin':'都柏林','Europe/Lisbon':'里斯本',
+      'Europe/Madrid':'马德里','Europe/Paris':'巴黎','Europe/Brussels':'布鲁塞尔',
+      'Europe/Amsterdam':'阿姆斯特丹','Europe/Berlin':'柏林','Europe/Rome':'罗马',
+      'Europe/Vienna':'维也纳','Europe/Bern':'伯尔尼','Europe/Zurich':'伯尔尼',
+      'Europe/Stockholm':'斯德哥尔摩','Europe/Oslo':'奥斯陆','Europe/Copenhagen':'哥本哈根',
+      'Europe/Helsinki':'赫尔辛基','Europe/Tallinn':'塔林','Europe/Riga':'里加',
+      'Europe/Vilnius':'维尔纽斯','Europe/Warsaw':'华沙','Europe/Prague':'布拉格',
+      'Europe/Budapest':'布达佩斯','Europe/Bucharest':'布加勒斯特',
+      'Europe/Sofia':'索菲亚','Europe/Athens':'雅典','Europe/Kyiv':'基辅',
+      'Europe/Kiev':'基辅','Europe/Minsk':'明斯克','Europe/Moscow':'莫斯科',
+      'Africa/Cairo':'开罗','Africa/Tunis':'突尼斯','Africa/Algiers':'阿尔及尔',
+      'Africa/Casablanca':'拉巴特','Africa/Tripoli':'的黎波里','Africa/Khartoum':'喀土穆',
+      'Africa/Addis_Ababa':'亚的斯亚贝巴','Africa/Nairobi':'内罗毕',
+      'Africa/Lagos':'阿布贾','Africa/Accra':'阿克拉',
+      'Africa/Kinshasa':'金沙萨','Africa/Johannesburg':'比勒陀利亚',
+      'America/New_York':'华盛顿','America/Chicago':'华盛顿',
+      'America/Denver':'华盛顿','America/Los_Angeles':'华盛顿',
+      'America/Phoenix':'华盛顿','America/Anchorage':'华盛顿',
+      'America/Toronto':'渥太华','America/Vancouver':'渥太华','America/Edmonton':'渥太华',
+      'America/Mexico_City':'墨西哥城','America/Havana':'哈瓦那',
+      'America/Guatemala':'危地马拉城','America/Panama':'巴拿马城',
+      'America/Bogota':'波哥大','America/Lima':'利马','America/Quito':'基多',
+      'America/Caracas':'加拉加斯','America/La_Paz':'苏克雷',
+      'America/Santiago':'圣地亚哥','America/Sao_Paulo':'巴西利亚',
+      'America/Manaus':'巴西利亚','America/Buenos_Aires':'布宜诺斯艾利斯',
+      'America/Montevideo':'蒙得维的亚','America/Asuncion':'亚松森',
+      'Pacific/Honolulu':'华盛顿',
+      'Australia/Sydney':'堪培拉','Australia/Melbourne':'堪培拉',
+      'Australia/Perth':'堪培拉','Australia/Brisbane':'堪培拉',
+      'Pacific/Auckland':'惠灵顿','Pacific/Fiji':'苏瓦',
+      'Pacific/Port_Moresby':'莫尔兹比港',
+    }
+    if(m[tz])return m[tz]
+    const p=tz.split('/');return p[p.length-1].replace(/_/g,' ')
+  }catch(e){return''}
+}
 function updateClock() {
-  const n=new Date(), el=document.getElementById('clock');
-  if(el) el.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  const n=new Date(), el=document.getElementById('clock')
+  if(!el)return
+  // Update time digits (first text node only, not the city child)
+  const timeStr=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`
+  // Use firstChild text node if exists, otherwise set directly
+  if(el.firstChild&&el.firstChild.nodeType===3){
+    el.firstChild.nodeValue=timeStr
+  } else {
+    el.childNodes[0]&&el.childNodes[0].nodeType===3
+      ?(el.childNodes[0].nodeValue=timeStr)
+      :(el.insertBefore(document.createTextNode(timeStr),el.firstChild))
+  }
+  // Set city label once
+  const cityEl=document.getElementById('clock-city')
+  if(cityEl&&!cityEl.textContent)cityEl.textContent=_getCapitalCity()
 }
 function pad(n){return String(n).padStart(2,'0')}
 const ROLE_CONFIG={
