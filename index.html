@@ -1175,18 +1175,21 @@ mark.hl-pink{background:#fecdd3;color:#881337}
     <div class="wr-layout">
       <!-- 左列：Overleaf 项目 + 本地草稿 -->
       <div class="wr-projects-col">
-        <!-- Overleaf 账户徽章 -->
-        <div id="wr-ol-account-badge" style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0">
-          <span style="font-size:18px">🍃</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="wr-ol-name">未连接 Overleaf</div>
-            <div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="wr-ol-email"></div>
+        <!-- Overleaf 接入说明 -->
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:16px">🍃</span>
+            <span style="font-size:12px;font-weight:700">Overleaf 项目</span>
+            <a href="https://www.overleaf.com/project" target="_blank" style="font-size:10px;color:var(--primary);margin-left:auto;text-decoration:none">打开 Overleaf ↗</a>
           </div>
-          <button class="btn btn-ghost btn-sm" style="font-size:10px;flex-shrink:0" onclick="wrOpenAccountSettings()">设置</button>
+          <div style="font-size:10px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:6px 8px;line-height:1.6">
+            📌 导入方式：Overleaf 项目页 → <b>Menu → Download → Source</b> → 导入 ZIP<br>
+            🔗 下方可收藏项目链接，点击直接跳转
+          </div>
         </div>
-        <!-- Overleaf 项目区 -->
-        <div style="padding:8px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-          <span>Overleaf 项目</span>
+        <!-- Overleaf 项目书签区 -->
+        <div style="padding:6px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+          <span>项目书签</span>
           <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 6px" onclick="wrAddOlProject()">+ 添加</button>
         </div>
         <div id="wr-ol-projects-list" style="padding:0 8px 8px;flex-shrink:0"></div>
@@ -1340,35 +1343,6 @@ mark.hl-pink{background:#fecdd3;color:#881337}
     </div>
   </div>
 
-  <!-- Overleaf 账户设置弹窗 -->
-  <div id="wr-account-modal" style="display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
-    <div style="background:var(--card);border-radius:14px;padding:24px;width:500px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-      <div style="font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">
-        <span>🍃</span> 连接 Overleaf 账户
-      </div>
-      <div style="font-size:12px;color:var(--text2);background:var(--surface2);padding:10px 12px;border-radius:8px;margin-bottom:16px;line-height:1.6">
-        输入你的 Overleaf 账户信息和项目链接。你可以在 Overleaf 项目页面 URL 中找到项目链接（如 https://www.overleaf.com/project/xxxxxxxx）。
-      </div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">显示名称</label>
-          <input id="wr-acc-name" placeholder="你的名字" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg)">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Overleaf 邮箱</label>
-          <input id="wr-acc-email" type="email" placeholder="your@email.com" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg)">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Overleaf 主页链接（可选）</label>
-          <input id="wr-acc-profile" placeholder="https://www.overleaf.com" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg)">
-        </div>
-      </div>
-      <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:8px">
-        <button class="btn btn-ghost" onclick="document.getElementById('wr-account-modal').style.display='none'">取消</button>
-        <button class="btn btn-primary" onclick="wrSaveAccount()">💾 保存账户信息</button>
-      </div>
-    </div>
-  </div>
 
 </div>
 
@@ -6228,7 +6202,6 @@ let _katexLoading=false
 function initWritingPanel(){
   if(_wrPanelInited)return
   _wrPanelInited=true
-  renderOlAccountBadge()
   renderOlProjectsList()
   renderWrZipProjects()
   renderWrDocsList()
@@ -6272,15 +6245,6 @@ function renderOlProjectsList(){
         <button class="btn btn-ghost btn-sm" style="font-size:10px;color:#dc2626;padding:2px 6px" onclick="wrDeleteOlProject('${p.id}')" title="删除">🗑</button>
       </div>
     </div>`).join('')
-}
-
-// ── Account badge ──
-function renderOlAccountBadge(){
-  const acc=ld(WR_OL_ACC_KEY)||{}
-  const nameEl=document.getElementById('wr-ol-name')
-  const emailEl=document.getElementById('wr-ol-email')
-  if(nameEl)nameEl.textContent=acc.name||'未连接 Overleaf'
-  if(emailEl)emailEl.textContent=acc.email||''
 }
 
 // ── New doc ──
@@ -7045,35 +7009,6 @@ function wrDeleteOlProject(id){
   sv(WR_OL_PROJ_KEY,projects)
   renderOlProjectsList()
   toast('项目已删除','success')
-}
-
-// ── Account settings modal ──
-function wrOpenAccountSettings(){
-  const acc=ld(WR_OL_ACC_KEY)||{}
-  const nameEl=document.getElementById('wr-acc-name')
-  const emailEl=document.getElementById('wr-acc-email')
-  const profileEl=document.getElementById('wr-acc-profile')
-  if(nameEl)nameEl.value=acc.name||''
-  if(emailEl)emailEl.value=acc.email||''
-  if(profileEl)profileEl.value=acc.profile||''
-  const modal=document.getElementById('wr-account-modal')
-  if(modal){modal.style.display='flex'}
-}
-
-function wrSaveAccount(){
-  const nameEl=document.getElementById('wr-acc-name')
-  const emailEl=document.getElementById('wr-acc-email')
-  const profileEl=document.getElementById('wr-acc-profile')
-  const acc={
-    name:(nameEl?nameEl.value:'').trim(),
-    email:(emailEl?emailEl.value:'').trim(),
-    profile:(profileEl?profileEl.value:'').trim()
-  }
-  sv(WR_OL_ACC_KEY,acc)
-  renderOlAccountBadge()
-  const modal=document.getElementById('wr-account-modal')
-  if(modal)modal.style.display='none'
-  toast('账户信息已保存','success')
 }
 
 // ── Lazy-load KaTeX ──
