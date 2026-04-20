@@ -862,6 +862,7 @@ mark.hl-pink{background:#fecdd3;color:#881337}
       <div class="card-title" style="margin-bottom:0">🌿 同行者</div>
       <span style="font-size:11px;color:var(--text2)">匿名 · 互相见证</span>
     </div>
+    <div id="wall-daily-quote" style="font-size:12px;color:var(--text2);font-style:italic;line-height:1.6;margin-bottom:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--primary-soft)"></div>
     <!-- 身份 + 发帖表单（在消息列表上方）-->
     <div id="wall-identity" style="font-size:12px;color:var(--text2);margin-bottom:6px"></div>
     <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
@@ -3571,6 +3572,7 @@ function renderRefHistory(){
 // ══════════════════════════════════════
 function renderOverview(){
   renderIdentityCard();
+  _renderDailyQuote();
   const tasks=ld(K.tasks).filter(t=>t.status!=='done').slice(0,5);
   const tEl=document.getElementById('ov-tasks');
   if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
@@ -4123,6 +4125,52 @@ function _rerollNick(){
 
 // 渲染"你将以 XX 身份发布"预览
 
+const _DAILY_QUOTES=[
+  // 英文 — 陪伴 / 不孤单
+  {text:"You are not alone. We are right here.",attr:"— PhD Workstation"},
+  {text:"The struggle you're in today is developing the strength you need tomorrow.",attr:"— Anonymous"},
+  {text:"It always seems impossible until it's done.",attr:"— Nelson Mandela"},
+  {text:"A year from now you will wish you had started today.",attr:"— Karen Lamb"},
+  {text:"Done is better than perfect.",attr:"— Sheryl Sandberg"},
+  {text:"Research is what I'm doing when I don't know what I'm doing.",attr:"— Wernher von Braun"},
+  {text:"The expert in anything was once a beginner.",attr:"— Helen Hayes"},
+  {text:"You don't have to be great to start, but you have to start to be great.",attr:"— Zig Ziglar"},
+  {text:"Progress, not perfection.",attr:"— Anonymous"},
+  {text:"Fall seven times, stand up eight.",attr:"— Japanese Proverb"},
+  {text:"Every PhD student feels lost sometimes. That's not failure — that's research.",attr:"— Anonymous"},
+  {text:"Your current situation is not your final destination.",attr:"— Anonymous"},
+  {text:"Believe in yourself and all that you are.",attr:"— Christian D. Larson"},
+  {text:"The only way out is through.",attr:"— Robert Frost"},
+  {text:"You've survived 100% of your bad days so far.",attr:"— Anonymous"},
+  {text:"Small steps every day. That's all it takes.",attr:"— Anonymous"},
+  {text:"Being a PhD student doesn't mean knowing everything. It means learning everything.",attr:"— Anonymous"},
+  // 中文 — 陪伴 / 科研
+  {text:"你不是一个人在战斗。",attr:"— 同行者"},
+  {text:"每一个专家，都曾是初学者。",attr:"— 佚名"},
+  {text:"不要与他人比较，要与昨天的自己比较。",attr:"— 佚名"},
+  {text:"科研的本质是和未知打交道，迷茫是正常的。",attr:"— 同行者"},
+  {text:"走得慢没关系，只要方向对。",attr:"— 佚名"},
+  {text:"今天的坚持，是明天的底气。",attr:"— 佚名"},
+  {text:"论文不是天才写出来的，是一次次修改堆出来的。",attr:"— 同行者"},
+  {text:"累了可以休息，但不要放弃。",attr:"— 佚名"},
+  {text:"你愿意坐冷板凳，本身就已经很了不起。",attr:"— 同行者"},
+  {text:"当你觉得没有进展的时候，其实你已经在进展了。",attr:"— 佚名"},
+  {text:"接受自己今天只能做这么多。",attr:"— 佚名"},
+  {text:"读博的意义，不只是那一纸证书，还有你学会了如何思考。",attr:"— 同行者"},
+  {text:"每一篇拒稿都是下一篇录用的练习。",attr:"— 同行者"},
+  {text:"比起什么都完美，先把什么都做完更重要。",attr:"— 佚名"},
+  {text:"深夜还在工作的你，辛苦了。",attr:"— 同行者"},
+]
+function _renderDailyQuote(){
+  const el=document.getElementById('wall-daily-quote')
+  if(!el) return
+  // 每天固定同一条（按日期哈希），刷新不变
+  const today=new Date()
+  const seed=today.getFullYear()*10000+(today.getMonth()+1)*100+today.getDate()
+  const q=_DAILY_QUOTES[seed%_DAILY_QUOTES.length]
+  el.innerHTML=`<span style="opacity:.8">💬</span> <span>${q.text}</span> <span style="font-size:11px;opacity:.6;margin-left:4px">${q.attr}</span>`
+}
+
 const _WALL_MOODS=[
   {e:'🦸',l:'卷王模式'},{e:'😴',l:'今日摸鱼'},{e:'🧘',l:'佛系研究生'},
   {e:'🔥',l:'在燃！'},{e:'🌊',l:'摆烂选手'},{e:'😭',l:'快崩溃了'},
@@ -4159,6 +4207,7 @@ function _renderIdentity(){
     }
   }
   _renderMoodBar()
+  _renderDailyQuote()
 }
 
 // 当前激活的 tab、发帖类型、分页
