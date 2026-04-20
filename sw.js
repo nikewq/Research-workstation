@@ -1,7 +1,7 @@
 // PhD Workstation Service Worker
 // Caches index.html for offline use and faster loads
 
-const CACHE_NAME = 'phd-workstation-v3';
+const CACHE_NAME = 'phd-workstation-v4';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,8 @@ const CORE_ASSETS = [
   './icons/tab_icon.png',
   './icons/logo.png'
 ];
+// CDN assets cached on first use (cache-first after that)
+const CDN_CACHE = 'phd-cdn-v1';
 
 // Install: pre-cache core assets
 self.addEventListener('install', event => {
@@ -18,11 +20,11 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
+// Activate: clean up old caches (keep CDN cache)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE_NAME && k !== CDN_CACHE).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -47,6 +49,19 @@ self.addEventListener('fetch', event => {
             return response;
           }).catch(()=>{});
           return cached || fetchPromise; // instant if cached, network fallback if not
+        })
+      )
+    );
+  } else if (url.origin.includes('cdnjs.cloudflare.com') || url.origin.includes('cdn.jsdelivr.net')) {
+    // CDN assets: cache-first, so they work offline after first load
+    event.respondWith(
+      caches.open(CDN_CACHE).then(cache =>
+        cache.match(event.request).then(cached => {
+          if (cached) return cached;
+          return fetch(event.request).then(response => {
+            if (response.ok) cache.put(event.request, response.clone());
+            return response;
+          });
         })
       )
     );
