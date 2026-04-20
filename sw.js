@@ -38,15 +38,17 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.pathname.endsWith('index.html') || url.pathname === '/' || url.pathname.endsWith('/')) {
-    // Network-first: always try to get latest index.html
+    // Stale-while-revalidate: serve cache immediately (fast), fetch update in background
     event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          return response;
+      caches.open(CACHE_NAME).then(cache =>
+        cache.match(event.request).then(cached => {
+          const fetchPromise = fetch(event.request).then(response => {
+            cache.put(event.request, response.clone());
+            return response;
+          }).catch(()=>{});
+          return cached || fetchPromise; // instant if cached, network fallback if not
         })
-        .catch(() => caches.match(event.request))
+      )
     );
   } else {
     // Cache-first for static assets (icons, manifest)

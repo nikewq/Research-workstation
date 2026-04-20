@@ -11,7 +11,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PhD Workstation">
 <link rel="apple-touch-icon" href="icons/tab_icon.png">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --border:#30363d;
@@ -2424,7 +2426,7 @@ function finishSetup() {
   toast(`🎉 欢迎，${cfg.name}！工作台已就绪！`);
   // 自动生成同步码并上传
   _getOrCreateSyncCode();
-  setTimeout(saveProfileCloud, 800);
+  setTimeout(saveProfileCloud, 5000); // delay until page is fully interactive
 }
 function skipSetup() {
   const cfg = getCfg();
