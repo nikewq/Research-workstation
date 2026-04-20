@@ -4055,10 +4055,11 @@ initSetupWizard();
 // Clock — self-starting, independent of initApp()
 ;(function(){
   function _tick(){
-    const t=document.getElementById('clock-time');
-    if(!t)return;
     const n=new Date();
-    t.textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
+    const s=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
+    // try new span first, fall back to the clock wrapper itself
+    const el=document.getElementById('clock-time')||document.getElementById('clock');
+    if(el)el.textContent=s;
   }
   _tick();
   setInterval(_tick,1000);
