@@ -1844,6 +1844,29 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
   </div>
 </div>
 
+<div class="modal-overlay" id="taskNoteModal">
+  <div class="modal" style="max-width:600px;height:80vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">任务笔记</div>
+        <div id="tn-title" style="font-size:15px;font-weight:700;line-height:1.4;word-break:break-word"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('taskNoteModal')" style="flex-shrink:0">✕</button>
+    </div>
+    <textarea id="tn-content" placeholder="在这里记录任务相关的细节、想法、参考资料……支持任意格式文本"
+      style="flex:1;resize:none;font-size:13px;line-height:1.7;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;outline:none"
+      oninput="autoSaveTaskNote()"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+      <span id="tn-save-tip" style="font-size:11px;color:var(--text2)"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="clearTaskNote()">清空</button>
+        <button class="btn btn-primary btn-sm" onclick="saveTaskNote()">保存</button>
+      </div>
+    </div>
+    <input type="hidden" id="tn-id">
+  </div>
+</div>
+
 <div class="modal-overlay" id="editTaskModal">
   <div class="modal">
     <div class="modal-title">编辑任务</div>
@@ -3066,6 +3089,39 @@ function toggleTask(id){
   sv(K.tasks,tasks);renderTasks();renderOverview();updateStats();
 }
 function delTask(id){let tasks=ld(K.tasks).filter(t=>t.id!==id);sv(K.tasks,tasks);renderTasks();renderOverview();}
+let _noteAutoSaveTimer=null;
+function openTaskNote(id){
+  const t=ld(K.tasks).find(t=>t.id===id);if(!t)return;
+  document.getElementById('tn-id').value=id;
+  document.getElementById('tn-title').textContent=t.title;
+  document.getElementById('tn-content').value=t.note||'';
+  document.getElementById('tn-save-tip').textContent='';
+  openModal('taskNoteModal');
+  setTimeout(()=>document.getElementById('tn-content').focus(),100);
+}
+function saveTaskNote(){
+  const id=document.getElementById('tn-id').value;
+  const tasks=ld(K.tasks),t=tasks.find(t=>t.id===id);if(!t)return;
+  t.note=document.getElementById('tn-content').value;
+  sv(K.tasks,tasks);
+  document.getElementById('tn-save-tip').textContent='✅ 已保存';
+  setTimeout(()=>{const el=document.getElementById('tn-save-tip');if(el)el.textContent='';},2000);
+  renderTasks();renderOverview();
+}
+function autoSaveTaskNote(){
+  clearTimeout(_noteAutoSaveTimer);
+  _noteAutoSaveTimer=setTimeout(()=>{
+    saveTaskNote();
+    const tip=document.getElementById('tn-save-tip');
+    if(tip)tip.textContent='自动保存 ✓';
+    setTimeout(()=>{const el=document.getElementById('tn-save-tip');if(el)el.textContent='';},1500);
+  },800);
+}
+function clearTaskNote(){
+  if(!confirm('确认清空这条任务的笔记？'))return;
+  document.getElementById('tn-content').value='';
+  saveTaskNote();
+}
 function openEditTask(id){
   const t=ld(K.tasks).find(t=>t.id===id);if(!t)return;
   document.getElementById('et-id').value=id;
@@ -3101,10 +3157,11 @@ function renderTasks(){
       <div class="priority-dot ${pdot}"></div>
       <div class="task-checkbox ${t.status==='done'?'checked':''}" onclick="toggleTask('${t.id}')">${t.status==='done'?'✓':''}</div>
       <div class="task-body">
-        <div class="task-title ${t.status==='done'?'crossed':''}">${t.title}</div>
+        <div class="task-title ${t.status==='done'?'crossed':''}">${t.title}${t.note?` <span style="font-size:10px;color:var(--primary);opacity:.7" title="有笔记">📝</span>`:''}</div>
         <div class="task-meta">${projTagHtml(t.proj)}${t.due?`<span class="task-due ${ov?'overdue':''}">📅 ${t.due}${ov?' ⚠️':''}</span>`:''}</div>
       </div>
       <div class="task-actions">
+        <button onclick="openTaskNote('${t.id}')" title="任务笔记" style="${t.note?'color:var(--primary)':''}">📝</button>
         <button onclick="openEditTask('${t.id}')">✏️</button>
         <button onclick="delTask('${t.id}')" style="color:var(--red)">🗑</button>
       </div>
@@ -3978,9 +4035,10 @@ function renderOverview(){
   if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
     <div class="task-checkbox" onclick="toggleTask('${t.id}')"></div>
     <div class="task-body">
-      <div class="task-title">${t.title}</div>
+      <div class="task-title">${t.title}${t.note?` <span style="font-size:10px;color:var(--primary);opacity:.7">📝</span>`:''}</div>
       <div class="task-meta">${projTagHtml(t.proj)}${t.due&&t.due<today()?`<span class="task-due overdue">📅 ${t.due} ⚠️</span>`:t.due?`<span class="task-due">📅 ${t.due}</span>`:''}</div>
     </div>
+    <div class="task-actions"><button onclick="openTaskNote('${t.id}')" title="任务笔记" style="opacity:.6${t.note?';color:var(--primary);opacity:1':''}">📝</button></div>
   </div>`).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">✅</div><p>今日任务全部完成！</p></div>';
 
   const subs=ld(K.subs).slice(0,4),sEl=document.getElementById('ov-subs');
