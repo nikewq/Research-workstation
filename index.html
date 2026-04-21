@@ -1790,19 +1790,21 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
       <div style="font-size:11px;color:var(--text2);margin-top:6px">换设备时输入此码即可恢复所有设置</div>
     </div>
 
-    <button class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="saveProfileCloud()">
-      ☁️ 立即同步到云端
-    </button>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveProfileCloud()">☁️ 推送到云端</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="pullProfileCloud()">🔄 拉取最新</button>
+    </div>
 
     <hr style="border:none;border-top:1px solid var(--border);margin-bottom:16px">
 
-    <!-- 导入同步码 -->
-    <div style="font-size:13px;font-weight:600;margin-bottom:8px">在新设备上恢复</div>
+    <!-- 切换同步码 -->
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">绑定到其他设备的同步码</div>
+    <div style="font-size:11.5px;color:var(--text2);margin-bottom:10px">输入另一台设备上的同步码，导入后本设备将永久使用该码进行同步</div>
     <div style="display:flex;gap:8px">
-      <input id="sync-code-input" placeholder="输入同步码，如 MAPLE42" maxlength="12"
+      <input id="sync-code-input" placeholder="输入同步码，如 MAPLE42" maxlength="20"
         style="flex:1;text-transform:uppercase;letter-spacing:2px;font-family:monospace"
         oninput="this.value=this.value.toUpperCase()">
-      <button class="btn btn-ghost" onclick="loadProfileCloud()">导入</button>
+      <button class="btn btn-ghost" onclick="loadProfileCloud()">导入并绑定</button>
     </div>
     <div id="sync-tip" style="font-size:12px;margin-top:8px;display:none"></div>
 
@@ -4511,6 +4513,29 @@ async function saveProfileCloud(){
     }
   } catch(e){
     tip.textContent = '网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block'
+  }
+}
+
+async function pullProfileCloud(){
+  const code = _getOrCreateSyncCode()
+  const tip = document.getElementById('sync-tip')
+  tip.textContent='正在拉取…'; tip.style.color='var(--text2)'; tip.style.display='block'
+  try{
+    const r = await fetch(`${_SB_URL}/rest/v1/profiles?code=eq.${encodeURIComponent(code)}&select=data`, {
+      headers: { 'apikey': _SB_KEY_SYNC, 'Authorization': 'Bearer ' + _SB_KEY_SYNC }
+    })
+    if(!r.ok){ tip.textContent='拉取失败 ('+r.status+')'; tip.style.color='var(--red)'; return }
+    const rows = await r.json()
+    if(!rows.length){ tip.textContent='云端暂无此同步码的数据，请先在主设备上推送一次'; tip.style.color='var(--text2)'; return }
+    const d = rows[0].data
+    if(d.cfg) saveCfg({...getCfg(), ...d.cfg})
+    if(d.habitDefs) sv(K.habitDefs, d.habitDefs)
+    if(d.tools) sv(K.tools, d.tools)
+    closeModal('syncModal')
+    toast('✅ 已拉取最新数据，正在刷新…')
+    setTimeout(()=>location.reload(), 1200)
+  } catch(e){
+    tip.textContent='网络错误：'+e.message; tip.style.color='var(--red)'
   }
 }
 
