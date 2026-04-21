@@ -1584,9 +1584,16 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 <div class="page" id="page-stats">
   <div class="page-title" data-i18n="page.stats">统计图表</div>
   <div class="page-subtitle">数据驱动科研节奏</div>
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button id="sr-btn-7d" class="btn btn-sm btn-primary" onclick="_setStatsRange('7d')">近7天</button>
+    <button id="sr-btn-1m" class="btn btn-sm btn-ghost" onclick="_setStatsRange('1m')">近1月</button>
+    <button id="sr-btn-3m" class="btn btn-sm btn-ghost" onclick="_setStatsRange('3m')">近3月</button>
+    <button id="sr-btn-1y" class="btn btn-sm btn-ghost" onclick="_setStatsRange('1y')">近1年</button>
+    <button id="sr-btn-3y" class="btn btn-sm btn-ghost" onclick="_setStatsRange('3y')">近3年</button>
+  </div>
   <div class="grid-2 mb-16">
-    <div class="card"><div class="card-title">近7天完成任务</div><div class="chart-wrap"><canvas id="ch-tasks"></canvas></div></div>
-    <div class="card"><div class="card-title">近7天心流时光</div><div class="chart-wrap"><canvas id="ch-pomos"></canvas></div></div>
+    <div class="card"><div class="card-title"><span id="ch-tasks-title">近7天完成任务</span></div><div class="chart-wrap"><canvas id="ch-tasks"></canvas></div></div>
+    <div class="card"><div class="card-title"><span id="ch-pomos-title">近7天心流时光</span></div><div class="chart-wrap"><canvas id="ch-pomos"></canvas></div></div>
   </div>
   <div class="grid-2">
     <div class="card"><div class="card-title">任务项目分布</div><div class="chart-wrap"><canvas id="ch-projs"></canvas></div></div>
@@ -1594,7 +1601,7 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
   </div>
   <div class="card" style="margin-top:16px">
     <div class="card-title" style="display:flex;align-items:center;gap:8px">
-      🐟 近7天时间构成
+      <span id="ch-fish-title">🐟 近7天时间构成</span>
       <span style="font-size:11px;font-weight:400;color:var(--text2)">（签到在线 = 专注 + 摸鱼）</span>
       <span style="margin-left:auto;display:flex;gap:12px;font-size:11px;font-weight:400">
         <span style="color:#ef4444">■ 心流专注</span>
@@ -3581,11 +3588,14 @@ function _pomoRestore(){
     updatePomoDisplay()
     const b=document.getElementById('pomo-btn');if(b)b.textContent='⏸ 暂停'
     toast('⏱ 心流计时已恢复','info')
-  }catch(e){_pomoClearSS()}
+  }catch(e){console.error('[pomo restore]',e)}
 }
 
-// 刷新/关闭前确保状态被保存
+// 刷新/关闭前确保状态被保存（pagehide + beforeunload 双保险）
 window.addEventListener('pagehide',()=>{
+  if(pomo.running)_pomoSaveRunning()
+})
+window.addEventListener('beforeunload',()=>{
   if(pomo.running)_pomoSaveRunning()
 })
 function updatePomoDisplay(){
@@ -3612,7 +3622,21 @@ function togglePomo(){
   }
   updatePomoDisplay();
 }
-function resetPomo(){clearInterval(pomo.iv);pomo={running:false,isBreak:false,secs:parseInt(document.getElementById('pomo-work')?.value||25)*60,iv:null,round:pomo.round,taskId:'',taskTitle:''};document.getElementById('pomo-btn').textContent='▶ 开始';_pomoClearSS();updatePomoDisplay();}
+function resetPomo(){
+  const workDur=_pomoGetWorkDur(),elapsedSecs=workDur*60-pomo.secs;
+  if(!pomo.isBreak&&elapsedSecs>=60){
+    if(confirm(`已专注 ${Math.floor(elapsedSecs/60)} 分钟，记录为心流历史？`)){
+      const list=ld(K.pomos);
+      list.push({id:uid(),date:today(),taskId:pomo.taskId,taskTitle:pomo.taskTitle,
+        dur:Math.floor(elapsedSecs/60),ts:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
+      sv(K.pomos,list);renderPomoLog&&renderPomoLog();updateStats&&updateStats();
+    }
+  }
+  clearInterval(pomo.iv);
+  pomo={running:false,isBreak:false,secs:workDur*60,iv:null,round:pomo.round,taskId:'',taskTitle:''};
+  document.getElementById('pomo-btn').textContent='▶ 开始';
+  _pomoClearSS();updatePomoDisplay();
+}
 function renderPomoLog(){
   const el=document.getElementById('pomo-log');if(!el)return;
   const list=ld(K.pomos).filter(p=>p.date===today()).reverse();
@@ -4080,31 +4104,92 @@ function updateStats(){
   document.getElementById('s-streak').textContent=streak;
 }
 
-let chartsInited=false;
+let _statsRange='7d';
+const _chartInsts={};
+function _setStatsRange(r){
+  _statsRange=r;
+  ['7d','1m','3m','1y','3y'].forEach(x=>{
+    const b=document.getElementById('sr-btn-'+x);if(!b)return;
+    b.className='btn btn-sm '+(x===r?'btn-primary':'btn-ghost');
+  });
+  renderCharts();
+}
+function _buildPeriods(range){
+  if(range==='7d'){
+    const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return localDate(d);});
+    return {periods:days,labels:days.map(d=>['日','一','二','三','四','五','六'][new Date(d+'T12:00').getDay()]),agg:'day'};
+  }
+  if(range==='1m'){
+    const days=Array.from({length:30},(_,i)=>{const d=new Date();d.setDate(d.getDate()-29+i);return localDate(d);});
+    return {periods:days,labels:days.map(d=>d.slice(5)),agg:'day'};
+  }
+  if(range==='3m'){
+    const weeks=[],wl=[];
+    for(let i=12;i>=0;i--){
+      const e=new Date();e.setDate(e.getDate()-i*7);
+      const s=new Date(e);s.setDate(s.getDate()-6);
+      weeks.push({start:localDate(s),end:localDate(e)});wl.push(localDate(s).slice(5));
+    }
+    return {periods:weeks,labels:wl,agg:'range'};
+  }
+  if(range==='1y'){
+    const months=[],ml=[];
+    for(let i=11;i>=0;i--){
+      const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+      const y=d.getFullYear(),m=d.getMonth()+1;
+      months.push({start:`${y}-${String(m).padStart(2,'0')}-01`,end:localDate(new Date(y,m,0))});
+      ml.push(`${m}月`);
+    }
+    return {periods:months,labels:ml,agg:'range'};
+  }
+  // 3y
+  const months=[],ml=[];
+  for(let i=35;i>=0;i--){
+    const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+    const y=d.getFullYear(),m=d.getMonth()+1;
+    months.push({start:`${y}-${String(m).padStart(2,'0')}-01`,end:localDate(new Date(y,m,0))});
+    ml.push(m===1?`${y}年`:`${m}月`);
+  }
+  return {periods:months,labels:ml,agg:'range'};
+}
 function renderCharts(){
-  if(chartsInited)return;chartsInited=true;
-  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return localDate(d);});
-  const labels=days.map(d=>['日','一','二','三','四','五','六'][new Date(d+'T12:00').getDay()]);
-  const cOpts={responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false}},
-    scales:{x:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'}},
-            y:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'},beginAtZero:true}}};
+  Object.values(_chartInsts).forEach(c=>{try{c.destroy()}catch(_){}});
+  const {periods,labels,agg}=_buildPeriods(_statsRange);
+  const rLabel={'7d':'近7天','1m':'近30天','3m':'近3月','1y':'近1年','3y':'近3年'}[_statsRange];
+  const tt=document.getElementById('ch-tasks-title');if(tt)tt.textContent=rLabel+'完成任务';
+  const pt=document.getElementById('ch-pomos-title');if(pt)pt.textContent=rLabel+'心流时光';
+  const ft=document.getElementById('ch-fish-title');if(ft)ft.textContent='🐟 '+rLabel+'时间构成';
+  function inP(date,p){return agg==='day'?date===p:date>=p.start&&date<=p.end;}
+  function sumPomoMins(p,arr){return arr.filter(x=>inP(x.date,p)).reduce((s,x)=>s+(x.dur||25),0);}
+  function ckMins(p,cks){
+    if(agg==='day'){const c=cks.find(x=>x.date===p);if(!c)return 0;const m=c.totalMins!=null?c.totalMins:_ciMins(c);return m>0?m:0;}
+    return cks.filter(x=>inP(x.date,p)).reduce((s,c)=>{const m=c.totalMins!=null?c.totalMins:_ciMins(c);return s+(m>0?m:0);},0);
+  }
   const tasks=ld(K.tasks),pomos=ld(K.pomos),cks=ld(K.checkins);
-  new Chart(document.getElementById('ch-tasks'),{type:'bar',data:{labels,datasets:[{label:'任务',data:days.map(d=>tasks.filter(t=>t.done===d).length),backgroundColor:'rgba(124,58,237,.5)',borderColor:'#7c3aed',borderWidth:1,borderRadius:4}]},options:cOpts});
-  new Chart(document.getElementById('ch-pomos'),{type:'bar',data:{labels,datasets:[{label:'心流时光',data:days.map(d=>pomos.filter(p=>p.date===d).length),backgroundColor:'rgba(239,68,68,.4)',borderColor:'#ef4444',borderWidth:1,borderRadius:4}]},options:cOpts});
-  // Projects pie
-  const projs=getProjects(),pcnts={};tasks.filter(t=>t.status==='done').forEach(t=>{pcnts[t.proj]=(pcnts[t.proj]||0)+1;});
+  const cOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:'#8b949e',font:{size:11},maxRotation:45},grid:{color:'#30363d'}},
+            y:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'},beginAtZero:true}}};
+  _chartInsts.tasks=new Chart(document.getElementById('ch-tasks'),{type:'bar',data:{labels,datasets:[
+    {label:'任务',data:periods.map(p=>tasks.filter(t=>t.done&&inP(t.done,p)).length),
+     backgroundColor:'rgba(124,58,237,.5)',borderColor:'#7c3aed',borderWidth:1,borderRadius:4}]},options:cOpts});
+  _chartInsts.pomos=new Chart(document.getElementById('ch-pomos'),{type:'bar',data:{labels,datasets:[
+    {label:'心流',data:periods.map(p=>pomos.filter(x=>inP(x.date,p)).length),
+     backgroundColor:'rgba(239,68,68,.4)',borderColor:'#ef4444',borderWidth:1,borderRadius:4}]},options:cOpts});
+  const startDate=agg==='day'?periods[0]:periods[0].start;
+  const projs=getProjects(),pcnts={};
+  tasks.filter(t=>t.status==='done'&&t.done&&t.done>=startDate).forEach(t=>{pcnts[t.proj]=(pcnts[t.proj]||0)+1;});
   const pLabels=projs.map(p=>p.name),pData=projs.map(p=>pcnts[p.id]||0),pColors=projs.map(p=>p.color);
-  new Chart(document.getElementById('ch-projs'),{type:'doughnut',data:{labels:pLabels.length?pLabels:['暂无'],datasets:[{data:pLabels.length?pData:[1],backgroundColor:pColors.length?pColors:['#7c3aed'],borderWidth:0}]},
+  _chartInsts.projs=new Chart(document.getElementById('ch-projs'),{type:'doughnut',data:{
+    labels:pLabels.length?pLabels:['暂无'],datasets:[{data:pLabels.length?pData:[1],
+    backgroundColor:pColors.length?pColors:['#7c3aed'],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}}}});
-  const wh=days.map(d=>{const c=cks.find(ch=>ch.date===d);if(!c||!c.ci)return 0;
-    const m=c.totalMins!=null?c.totalMins:_ciMins(c);return m>0?Math.round(m/60*10)/10:0;});
-  new Chart(document.getElementById('ch-hours'),{type:'line',data:{labels,datasets:[{data:wh,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',fill:true,tension:.4,pointRadius:4}]},options:cOpts});
-  // 摸鱼时光 stacked bar
-  const focusData=days.map(d=>Math.round(pomos.filter(p=>p.date===d).reduce((s,p)=>s+(p.dur||25),0)/60*10)/10);
-  const fishData=days.map((d,i)=>Math.max(0,Math.round((wh[i]*60-pomos.filter(p=>p.date===d).reduce((s,p)=>s+(p.dur||25),0))/60*10)/10));
+  const wh=periods.map(p=>Math.round(ckMins(p,cks)/60*10)/10);
+  _chartInsts.hours=new Chart(document.getElementById('ch-hours'),{type:'line',data:{labels,datasets:[
+    {data:wh,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',fill:true,tension:.4,pointRadius:agg==='day'?4:2}]},options:cOpts});
+  const focusData=periods.map(p=>Math.round(sumPomoMins(p,pomos)/60*10)/10);
+  const fishData=periods.map((p,i)=>Math.max(0,Math.round((wh[i]*60-sumPomoMins(p,pomos))/60*10)/10));
   const fishOpts=Object.assign({},cOpts,{scales:{x:cOpts.scales.x,y:Object.assign({},cOpts.scales.y,{stacked:true})},plugins:{legend:{display:false}}});
-  new Chart(document.getElementById('ch-fish'),{type:'bar',data:{labels,datasets:[
+  _chartInsts.fish=new Chart(document.getElementById('ch-fish'),{type:'bar',data:{labels,datasets:[
     {label:'心流专注',data:focusData,backgroundColor:'rgba(239,68,68,.5)',borderColor:'#ef4444',borderWidth:1,borderRadius:4,stack:'s'},
     {label:'摸鱼时光',data:fishData,backgroundColor:'rgba(16,185,129,.4)',borderColor:'#10b981',borderWidth:1,borderRadius:4,stack:'s'}
   ]},options:fishOpts});
