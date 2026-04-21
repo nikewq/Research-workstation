@@ -3031,9 +3031,9 @@ function renderCheckin(){
 //  PROJECTS HELPER
 // ══════════════════════════════════════
 function getProjects(){return getCfg().projects||[];}
-function projColor(id){const p=getProjects().find(p=>p.id===id);return p?p.color:'#8b949e';}
-function projName(id){const p=getProjects().find(p=>p.id===id);return p?p.name:id;}
-function projTagHtml(id){const c=projColor(id);return `<span class="tag" style="background:${c}22;color:${c}">${projName(id)}</span>`;}
+function projColor(id){if(!id)return '#8b949e';const p=getProjects().find(p=>p.id===id);return p?p.color:'#8b949e';}
+function projName(id){if(!id)return '';const p=getProjects().find(p=>p.id===id);return p?p.name:'';}
+function projTagHtml(id){const n=projName(id);if(!n)return '';const c=projColor(id);return `<span class="tag" style="background:${c}22;color:${c}">${n}</span>`;}
 
 function populateProjectSelects(){
   const projs=getProjects();
