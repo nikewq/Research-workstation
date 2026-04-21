@@ -1932,7 +1932,9 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">✏️ 周报内容（可直接编辑）</div>
       <textarea id="wr-result" style="width:100%;height:320px;font-size:13px;line-height:1.7;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="_wrSaveToReflection()">📝 存入本周反思</button>
         <button class="btn btn-ghost btn-sm" onclick="_wrCopyMd()">📋 复制 Markdown</button>
+        <button class="btn btn-ghost btn-sm" onclick="_wrOpenNote()">🔗 打开笔记空间</button>
         <button class="btn btn-ghost btn-sm" onclick="_wrDownload()">💾 下载 .md</button>
       </div>
     </div>
@@ -4083,20 +4085,43 @@ ${taskText||'（无）'}`;
   document.getElementById('wr-result-wrap').style.display='';
   btn.disabled=false;
 }
+function _wrSaveToReflection(){
+  const content=document.getElementById('wr-result')?.value.trim();
+  if(!content){toast('请先生成周报');return}
+  const weekStart=document.getElementById('wr-week-start').value;
+  const list=ld(K.refs),sep='\n\n---\n\n';
+  const idx=list.findIndex(r=>r.date===weekStart);
+  if(idx>=0){list[idx].wins=list[idx].wins?list[idx].wins+sep+content:content}
+  else{list.unshift({id:uid(),date:weekStart,mood:'📅',wins:content,struggles:'',tomorrow:'',gratitude:'',ts:new Date().toLocaleString('zh-CN')})}
+  sv(K.refs,list);renderRefHistory();
+  closeModal('weeklyReportModal');
+  toast('📝 周报已存入反思日记！');switchPage('reflection');
+}
 function _wrCopyMd(){
-  const txt=document.getElementById('wr-result').value;
-  navigator.clipboard.writeText(txt).then(()=>toast('📋 已复制 Markdown'));
+  const content=document.getElementById('wr-result')?.value.trim();
+  if(!content){toast('请先生成周报');return}
+  navigator.clipboard?.writeText(content).then(()=>toast('📋 已复制 Markdown！')).catch(()=>toast('❌ 复制失败'));
+}
+function _wrOpenNote(){
+  const content=document.getElementById('wr-result')?.value.trim();
+  if(!content){toast('请先生成周报');return}
+  const weekStart=document.getElementById('wr-week-start').value;
+  const weekNum=document.getElementById('wr-week-num').value;
+  const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}');
+  if(!cfg.url&&cfg.type!=='obsidian'){_showNoteSettings();toast('请先设置笔记空间链接');return}
+  if(cfg.type==='obsidian'){
+    window.location.href=`obsidian://new?vault=${encodeURIComponent(cfg.vault||'')}&name=${encodeURIComponent(`${weekStart}-周报（本年第${weekNum}周）`)}&content=${encodeURIComponent(content)}`;
+  }else{window.open(cfg.url,'_blank')}
 }
 function _wrDownload(){
-  const content=document.getElementById('wr-result').value;
+  const content=document.getElementById('wr-result')?.value.trim();
+  if(!content){toast('请先生成周报');return}
   const weekStart=document.getElementById('wr-week-start').value;
   const weekNum=document.getElementById('wr-week-num').value;
   const filename=`${weekStart}-周报（本年第${weekNum}周）.md`;
   const blob=new Blob([content],{type:'text/markdown;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
-  URL.revokeObjectURL(url);
-  toast(`💾 已下载：${filename}`);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+  toast('💾 已下载周报文件！');
 }
 
 // ══════════════════════════════════════
