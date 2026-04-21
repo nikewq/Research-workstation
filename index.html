@@ -3851,7 +3851,7 @@ function renderTools(){
 }
 
 // ══════════════════════════════════════
-//  PERSONAL SKILLS PANEL (OLIVE49)
+//  PERSONAL SKILLS PANEL
 // ══════════════════════════════════════
 const SKILLS_CORE=[
   {cmd:'/autoresearch-nini',badge:'v2',desc:'科研推理引擎：显式状态机 + 四领域路由（model_research / code_dev / data_analysis / general_research）+ 停滞检测与策略注入'},
@@ -3885,10 +3885,20 @@ function _copySkillCmd(cmd,el){
     setTimeout(()=>{if(h){h.textContent='👆 点击复制';h.style.color=''}},2000);
   }).catch(()=>toast('复制失败','error'));
 }
+const _PSH='37290f481f264486e2f28e3939881e05df359d838b0b2629b369cbd824531e0d';
+async function _checkPersonalUnlock(){
+  const code=localStorage.getItem('_sync_code');if(!code)return false;
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(code));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')===_PSH;
+}
 function renderSkillSections(){
-  if(localStorage.getItem('_sync_code')!=='OLIVE49'){
-    const old=document.getElementById('personal-skills-panel');if(old)old.remove();return;
-  }
+  _checkPersonalUnlock().then(ok=>{
+    const old=document.getElementById('personal-skills-panel');
+    if(!ok){if(old)old.remove();return;}
+    _renderPersonalSkills();
+  });
+}
+function _renderPersonalSkills(){
   const toolGrid=document.getElementById('tool-grid');if(!toolGrid)return;
   let wrap=document.getElementById('personal-skills-panel');
   if(!wrap){
