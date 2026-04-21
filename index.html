@@ -3516,9 +3516,7 @@ function _pomoStartInterval(workDur){
     if(pomo.secs>0){
       pomo.secs--;
       updatePomoDisplay();
-      // 每5秒刷新 deadline（防止刷新时 deadline 过期）
-      _pomoSaveTick++;
-      if(_pomoSaveTick>=5){_pomoSaveTick=0;_pomoSaveRunning();}
+      _pomoSaveRunning(); // 每秒写入，确保刷新时 deadline 始终准确
     }else{
       // 计时结束
       if(!pomo.isBreak){
@@ -3551,8 +3549,9 @@ function _pomoRestore(){
     // 优先读 localStorage（新版），再检查旧 sessionStorage
     let raw=localStorage.getItem(_POMO_LS)
     if(!raw)raw=sessionStorage.getItem('phd_pomo_ss')
-    if(!raw)return
+    if(!raw){console.debug('[pomo] no saved state');return}
     const s=JSON.parse(raw)
+    console.debug('[pomo] restoring, rem='+Math.ceil((s.deadline-Date.now())/1000)+'s, paused='+!!s.paused)
 
     // 已暂停 → 恢复显示，不启动计时
     if(s.paused){

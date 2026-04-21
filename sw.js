@@ -1,7 +1,7 @@
 // PhD Workstation Service Worker
 // Caches index.html for offline use and faster loads
 
-const CACHE_NAME = 'phd-workstation-v7';
+const CACHE_NAME = 'phd-workstation-v8';
 const CORE_ASSETS = [
   './',
   './index.html',
