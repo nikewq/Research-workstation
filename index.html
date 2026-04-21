@@ -3109,7 +3109,7 @@ function renderTasks(){
     </div>`;
   }).join('');
   const sub=document.getElementById('tasks-subtitle');
-  if(sub){const cfg=getCfg();sub.textContent=cfg.areas?.join(' · ')||'管理你的科研任务';}
+  if(sub){const cfg=getCfg();const areas=cfg.areas?.join(' · ')||'';sub.innerHTML=areas?`${areas} · <em style="font-style:italic;color:var(--primary);opacity:.85;letter-spacing:.01em">Attention is All You Need</em>`:'减少决策损耗，把注意力还给真正重要的事 · <em style="font-style:italic;color:var(--primary);opacity:.85;letter-spacing:.01em">Attention is All You Need</em>';}
 }
 
 // ══════════════════════════════════════
