@@ -4260,15 +4260,29 @@ function renderRefHistory(){
     const preview=escHtml((r.wins||'').replace(/\n/g,' ').slice(0,60)||(bms.length?`📌 ${bms.length}条摸鱼收藏`:'无内容'));
     const labelBadge=isWeekly?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(13,148,136,0.12);color:#0d9488;margin-left:4px">${r.label||'周报'}</span>`:isDaily?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(124,58,237,0.1);color:var(--primary);margin-left:4px">${r.label||'今日简报'}</span>`:'';
     const borderStyle=isWeekly?'border-left:3px solid #0d9488;':isDaily?'border-left:3px solid var(--primary);':'';
-    return `<div class="ref-entry" onclick="openRefEntry('${r.id}')" style="cursor:pointer;transition:background .15s;${borderStyle}" onmouseenter="this.style.background='var(--primary-soft)'" onmouseleave="this.style.background=''">
-      <div class="ref-date" style="display:flex;justify-content:space-between;align-items:center">
-        <span>${r.mood||'📝'} ${r.date}${labelBadge}${r.ts?' · '+r.ts:''}</span>
-        <span style="font-size:11px;color:var(--primary)">📖 查看/编辑 →</span>
+    return `<div class="ref-entry" style="transition:background .15s;${borderStyle}" onmouseenter="this.style.background='var(--primary-soft)'" onmouseleave="this.style.background=''">
+      <div style="display:flex;align-items:flex-start;gap:6px">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="openRefEntry('${r.id}')">
+          <div class="ref-date" style="display:flex;justify-content:space-between;align-items:center">
+            <span>${r.mood||'📝'} ${r.date}${labelBadge}${r.ts?' · '+r.ts:''}</span>
+            <span style="font-size:11px;color:var(--primary)">📖 查看/编辑 →</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview}</div>
+          ${bms.length?`<div style="margin-top:4px;font-size:11px;color:var(--primary)">📌 ${bms.length}条收藏</div>`:''}
+        </div>
+        <button onclick="deleteRefEntry('${r.id}',event)" title="删除此条记录" style="flex-shrink:0;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text2);opacity:.45;padding:2px 4px;border-radius:4px;transition:all .15s;line-height:1" onmouseenter="this.style.opacity='1';this.style.color='#ef4444'" onmouseleave="this.style.opacity='.45';this.style.color='var(--text2)'">🗑</button>
       </div>
-      <div style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview}</div>
-      ${bms.length?`<div style="margin-top:4px;font-size:11px;color:var(--primary)">📌 ${bms.length}条收藏</div>`:''}
     </div>`;
   }).join('');
+}
+
+function deleteRefEntry(id,e){
+  e&&e.stopPropagation()
+  if(!confirm('确定删除这条反思记录？'))return
+  const list=ld(K.refs).filter(r=>r.id!==id)
+  sv(K.refs,list)
+  renderRefHistory()
+  toast('🗑 已删除')
 }
 
 // ══════════════════════════════════════
@@ -5620,10 +5634,19 @@ function openDailyBrief(){
       </div>`:`<div style="font-size:12px;color:var(--text2)">今日暂无完成任务，简报将基于进行中任务和其他数据生成。</div>`}
     `
   }
-  const resultWrap=document.getElementById('db-result-wrap');if(resultWrap)resultWrap.style.display='none'
+  const resultWrap=document.getElementById('db-result-wrap')
   const genTip=document.getElementById('db-gen-tip');if(genTip)genTip.textContent=''
   const extraLog=document.getElementById('db-extra-log');if(extraLog)extraLog.value=''
   const logDetails=document.getElementById('db-log-details');if(logDetails)logDetails.open=false
+  // 检查今天是否已有简报，如有则预填内容
+  const existingToday=ld(K.refs).find(r=>r.date===td&&r.type==='daily')
+  if(existingToday&&resultWrap){
+    const resultEl=document.getElementById('db-result');if(resultEl)resultEl.value=existingToday.wins||''
+    resultWrap.style.display='block'
+    if(genTip)genTip.textContent='📋 已加载今日简报，可重新生成以追加新内容'
+  }else{
+    if(resultWrap)resultWrap.style.display='none'
+  }
   openModal('dailyBriefModal')
 }
 
@@ -5676,14 +5699,29 @@ async function _dbSaveToReflection(){
   if(!content){toast('请先生成简报');return}
   const td=today(),dbFilename=`日报-${td}`
   const list=ld(K.refs)
-  list.unshift({id:uid(),date:td,mood:'📋',type:'daily',
-    wins:content,struggles:'',tomorrow:'',gratitude:'',
-    ts:new Date().toLocaleString('zh-CN'),label:'今日简报'})
+  const existIdx=list.findIndex(r=>r.date===td&&r.type==='daily')
+  let isUpdate=false
+  if(existIdx>=0){
+    const existing=list[existIdx]
+    const oldWins=existing.wins||''
+    // 如果内容相同则不重复追加
+    if(oldWins.trim()===content.trim()){
+      closeModal('dailyBriefModal');toast('📋 内容未变化，已是最新简报');switchPage('reflection');return
+    }
+    existing.wins=oldWins?oldWins+'\n\n---\n\n'+content:content
+    existing.ts=new Date().toLocaleString('zh-CN')
+    isUpdate=true
+  }else{
+    list.unshift({id:uid(),date:td,mood:'📋',type:'daily',
+      wins:content,struggles:'',tomorrow:'',gratitude:'',
+      ts:new Date().toLocaleString('zh-CN'),label:'今日简报'})
+  }
   sv(K.refs,list)
   renderRefHistory()
   closeModal('dailyBriefModal')
-  const savedLocal=await _writeToReflectionDir(dbFilename+'.md',content)
-  toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${dbFilename}.md`:'📝 简报已存入今日反思！')
+  const finalContent=isUpdate?(list.find(r=>r.date===td&&r.type==='daily')?.wins||content):content
+  const savedLocal=await _writeToReflectionDir(dbFilename+'.md',finalContent)
+  toast(savedLocal?`📝 ${isUpdate?'简报已追加并':'已'}保存到 科研空间/反思日记/${dbFilename}.md`:`📝 ${isUpdate?'简报已更新！':'简报已存入今日反思！'}`)
   switchPage('reflection')
 }
 
