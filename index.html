@@ -1874,6 +1874,37 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
   </div>
 </div>
 
+<!-- 项目笔记 Modal -->
+<div class="modal-overlay" id="projNoteModal">
+  <div class="modal" style="max-width:640px;height:82vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">项目笔记</div>
+        <div id="pn-title" style="font-size:15px;font-weight:700"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('projNoteModal')">✕</button>
+    </div>
+    <textarea id="pn-content" placeholder="项目描述、研究背景、进展记录、思路整理……支持任意格式文本"
+      style="flex:1;resize:none;font-size:13px;line-height:1.7;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;outline:none;min-height:0"
+      oninput="autoSaveProjNote()"></textarea>
+    <div style="margin-top:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">🔗 外部链接</div>
+      <div id="pn-links"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="addProjLink('🔮 Obsidian')">+ Obsidian</button>
+        <button class="btn btn-ghost btn-sm" onclick="addProjLink('📋 Notion')">+ Notion</button>
+        <button class="btn btn-ghost btn-sm" onclick="addProjLink('🪶 飞书')">+ 飞书</button>
+        <button class="btn btn-ghost btn-sm" onclick="addProjLink('🔗 自定义')">+ 自定义</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+      <span id="pn-save-tip" style="font-size:11px;color:var(--text2)"></span>
+      <button class="btn btn-primary btn-sm" onclick="saveProjNote()">保存</button>
+    </div>
+    <input type="hidden" id="pn-id">
+  </div>
+</div>
+
 <div class="modal-overlay" id="editTaskModal">
   <div class="modal">
     <div class="modal-title">编辑任务</div>
@@ -4423,8 +4454,9 @@ function renderProjSettings(){
   const projs=getProjects();
   el.innerHTML=projs.map((p,i)=>`<div class="project-item">
     <div class="color-swatch" style="background:${p.color}"></div>
-    <input value="${p.name}" style="flex:1" onchange="updateProjName('${p.id}',this.value)">
+    <input value="${(p.name||'').replace(/"/g,'&quot;')}" style="flex:1" onchange="updateProjName('${p.id}',this.value)">
     <input type="color" value="${p.color}" style="width:36px;padding:3px;cursor:pointer" onchange="updateProjColor('${p.id}',this.value)">
+    <button class="btn btn-ghost btn-sm" onclick="openProjNote('${p.id}')" title="项目笔记" style="${p.note||p.links?.length?'color:var(--primary)':''}">📝</button>
     <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">×</button>
   </div>`).join('')||'<div class="text-muted text-sm">暂无项目</div>';
 }
@@ -4442,6 +4474,63 @@ function deleteProject(id){
   if(!confirm('删除项目？（已关联的任务不会删除）'))return;
   const cfg=getCfg();cfg.projects=cfg.projects?.filter(p=>p.id!==id)||[];
   saveCfg(cfg);renderProjSettings();populateProjectSelects();
+}
+// ── 项目笔记 ──
+let _projNoteTimer=null;
+function openProjNote(id){
+  const p=getProjects().find(p=>p.id===id);if(!p)return;
+  document.getElementById('pn-id').value=id;
+  document.getElementById('pn-title').textContent=p.name;
+  document.getElementById('pn-content').value=p.note||'';
+  document.getElementById('pn-save-tip').textContent='';
+  _renderProjLinks(id);
+  openModal('projNoteModal');
+}
+function _renderProjLinks(id){
+  const p=getProjects().find(p=>p.id===id);
+  const el=document.getElementById('pn-links');if(!el||!p)return;
+  const links=p.links||[];
+  el.innerHTML=links.length?links.map((l,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <span style="font-size:12px;color:var(--text2);min-width:80px;white-space:nowrap">${(l.label||'').replace(/</g,'&lt;')}</span>
+      <input value="${(l.url||'').replace(/"/g,'&quot;')}" placeholder="粘贴链接或 URI…"
+        style="flex:1;font-size:12px" onblur="updateProjLinkUrl('${id}',${i},this.value)">
+      ${l.url?`<a href="${(l.url||'').replace(/"/g,'&quot;')}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="padding:4px 8px;flex-shrink:0" title="在新标签打开">↗</a>`:''}
+      <button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="removeProjLink('${id}',${i})">×</button>
+    </div>`).join('')
+    :'<div style="font-size:12px;color:var(--text2);padding:4px 0">暂无链接，点击下方按钮添加</div>';
+}
+function addProjLink(label){
+  const id=document.getElementById('pn-id').value;
+  const cfg=getCfg(),p=cfg.projects?.find(p=>p.id===id);if(!p)return;
+  if(!p.links)p.links=[];
+  p.links.push({label,url:''});
+  saveCfg(cfg);_renderProjLinks(id);
+}
+function removeProjLink(id,idx){
+  const cfg=getCfg(),p=cfg.projects?.find(p=>p.id===id);if(!p?.links)return;
+  p.links.splice(idx,1);saveCfg(cfg);_renderProjLinks(id);
+}
+function updateProjLinkUrl(id,idx,url){
+  const cfg=getCfg(),p=cfg.projects?.find(p=>p.id===id);if(!p?.links?.[idx])return;
+  p.links[idx].url=url;saveCfg(cfg);_renderProjLinks(id);
+}
+function saveProjNote(){
+  const id=document.getElementById('pn-id').value;
+  const cfg=getCfg(),p=cfg.projects?.find(p=>p.id===id);if(!p)return;
+  p.note=document.getElementById('pn-content').value;
+  saveCfg(cfg);clearTimeout(_projNoteTimer);
+  const tip=document.getElementById('pn-save-tip');
+  if(tip){tip.textContent='已保存';setTimeout(()=>{if(tip.textContent==='已保存')tip.textContent='';},1500);}
+  renderProjSettings();
+}
+function autoSaveProjNote(){
+  clearTimeout(_projNoteTimer);
+  _projNoteTimer=setTimeout(()=>{
+    saveProjNote();
+    const tip=document.getElementById('pn-save-tip');
+    if(tip)tip.textContent='已自动保存';
+  },800);
 }
 function renderAreaTagsSettings(){
   const el=document.getElementById('area-tags-list');if(!el)return;
