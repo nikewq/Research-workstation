@@ -3966,7 +3966,14 @@ function renderRefHistory(){
 function renderOverview(){
   renderIdentityCard();
   if(typeof _renderDailyQuote==='function')_renderDailyQuote();
-  const tasks=ld(K.tasks).filter(t=>t.status!=='done').slice(0,5);
+  const _pOrd={high:0,med:1,low:2};
+  const tasks=ld(K.tasks).filter(t=>t.status!=='done')
+    .sort((a,b)=>{
+      const pd=(_pOrd[a.prio]||1)-(_pOrd[b.prio]||1);if(pd!==0)return pd;
+      if(a.due&&b.due)return a.due>b.due?1:-1;
+      if(a.due)return -1;if(b.due)return 1;
+      return (b.created||'')>(a.created||'')?-1:1;
+    }).slice(0,5);
   const tEl=document.getElementById('ov-tasks');
   if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
     <div class="task-checkbox" onclick="toggleTask('${t.id}')"></div>
