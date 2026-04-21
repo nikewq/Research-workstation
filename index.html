@@ -1519,6 +1519,18 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
         </div>
       </div>
     </div>
+    <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(13,148,136,0.08) 100%);border:1px solid #0d948844;border-radius:12px;padding:16px;cursor:pointer;transition:all .15s" onclick="openWeeklyReport()" onmouseenter="this.style.borderColor='#0d9488'" onmouseleave="this.style.borderColor='#0d948844'">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:28px;line-height:1;flex-shrink:0">📅</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+            <span style="font-weight:700;font-size:14px;color:#0d9488">本周周报</span>
+            <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(13,148,136,0.12);color:#0d9488">▶ 点击运行</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">汇总本周反思日记与完成任务，AI 按项目整理，生成可编辑周报，一键保存到本地</div>
+        </div>
+      </div>
+    </div>
     <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(37,99,235,0.08) 100%);border:1px solid #2563eb44;border-radius:12px;padding:16px;cursor:pointer;transition:all .15s" onclick="openDailyPapers()" onmouseenter="this.style.borderColor='#2563eb'" onmouseleave="this.style.borderColor='#2563eb44'">
       <div style="display:flex;align-items:flex-start;gap:12px">
         <div style="font-size:28px;line-height:1;flex-shrink:0">📚</div>
@@ -1906,22 +1918,26 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 </div>
 
 <div class="modal-overlay" id="weeklyReportModal" onclick="if(event.target===this)closeModal('weeklyReportModal')">
-  <div class="modal" style="max-width:680px;height:85vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">内置功能</div>
-        <div style="font-size:15px;font-weight:700">📋 本周周报</div>
+  <div class="modal-box" style="max-width:660px;width:95%;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin-bottom:0">📅 本周周报</div>
+      <div style="font-size:12px;color:var(--text2)" id="wr-date-label"></div>
+    </div>
+    <div id="wr-data-preview" style="margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="_genWeeklyReport()" id="wr-gen-btn">🤖 AI 生成周报</button>
+      <span id="wr-gen-tip" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div id="wr-result-wrap" style="display:none">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">✏️ 周报内容（可直接编辑）</div>
+      <textarea id="wr-result" style="width:100%;height:320px;font-size:13px;line-height:1.7;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="_wrCopyMd()">📋 复制 Markdown</button>
+        <button class="btn btn-ghost btn-sm" onclick="_wrDownload()">💾 下载 .md</button>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('weeklyReportModal')">✕</button>
     </div>
-    <div id="wr-status" style="font-size:12px;color:var(--text2);margin-bottom:8px;min-height:16px"></div>
-    <textarea id="wr-content" readonly style="flex:1;resize:none;font-size:13px;line-height:1.7;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;outline:none;min-height:0;white-space:pre-wrap"></textarea>
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px">
-      <input type="hidden" id="wr-week-start">
-      <input type="hidden" id="wr-week-num">
-      <button id="wr-dl-btn" class="btn btn-primary btn-sm" onclick="_downloadWeeklyReport()" style="display:none">📥 下载 Markdown</button>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('weeklyReportModal')">关闭</button>
-    </div>
+    <input type="hidden" id="wr-week-start">
+    <input type="hidden" id="wr-week-num">
   </div>
 </div>
 
@@ -3969,33 +3985,21 @@ function copyTool(id,el){
 function renderTools(){
   const el=document.getElementById('tool-grid');if(!el)return;
   const list=ld(K.tools);
-  if(!list.length){el.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚡</div><p>添加你的常用工具</p></div>';}
-  else{el.innerHTML=list.map(t=>`<div class="tool-card" onclick="copyTool('${t.id}',this)">
+  if(!list.length){el.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚡</div><p>添加你的常用工具</p></div>';return;}
+  el.innerHTML=list.map(t=>`<div class="tool-card" onclick="copyTool('${t.id}',this)">
     <button class="tool-del" onclick="event.stopPropagation();delTool('${t.id}')">×</button>
     <div style="font-size:20px;margin-bottom:6px">${t.icon}</div>
     <div class="tool-cmd">${t.label}</div>
     ${t.desc?`<div class="tool-desc">${t.desc}</div>`:''}
     <div style="font-size:10px;color:var(--text2);margin-top:4px;font-family:monospace;word-break:break-all">${t.cmd}</div>
     <div class="tool-hint">👆 点击复制</div>
-  </div>`).join('');}
-  _renderBuiltinTools();
+  </div>`).join('');
   renderSkillSections();
 }
 
 // ══════════════════════════════════════
-//  BUILTIN TOOLS
+//  WEEKLY REPORT
 // ══════════════════════════════════════
-function _renderBuiltinTools(){
-  let sec=document.getElementById('builtin-tools-sec');
-  if(!sec){sec=document.createElement('div');sec.id='builtin-tools-sec';document.getElementById('tool-grid').insertAdjacentElement('afterend',sec);}
-  sec.innerHTML=`<div style="font-weight:700;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 12px">⚙️ 内置功能</div>
-<div class="grid-3"><div class="tool-card" onclick="openWeeklyReport()" style="cursor:pointer">
-  <div style="font-size:20px;margin-bottom:6px">📋</div>
-  <div class="tool-cmd">本周周报</div>
-  <div class="tool-desc">汇总本周反思日记与完成任务，AI 按项目生成周报</div>
-  <div class="tool-hint">👆 点击生成</div>
-</div></div>`;
-}
 function _getISOWeekNum(d){
   const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
   dt.setUTCDate(dt.getUTCDate()+4-(dt.getUTCDay()||7));
@@ -4006,30 +4010,55 @@ function _getWeekMonday(d){
   const dt=new Date(d);dt.setHours(0,0,0,0);
   const diff=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-diff);return dt;
 }
-async function openWeeklyReport(){
+function openWeeklyReport(){
   openModal('weeklyReportModal');
-  const statusEl=document.getElementById('wr-status'),contentEl=document.getElementById('wr-content'),dlBtn=document.getElementById('wr-dl-btn');
-  statusEl.textContent='正在收集本周数据…';contentEl.value='';dlBtn.style.display='none';
   const now=new Date(),monday=_getWeekMonday(now),sunday=new Date(monday);
   sunday.setDate(monday.getDate()+6);
   const weekStart=localDate(monday),weekEnd=localDate(sunday),weekNum=_getISOWeekNum(now),year=monday.getFullYear();
   document.getElementById('wr-week-start').value=weekStart;
   document.getElementById('wr-week-num').value=weekNum;
+  document.getElementById('wr-date-label').textContent=`${weekStart} ~ ${weekEnd}（第${weekNum}周）`;
   const refs=ld(K.refs).filter(r=>r.date>=weekStart&&r.date<=weekEnd);
   const tasks=ld(K.tasks).filter(t=>t.done&&t.done>=weekStart&&t.done<=weekEnd);
   const cfg=getCfg(),projMap={};
   (cfg.projects||[]).forEach(p=>{projMap[p.id]=p.name;});
   const tasksByProj={};
   tasks.forEach(t=>{const n=projMap[t.proj]||t.proj||'通用';if(!tasksByProj[n])tasksByProj[n]=[];tasksByProj[n].push(t.title);});
-  const header=`# ${year}年第${weekNum}周 周报\n\n**时间范围：** ${weekStart} ~ ${weekEnd}\n\n`;
-  if(!refs.length&&!tasks.length){
-    statusEl.textContent='⚠️ 本周暂无反思日记或已完成任务';
-    contentEl.value=header+'暂无记录';dlBtn.style.display='';return;
-  }
+  const projLines=Object.entries(tasksByProj).map(([p,ts])=>`<div style="font-size:12px;color:var(--text2)"><b>${p}</b>：${ts.slice(0,3).join('、')}${ts.length>3?`…等${ts.length}项`:''}</div>`).join('');
+  document.getElementById('wr-data-preview').innerHTML=`
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:10px">
+      <div><div style="font-size:20px;font-weight:700;color:var(--primary)">${refs.length}</div><div style="font-size:11px;color:var(--text2)">本周日记</div></div>
+      <div><div style="font-size:20px;font-weight:700;color:#0d9488">${tasks.length}</div><div style="font-size:11px;color:var(--text2)">完成任务</div></div>
+      <div><div style="font-size:20px;font-weight:700;color:#f59e0b">${Object.keys(tasksByProj).length}</div><div style="font-size:11px;color:var(--text2)">涉及项目</div></div>
+    </div>
+    ${projLines?`<div style="margin-top:4px">${projLines}</div>`:''}`;
+  document.getElementById('wr-result-wrap').style.display='none';
+  document.getElementById('wr-gen-btn').disabled=false;
+  document.getElementById('wr-gen-tip').textContent=refs.length||tasks.length?'':'⚠️ 本周暂无数据';
+}
+async function _genWeeklyReport(){
+  const weekStart=document.getElementById('wr-week-start').value;
+  const weekNum=document.getElementById('wr-week-num').value;
+  const year=weekStart.slice(0,4);
+  const monday=new Date(weekStart);const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+  const weekEnd=localDate(sunday);
+  const refs=ld(K.refs).filter(r=>r.date>=weekStart&&r.date<=weekEnd);
+  const tasks=ld(K.tasks).filter(t=>t.done&&t.done>=weekStart&&t.done<=weekEnd);
+  const cfg=getCfg(),projMap={};
+  (cfg.projects||[]).forEach(p=>{projMap[p.id]=p.name;});
+  const tasksByProj={};
+  tasks.forEach(t=>{const n=projMap[t.proj]||t.proj||'通用';if(!tasksByProj[n])tasksByProj[n]=[];tasksByProj[n].push(t.title);});
+  const btn=document.getElementById('wr-gen-btn'),tip=document.getElementById('wr-gen-tip');
+  btn.disabled=true;tip.textContent='AI 生成中…';
   const refText=refs.map(r=>`【${r.date} ${r.mood||''}】\n收获：${r.wins||'无'}\n困难：${r.struggles||'无'}\n明日：${r.tomorrow||'无'}\n感恩：${r.gratitude||'无'}`).join('\n\n');
   const taskText=Object.entries(tasksByProj).map(([p,ts])=>`${p}：${ts.join('、')}`).join('\n');
-  statusEl.textContent='AI 生成中…';
-  const prompt=`你是帮助博士生整理周报的助手。请根据以下本周（${weekStart}~${weekEnd}，第${weekNum}周）的反思日记和完成任务，生成一份简洁周报。
+  const header=`# ${year}年第${weekNum}周 周报\n\n**时间范围：** ${weekStart} ~ ${weekEnd}\n\n`;
+  if(!refs.length&&!tasks.length){
+    document.getElementById('wr-result').value=header+'暂无本周数据。';
+    document.getElementById('wr-result-wrap').style.display='';
+    btn.disabled=false;tip.textContent='';return;
+  }
+  const prompt=`你是帮助博士生整理周报的助手。根据以下本周（${weekStart}~${weekEnd}，第${weekNum}周）的反思日记和完成任务，生成一份简洁周报。
 
 要求：
 1. 输出 4 个 Markdown 二级标题：## 本周收获 / ## 本周困难 / ## 下周计划 / ## 本周感恩
@@ -4045,16 +4074,21 @@ ${refText||'（无）'}
 ${taskText||'（无）'}`;
   const result=await _callAI(prompt,2000);
   if(!result){
-    statusEl.textContent='⚠️ AI 生成失败，已展示原始汇总';
-    contentEl.value=header+`## 本周完成任务\n\n${taskText||'无'}\n\n## 反思日记摘要\n\n${refs.map(r=>`**${r.date}** ${r.mood||''}\n${r.wins||''}`).join('\n\n')}`;
+    document.getElementById('wr-result').value=header+`## 本周完成任务\n\n${taskText||'无'}\n\n## 反思日记摘要\n\n${refs.map(r=>`**${r.date}** ${r.mood||''}\n${r.wins||''}`).join('\n\n')}`;
+    tip.textContent='⚠️ AI 失败，已展示原始汇总';
   }else{
-    statusEl.textContent=`✅ 已生成（${year}年第${weekNum}周，${weekStart} ~ ${weekEnd}）`;
-    contentEl.value=header+result;
+    document.getElementById('wr-result').value=header+result;
+    tip.textContent='✅ 生成完成';
   }
-  dlBtn.style.display='';
+  document.getElementById('wr-result-wrap').style.display='';
+  btn.disabled=false;
 }
-function _downloadWeeklyReport(){
-  const content=document.getElementById('wr-content').value;
+function _wrCopyMd(){
+  const txt=document.getElementById('wr-result').value;
+  navigator.clipboard.writeText(txt).then(()=>toast('📋 已复制 Markdown'));
+}
+function _wrDownload(){
+  const content=document.getElementById('wr-result').value;
   const weekStart=document.getElementById('wr-week-start').value;
   const weekNum=document.getElementById('wr-week-num').value;
   const filename=`${weekStart}-周报（本年第${weekNum}周）.md`;
@@ -4062,7 +4096,7 @@ function _downloadWeeklyReport(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=filename;a.click();
   URL.revokeObjectURL(url);
-  toast(`📥 已下载：${filename}`);
+  toast(`💾 已下载：${filename}`);
 }
 
 // ══════════════════════════════════════
