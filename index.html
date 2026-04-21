@@ -4121,31 +4121,15 @@ async function _wrSaveToReflection(){
   const weekStart=document.getElementById('wr-week-start').value;
   const weekNum=document.getElementById('wr-week-num').value;
   const wrFilename=`${weekStart}-周报（本年第${weekNum}周）`;
-  // 始终新建独立条目，不合并到日记
   const list=ld(K.refs);
   list.unshift({id:uid(),date:weekStart,mood:'📅',type:'weekly',
     wins:content,struggles:'',tomorrow:'',gratitude:'',
     ts:new Date().toLocaleString('zh-CN'),label:`第${weekNum}周周报`});
   sv(K.refs,list);renderRefHistory();
   closeModal('weeklyReportModal');
-  // 写入科研空间/反思日记/
   const savedLocal=await _writeToReflectionDir(wrFilename+'.md',content);
-  // 笔记空间额外动作
-  const ncfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
-  if(ncfg.type==='local'){
-    if(!savedLocal){
-      const blob=new Blob([content],{type:'text/markdown;charset=utf-8'})
-      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=wrFilename+'.md';a.click();URL.revokeObjectURL(a.href)
-    }
-    toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${wrFilename}.md`:'📝 已存入反思日记，文件已下载！')
-    switchPage('reflection')
-  }else if(ncfg.type==='obsidian'&&ncfg.vault){
-    toast(savedLocal?'📝 已存入并同步到本地，正在打开 Obsidian…':'📝 已存入反思日记，正在打开 Obsidian…')
-    setTimeout(()=>{window.location.href=`obsidian://new?vault=${encodeURIComponent(ncfg.vault)}&file=${encodeURIComponent('周报/'+wrFilename)}&content=${encodeURIComponent(content)}`},300)
-  }else{
-    toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${wrFilename}.md`:'📝 周报已存入反思日记！')
-    switchPage('reflection')
-  }
+  toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${wrFilename}.md`:'📝 周报已存入反思日记！')
+  switchPage('reflection')
 }
 function _wrCopyMd(){
   const content=document.getElementById('wr-result')?.value.trim();
@@ -5699,21 +5683,8 @@ async function _dbSaveToReflection(){
   renderRefHistory()
   closeModal('dailyBriefModal')
   const savedLocal=await _writeToReflectionDir(dbFilename+'.md',content)
-  const ncfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
-  if(ncfg.type==='local'){
-    if(!savedLocal){
-      const blob=new Blob([content],{type:'text/markdown;charset=utf-8'})
-      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=dbFilename+'.md';a.click();URL.revokeObjectURL(a.href)
-    }
-    toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${dbFilename}.md`:'📝 已存入反思日记，文件已下载！')
-    switchPage('reflection')
-  }else if(ncfg.type==='obsidian'&&ncfg.vault){
-    toast(savedLocal?'📝 已存入并同步到本地，正在打开 Obsidian…':'📝 已存入反思日记，正在打开 Obsidian…')
-    setTimeout(()=>{window.location.href=`obsidian://new?vault=${encodeURIComponent(ncfg.vault)}&file=${encodeURIComponent('日报/'+td)}&content=${encodeURIComponent(content)}`},300)
-  }else{
-    toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${dbFilename}.md`:'📝 简报已存入今日反思！')
-    switchPage('reflection')
-  }
+  toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${dbFilename}.md`:'📝 简报已存入今日反思！')
+  switchPage('reflection')
 }
 
 function _dbCopyMd(){
