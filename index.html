@@ -2290,7 +2290,10 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
     <div id="note-obsidian-wrap" style="display:none">
       <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Vault 名称（区分大小写）</div>
       <input id="note-vault-inp" placeholder="例如：Research" style="width:100%">
-      <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">收藏时会自动用 <code>obsidian://new</code> 在 Vault 中创建笔记页面</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.6">存入时自动在 Vault 内按类型写入子文件夹：<br>
+        <code>日报/YYYY-MM-DD.md</code><br>
+        <code>周报/YYYY-MM-DD-周报（本年第N周）.md</code><br>
+        <code>月报/</code> · <code>半年报/</code> · <code>年报/</code>（预留）</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:16px">
       <button class="btn btn-primary btn-sm" onclick="_saveNoteSettings()">保存</button>
@@ -4095,7 +4098,14 @@ function _wrSaveToReflection(){
   else{list.unshift({id:uid(),date:weekStart,mood:'📅',wins:content,struggles:'',tomorrow:'',gratitude:'',ts:new Date().toLocaleString('zh-CN')})}
   sv(K.refs,list);renderRefHistory();
   closeModal('weeklyReportModal');
-  toast('📝 周报已存入反思日记！');switchPage('reflection');
+  const ncfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
+  if(ncfg.type==='obsidian'&&ncfg.vault){
+    const filename=`${weekStart}-周报（本年第${weekNum}周）`
+    toast('📝 已存入反思日记，正在打开 Obsidian…')
+    setTimeout(()=>{window.location.href=`obsidian://new?vault=${encodeURIComponent(ncfg.vault)}&file=${encodeURIComponent('周报/'+filename)}&content=${encodeURIComponent(content)}`},300)
+  }else{
+    toast('📝 周报已存入反思日记！');switchPage('reflection')
+  }
 }
 function _wrCopyMd(){
   const content=document.getElementById('wr-result')?.value.trim();
@@ -4110,7 +4120,7 @@ function _wrOpenNote(){
   const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}');
   if(!cfg.url&&cfg.type!=='obsidian'){_showNoteSettings();toast('请先设置笔记空间链接');return}
   if(cfg.type==='obsidian'){
-    window.location.href=`obsidian://new?vault=${encodeURIComponent(cfg.vault||'')}&name=${encodeURIComponent(`${weekStart}-周报（本年第${weekNum}周）`)}&content=${encodeURIComponent(content)}`;
+    window.location.href=`obsidian://new?vault=${encodeURIComponent(cfg.vault||'')}&file=${encodeURIComponent(`周报/${weekStart}-周报（本年第${weekNum}周）`)}&content=${encodeURIComponent(content)}`;
   }else{window.open(cfg.url,'_blank')}
 }
 function _wrDownload(){
@@ -5626,8 +5636,13 @@ function _dbSaveToReflection(){
   sv(K.refs,list)
   renderRefHistory()
   closeModal('dailyBriefModal')
-  toast('📝 简报已存入今日反思！')
-  switchPage('reflection')
+  const ncfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
+  if(ncfg.type==='obsidian'&&ncfg.vault){
+    toast('📝 已存入反思日记，正在打开 Obsidian…')
+    setTimeout(()=>{window.location.href=`obsidian://new?vault=${encodeURIComponent(ncfg.vault)}&file=${encodeURIComponent('日报/'+td)}&content=${encodeURIComponent(content)}`},300)
+  }else{
+    toast('📝 简报已存入今日反思！');switchPage('reflection')
+  }
 }
 
 function _dbCopyMd(){
@@ -5642,7 +5657,7 @@ function _dbOpenNote(){
   const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
   if(!cfg.url&&cfg.type!=='obsidian'){_showNoteSettings();toast('请先设置笔记空间链接');return}
   if(cfg.type==='obsidian'){
-    window.location.href=`obsidian://new?vault=${encodeURIComponent(cfg.vault||'')}&name=${encodeURIComponent('今日简报-'+today())}&content=${encodeURIComponent(content)}`
+    window.location.href=`obsidian://new?vault=${encodeURIComponent(cfg.vault||'')}&file=${encodeURIComponent('日报/'+today())}&content=${encodeURIComponent(content)}`
   }else{window.open(cfg.url,'_blank')}
 }
 
