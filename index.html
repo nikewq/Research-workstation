@@ -1533,6 +1533,16 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
     </div>
   </div>
 
+  <!-- ── Claude 技能库 ── -->
+  <div style="font-weight:700;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">🔬 科研核心</div>
+  <div class="grid-3" id="skills-core" style="margin-bottom:24px"></div>
+
+  <div style="font-weight:700;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">📝 写作与发表</div>
+  <div class="grid-3" id="skills-writing" style="margin-bottom:24px"></div>
+
+  <div style="font-weight:700;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">🧪 实验与工具</div>
+  <div class="grid-3" id="skills-tools" style="margin-bottom:24px"></div>
+
   <div style="font-weight:700;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">🛠 自定义工具</div>
   <div class="card mb-16">
     <div class="card-title">添加工具</div>
@@ -2593,6 +2603,7 @@ function initApp() {
   renderHabits();
   renderSubmissions();
   renderTools();
+  renderSkillSections();
   renderRefHistory();
   populateProjectSelects();
   updatePomoTaskSel();
@@ -3845,6 +3856,59 @@ function renderTools(){
     <div style="font-size:10px;color:var(--text2);margin-top:4px;font-family:monospace;word-break:break-all">${t.cmd}</div>
     <div class="tool-hint">👆 点击复制</div>
   </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  CLAUDE SKILLS PANEL
+// ══════════════════════════════════════
+const SKILLS_CORE=[
+  {cmd:'/autoresearch-nini',  badge:'v2', desc:'科研推理引擎：显式状态机 + 四领域路由（model_research / code_dev / data_analysis / general_research）+ 停滞检测与策略注入'},
+  {cmd:'/idea-discovery-nini',            desc:'研究 Idea 发现：系统性发现因果 / OOD 领域的研究空白'},
+  {cmd:'/daily-papers',                   desc:'每日论文搜索：自动搜索指定领域最新工作，AI 评分摘要'},
+  {cmd:'/causal-ml-review-committee',     desc:'模拟审稿委员会：5 人委员会 peer review，NeurIPS 评审标准'},
+  {cmd:'/research-pipeline-nini',         desc:'完整科研流水线：idea → 实验 → 论文 → rebuttal 全流程'},
+  {cmd:'/prompt-kit-nini',                desc:'Prompt 资产库：覆盖写作 / 审稿 / 假设生成等场景'},
+];
+const SKILLS_WRITING=[
+  {cmd:'/paper-writing-nini', desc:'NeurIPS 论文写作：实验 → 叙事 → LaTeX → Overleaf'},
+  {cmd:'/rebuttal-nini',      desc:'NeurIPS Rebuttal：审稿解析 → 策略 → 草稿 → 压力测试'},
+  {cmd:'/slides-nini',        desc:'学术演示生成：答辩 / 汇报 / 组会，KaTeX 数学公式支持'},
+  {cmd:'/figs-nini',          desc:'学术图表生成：SVG + Matplotlib 双路径，12 种图类型，NeurIPS 规范'},
+  {cmd:'/math-proof',         desc:'严格数学证明：定理 → 引理 → 证明，LaTeX 格式输出'},
+  {cmd:'/research-review',    desc:'深度文献综述：论文解析 → 贡献提炼 → Obsidian 笔记'},
+];
+const SKILLS_TOOLS=[
+  {cmd:'/experiment-bridge-nini', desc:'GPU 实验管理：A100 启动 / 监控 / 分析，Telegram 推送结果'},
+  {cmd:'/debug',                  desc:'调试技能：分析错误日志，定位 bug 根因'},
+  {cmd:'/review',                 desc:'代码审查：全量 review，找问题并给出改进建议'},
+  {cmd:'/test',                   desc:'自动生成单元测试：覆盖主要逻辑分支'},
+  {cmd:'/refactor',               desc:'代码重构：提升质量与可读性，保持功能不变'},
+  {cmd:'/super-slides',           desc:'通用演示稿生成：美观 HTML 幻灯片，可导出 PDF / PPT'},
+];
+function _copySkillCmd(cmd,el){
+  navigator.clipboard.writeText(cmd).then(()=>{
+    const h=el.querySelector('.skill-hint');
+    if(h){h.textContent='✅ 已复制！';h.style.color='var(--green)'}
+    toast('✅ 已复制: '+cmd);
+    setTimeout(()=>{if(h){h.textContent='👆 点击复制';h.style.color=''}},2000);
+  }).catch(()=>toast('复制失败','error'));
+}
+function renderSkillSections(){
+  const _r=(list,elId)=>{
+    const el=document.getElementById(elId);if(!el)return;
+    el.innerHTML=list.map(s=>`
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s,transform .15s" onclick="_copySkillCmd('${s.cmd}',this)" onmouseenter="this.style.borderColor='var(--primary)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.borderColor='var(--border)';this.style.transform=''">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <code style="font-size:12px;font-weight:700;color:var(--primary);background:var(--primary-bg);padding:2px 7px;border-radius:4px;white-space:nowrap">${s.cmd}</code>
+          ${s.badge?`<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--green-soft);color:var(--green)">${s.badge}</span>`:''}
+        </div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.55;margin-bottom:6px">${s.desc}</div>
+        <div class="skill-hint" style="font-size:10.5px;color:var(--text2);opacity:.55">👆 点击复制</div>
+      </div>`).join('');
+  };
+  _r(SKILLS_CORE,'skills-core');
+  _r(SKILLS_WRITING,'skills-writing');
+  _r(SKILLS_TOOLS,'skills-tools');
 }
 
 // ══════════════════════════════════════
