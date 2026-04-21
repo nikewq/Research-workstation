@@ -4609,7 +4609,7 @@ function toast(msg,type='success'){
   document.addEventListener('visibilitychange',function(){if(!document.hidden)_tick();});
 })();
 
-initSetupWizard();
+// initSetupWizard() 已移至 DOMContentLoaded（见第二个 script 块末尾）
 </script>
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <script>
@@ -6552,8 +6552,8 @@ function _quickPick(name){
   generateCustomTheme();
 }
 
-// 初次加载
-document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWall,800)})
+// 初次加载（在所有 <script> 块执行完毕后调用，确保跨块函数已定义）
+document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWall,800);initSetupWizard();})
 </script>
 
 <!-- ── Reflection Entry Modal ── -->
