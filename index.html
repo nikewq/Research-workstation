@@ -2268,32 +2268,46 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 
 <!-- ── Note Settings Modal ── -->
 <div class="modal-overlay" id="noteSettingsModal" onclick="if(event.target===this)closeModal('noteSettingsModal')">
-  <div class="modal-box" style="max-width:420px;width:90%">
+  <div class="modal-box" style="max-width:440px;width:90%">
     <div class="modal-title" style="margin-bottom:14px">📎 笔记空间设置</div>
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">笔记工具类型</div>
-      <select id="note-type-sel" onchange="_onNoteTypeChange()" style="width:100%">
-        <option value="url">通用链接（飞书 / Notion / 语雀 / 其他）</option>
-        <option value="obsidian">Obsidian（本地 URI）</option>
-      </select>
-    </div>
-    <div id="note-url-wrap">
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">文档 URL</div>
-        <input id="note-url-inp" placeholder="粘贴飞书 / Notion 文档链接" style="width:100%">
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">选择笔记工具</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="note-type-btns">
+        <button class="note-type-opt" data-type="local"   onclick="_selectNoteType('local')"   style="padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;font-size:12px;transition:all .15s">💾<br>本地</button>
+        <button class="note-type-opt" data-type="obsidian" onclick="_selectNoteType('obsidian')" style="padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;font-size:12px;transition:all .15s">🟣<br>Obsidian</button>
+        <button class="note-type-opt" data-type="notion"  onclick="_selectNoteType('notion')"  style="padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;font-size:12px;transition:all .15s">📋<br>Notion</button>
+        <button class="note-type-opt" data-type="feishu"  onclick="_selectNoteType('feishu')"  style="padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;font-size:12px;transition:all .15s">🪶<br>飞书</button>
+        <button class="note-type-opt" data-type="other"   onclick="_selectNoteType('other')"   style="padding:10px 4px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;font-size:12px;transition:all .15s">🔗<br>其他</button>
       </div>
-      <div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">按钮显示名称</div>
-        <input id="note-label-inp" placeholder="例如：飞书日志 / My Notion" style="width:100%">
+      <input type="hidden" id="note-type-sel" value="local">
+    </div>
+    <div id="note-local-wrap">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px;color:var(--text2);line-height:1.8">
+        存入时自动下载到本地，文件按类型命名：<br>
+        <code>日报-YYYY-MM-DD.md</code><br>
+        <code>YYYY-MM-DD-周报（本年第N周）.md</code><br>
+        <span style="color:var(--text2);font-size:11px">月报 / 半年报 / 年报（功能预留）</span>
       </div>
     </div>
     <div id="note-obsidian-wrap" style="display:none">
       <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Vault 名称（区分大小写）</div>
-      <input id="note-vault-inp" placeholder="例如：Research" style="width:100%">
-      <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.6">存入时自动在 Vault 内按类型写入子文件夹：<br>
+      <input id="note-vault-inp" placeholder="例如：Research" style="width:100%;box-sizing:border-box">
+      <div style="background:var(--surface2);border-radius:10px;padding:10px;font-size:11px;color:var(--text2);line-height:1.8;margin-top:8px">
+        存入时自动在 Vault 内按类型写入子文件夹：<br>
         <code>日报/YYYY-MM-DD.md</code><br>
         <code>周报/YYYY-MM-DD-周报（本年第N周）.md</code><br>
-        <code>月报/</code> · <code>半年报/</code> · <code>年报/</code>（预留）</div>
+        <code>月报/</code> · <code>半年报/</code> · <code>年报/</code>（预留）
+      </div>
+    </div>
+    <div id="note-url-wrap" style="display:none">
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">文档 URL</div>
+        <input id="note-url-inp" placeholder="粘贴文档链接" style="width:100%;box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">按钮显示名称（可选）</div>
+        <input id="note-label-inp" placeholder="例如：飞书日志 / My Notion" style="width:100%;box-sizing:border-box">
+      </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:16px">
       <button class="btn btn-primary btn-sm" onclick="_saveNoteSettings()">保存</button>
@@ -4099,10 +4113,14 @@ function _wrSaveToReflection(){
   sv(K.refs,list);renderRefHistory();
   closeModal('weeklyReportModal');
   const ncfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
-  if(ncfg.type==='obsidian'&&ncfg.vault){
-    const filename=`${weekStart}-周报（本年第${weekNum}周）`
+  const wrFilename=`${weekStart}-周报（本年第${weekNum}周）`
+  if(ncfg.type==='local'){
+    const blob=new Blob([content],{type:'text/markdown;charset=utf-8'})
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=wrFilename+'.md';a.click();URL.revokeObjectURL(a.href)
+    toast('📝 已存入反思日记，文件已下载！');switchPage('reflection')
+  }else if(ncfg.type==='obsidian'&&ncfg.vault){
     toast('📝 已存入反思日记，正在打开 Obsidian…')
-    setTimeout(()=>{window.location.href=`obsidian://new?vault=${encodeURIComponent(ncfg.vault)}&file=${encodeURIComponent('周报/'+filename)}&content=${encodeURIComponent(content)}`},300)
+    setTimeout(()=>{window.location.href=`obsidian://new?vault=${encodeURIComponent(ncfg.vault)}&file=${encodeURIComponent('周报/'+wrFilename)}&content=${encodeURIComponent(content)}`},300)
   }else{
     toast('📝 周报已存入反思日记！');switchPage('reflection')
   }
@@ -5444,7 +5462,7 @@ function _showBmMenu(event,encodedItem){
   const btn=event.currentTarget
   const rect=btn.getBoundingClientRect()
   const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
-  const noteLabel=cfg.label||(cfg.type==='obsidian'?'Obsidian 新建笔记':'打开笔记空间（未设置）')
+  const noteLabel=cfg.label||(cfg.type==='obsidian'?'Obsidian 新建笔记':cfg.type==='local'?'下载到本地':'打开笔记空间（未设置）')
   const m=document.createElement('div')
   m.id='_bm-menu'
   m.style.cssText=`position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:0 8px 28px rgba(0,0,0,0.45);min-width:178px;top:${Math.min(rect.bottom+6,window.innerHeight-130)}px;left:${Math.min(rect.left,window.innerWidth-190)}px`
@@ -5489,6 +5507,12 @@ function _bmCopyMd(item){
 
 function _bmOpenNote(item){
   const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
+  if(cfg.type==='local'){
+    const content=`## ${item.title}\n\n${item.summary}\n\n来源：${item.url||'摸鱼侦察局'}\n日期：${today()}`
+    const blob=new Blob([content],{type:'text/markdown;charset=utf-8'})
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`摘录-${today()}-${(item.title||'笔记').slice(0,20)}.md`;a.click();URL.revokeObjectURL(a.href)
+    toast('💾 已下载到本地！');return
+  }
   if(!cfg.url&&cfg.type!=='obsidian'){_showNoteSettings();toast('请先设置笔记空间链接');return}
   if(cfg.type==='obsidian'){
     const content=encodeURIComponent(`## ${item.title}\n\n${item.summary}\n\n来源：${item.url||'摸鱼侦察局'}\n日期：${today()}`)
@@ -5501,26 +5525,38 @@ function _bmOpenNote(item){
 
 function _showNoteSettings(){
   const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
-  const t=document.getElementById('note-type-sel');if(t)t.value=cfg.type||'url'
   const u=document.getElementById('note-url-inp');if(u)u.value=cfg.url||''
   const l=document.getElementById('note-label-inp');if(l)l.value=cfg.label||''
   const v=document.getElementById('note-vault-inp');if(v)v.value=cfg.vault||''
-  _onNoteTypeChange()
+  _selectNoteType(cfg.type||'local')
   openModal('noteSettingsModal')
 }
 
-function _onNoteTypeChange(){
-  const type=document.getElementById('note-type-sel')?.value
-  const uw=document.getElementById('note-url-wrap');if(uw)uw.style.display=type==='obsidian'?'none':''
+function _selectNoteType(type){
+  const hid=document.getElementById('note-type-sel');if(hid)hid.value=type
+  document.querySelectorAll('.note-type-opt').forEach(b=>{
+    const active=b.dataset.type===type
+    b.style.borderColor=active?'var(--primary)':'var(--border)'
+    b.style.background=active?'var(--primary-soft)':'var(--surface2)'
+    b.style.color=active?'var(--primary)':''
+    b.style.fontWeight=active?'700':''
+  })
+  const lw=document.getElementById('note-local-wrap');if(lw)lw.style.display=type==='local'?'':'none'
   const ow=document.getElementById('note-obsidian-wrap');if(ow)ow.style.display=type==='obsidian'?'':'none'
+  const uw=document.getElementById('note-url-wrap');if(uw)uw.style.display=(type==='notion'||type==='feishu'||type==='other')?'':'none'
+  const urlInp=document.getElementById('note-url-inp')
+  if(urlInp){
+    const ph={notion:'粘贴 Notion 页面链接',feishu:'粘贴飞书文档链接',other:'粘贴链接'}
+    urlInp.placeholder=ph[type]||'粘贴链接'
+  }
 }
 
 function _saveNoteSettings(){
-  const type=document.getElementById('note-type-sel')?.value||'url'
+  const type=document.getElementById('note-type-sel')?.value||'local'
   const url=document.getElementById('note-url-inp')?.value.trim()||''
   const label=document.getElementById('note-label-inp')?.value.trim()||''
   const vault=document.getElementById('note-vault-inp')?.value.trim()||''
-  if(type!=='obsidian'&&!url){toast('请输入文档链接');return}
+  if((type==='notion'||type==='feishu'||type==='other')&&!url){toast('请输入文档链接');return}
   if(type==='obsidian'&&!vault){toast('请输入 Vault 名称');return}
   localStorage.setItem(_NOTE_LINKS_KEY,JSON.stringify({type,url,label,vault}))
   closeModal('noteSettingsModal')
@@ -5637,7 +5673,11 @@ function _dbSaveToReflection(){
   renderRefHistory()
   closeModal('dailyBriefModal')
   const ncfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}')
-  if(ncfg.type==='obsidian'&&ncfg.vault){
+  if(ncfg.type==='local'){
+    const blob=new Blob([content],{type:'text/markdown;charset=utf-8'})
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`日报-${td}.md`;a.click();URL.revokeObjectURL(a.href)
+    toast('📝 已存入反思日记，文件已下载！');switchPage('reflection')
+  }else if(ncfg.type==='obsidian'&&ncfg.vault){
     toast('📝 已存入反思日记，正在打开 Obsidian…')
     setTimeout(()=>{window.location.href=`obsidian://new?vault=${encodeURIComponent(ncfg.vault)}&file=${encodeURIComponent('日报/'+td)}&content=${encodeURIComponent(content)}`},300)
   }else{
