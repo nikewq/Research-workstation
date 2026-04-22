@@ -641,6 +641,12 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 .wr-preview-section{font-size:15px;font-weight:700;margin:18px 0 6px;padding-bottom:4px;border-bottom:1.5px solid var(--border)}
 .wr-comment{color:var(--text2);font-style:italic;font-size:12px}
 .wr-math-block{display:block;overflow-x:auto;text-align:center;margin:12px 0;padding:8px;background:var(--surface2);border-radius:6px}
+.wr-sync-pt{display:block;height:0;overflow:hidden}
+.wr-sync-flash{animation:wrSyncFlash .8s ease-out}
+@keyframes wrSyncFlash{0%{background:rgba(124,58,237,.18)}100%{background:transparent}}
+.wr-editor-line-hl{background:rgba(124,58,237,.10)!important}
+#wr-editor-sync-bar{position:absolute;left:0;width:3px;background:var(--primary);border-radius:2px;pointer-events:none;transition:top .2s,height .2s;opacity:0}
+#wr-editor-sync-bar.visible{opacity:1}
 /* AI 写作面板 */
 .wr-ai-btn{position:relative;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:1px solid var(--primary);border-radius:4px;background:var(--primary-soft);color:var(--primary);font-size:11px;cursor:pointer;font-weight:600;transition:background .12s}
 .wr-ai-btn:hover{background:var(--primary);color:#fff}
@@ -1369,7 +1375,8 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
           </div>
           <span id="wr-prev-subtitle" style="font-size:10px;font-weight:400;color:var(--text2)">KaTeX 数学渲染</span>
           <button id="wr-prev-retrans-btn" onclick="wrRetranslate()" style="display:none;margin-left:auto;padding:2px 8px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text2);cursor:pointer">↺ 重新翻译</button>
-          <button onclick="wrDownloadPdf()" title="下载 PDF" style="margin-left:auto;padding:2px 8px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:3px" onmouseenter="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">⬇ PDF</button>
+          <span title="点击编辑器 → 预览自动定位；点击预览 → 编辑器跳转（仿 Overleaf SyncTeX）" style="font-size:10px;color:var(--text2);padding:2px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:default" id="wr-sync-badge">⇄ 同步</span>
+          <button onclick="wrDownloadPdf()" title="下载 PDF" style="padding:2px 8px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:3px" onmouseenter="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">⬇ PDF</button>
         </div>
         <div id="wr-preview-area"></div>
         <!-- 翻译面板（固定在预览下方） -->
@@ -7407,11 +7414,100 @@ function initWritingPanel(){
   renderWrDocsList()
   _ensureKatex()
   _wrUpdateAiBtnLabel()
+  _wrInitSyncClick()
   // 自动打开第一篇草稿（若无 ZIP 项目激活）
   if(!_wrActiveZipId&&!_wrCurrentDocId){
     const docs=ld(WR_DOCS_KEY)||[]
     if(docs.length>0)wrOpenDoc(docs[0].id)
   }
+}
+
+// ── Bidirectional click-sync (Overleaf-style) ──
+function _wrInitSyncClick(){
+  const ta=document.getElementById('wr-editor')
+  const prevEl=document.getElementById('wr-preview-area')
+  if(!ta||!prevEl)return
+
+  // Forward: editor click → scroll preview to corresponding position
+  ta.addEventListener('click',_wrForwardSync)
+  ta.addEventListener('keyup',e=>{
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Home','End','PageUp','PageDown'].includes(e.key))
+      _wrForwardSync()
+  })
+
+  // Inverse: preview click → jump editor to source line
+  prevEl.addEventListener('click',e=>{
+    // Walk up DOM from click target to find nearest sync anchor
+    let el=e.target
+    let syncEl=null
+    for(let i=0;i<8&&el&&el!==prevEl;i++){
+      // check preceding siblings
+      let sib=el.previousElementSibling
+      while(sib){
+        if(sib.classList?.contains('wr-sync-pt')){syncEl=sib;break}
+        sib=sib.previousElementSibling
+      }
+      if(syncEl)break
+      // check element itself
+      if(el.classList?.contains('wr-sync-pt')){syncEl=el;break}
+      el=el.parentElement
+    }
+    if(!syncEl){
+      // fallback: find closest wr-sync-pt before click Y position in prevEl
+      const pts=prevEl.querySelectorAll('.wr-sync-pt')
+      const clickY=e.clientY
+      let best=null,bestDist=Infinity
+      pts.forEach(p=>{
+        const r=p.getBoundingClientRect()
+        const d=Math.abs(r.top-clickY)
+        if(d<bestDist){bestDist=d;best=p}
+      })
+      syncEl=best
+    }
+    if(!syncEl)return
+    const lineNum=parseInt(syncEl.dataset.srcLine)||0
+    _wrJumpEditorToLine(lineNum)
+  })
+}
+
+function _wrForwardSync(){
+  const ta=document.getElementById('wr-editor')
+  const prevEl=document.getElementById('wr-preview-area')
+  if(!ta||!prevEl||!_wrSyncMap.length)return
+  const cursorLine=ta.value.substring(0,ta.selectionStart).split('\n').length-1
+  // Find the sync point with the largest srcLine ≤ cursorLine
+  let best=null
+  for(const pt of _wrSyncMap){
+    if(pt.srcLine<=cursorLine){best=pt}
+    else break
+  }
+  if(!best&&_wrSyncMap.length)best=_wrSyncMap[0]
+  if(!best)return
+  const el=document.getElementById(best.id)
+  if(!el)return
+  // Remove previous flash
+  prevEl.querySelectorAll('.wr-sync-flash').forEach(e=>e.classList.remove('wr-sync-flash'))
+  el.scrollIntoView({behavior:'smooth',block:'center'})
+  // Flash the next sibling block element
+  const target=el.nextElementSibling||el.parentElement
+  if(target){target.classList.add('wr-sync-flash');setTimeout(()=>target.classList.remove('wr-sync-flash'),900)}
+}
+
+function _wrJumpEditorToLine(lineNum){
+  const ta=document.getElementById('wr-editor')
+  if(!ta)return
+  const lines=ta.value.split('\n')
+  const targetLine=Math.min(lineNum,lines.length-1)
+  let pos=0
+  for(let i=0;i<targetLine;i++)pos+=lines[i].length+1
+  ta.focus()
+  ta.setSelectionRange(pos,pos+lines[targetLine]?.length||0)
+  // Scroll textarea to center the target line
+  const lh=parseFloat(getComputedStyle(ta).lineHeight)||20
+  ta.scrollTop=targetLine*lh-ta.clientHeight/2
+  // Brief highlight via background flash (using a canvas overlay is complex; use CSS trick)
+  ta.classList.add('wr-editor-line-hl')
+  setTimeout(()=>ta.classList.remove('wr-editor-line-hl'),600)
 }
 
 // ── Docs list ──
@@ -8448,6 +8544,21 @@ function wrRenderPreview(){
   // ── Step 0.5: Build cross-reference map ──
   const _refMap=_wrBuildRefMap(raw)
 
+  // ── Step 0.55: Insert sync anchors (for bidirectional click-sync) ──
+  _wrSyncMap=[]
+  let _syncIdx=0
+  const _srcLines=raw.split('\n')
+  // Insert \x00SYNC:N\x00 before sections, figures, equations, and paragraph breaks
+  const _syncedLines=_srcLines.map((line,i)=>{
+    const t=line.trim()
+    const isSec=t.startsWith('\\section')||t.startsWith('\\subsection')||t.startsWith('\\subsubsection')||t.startsWith('\\paragraph')
+    const isEnv=t.startsWith('\\begin{')
+    const isPara=(t===''&&i>0&&_srcLines[i-1]?.trim()!==''&&i<_srcLines.length-1&&_srcLines[i+1]?.trim()!=='')
+    if(isSec||isEnv||isPara){return`\x00SYNC:${i}\x00`+line}
+    return line
+  }).join('\n')
+  raw=_syncedLines
+
   // ── Step 0.6: Extract figure environments into placeholders ──
   const figBlocks=[];let fi=0
   raw=raw.replace(/\\begin\{figure\*?\}([\s\S]*?)\\end\{figure\*?\}/g,(m,inner)=>{
@@ -8522,7 +8633,15 @@ function wrRenderPreview(){
   raw=raw.replace(/(?<!\$)\$([^$\n]{1,300}?)\$(?!\$)/g,(_,inner)=>_ph(inner,false))
 
   // ── Step 2: HTML escape the text ──
+  // Note: \x00 markers survive the escape (not in &<> set)
   let html=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+
+  // ── Step 2.5: Convert sync markers to HTML anchors ──
+  html=html.replace(/\x00SYNC:(\d+)\x00/g,(m,ln)=>{
+    const id=`wr-sync-${_syncIdx++}`
+    _wrSyncMap.push({srcLine:parseInt(ln),id})
+    return`<span class="wr-sync-pt" data-src-line="${ln}" id="${id}"></span>`
+  })
 
   // ── Step 3: LaTeX text transformations ──
   html=html
@@ -8705,6 +8824,7 @@ const WR_ZIP_KEY='phd_wr_zip_v1'
 let _wrZipJsReady=null
 let _wrActiveZipId=null   // 当前打开的 ZIP 项目 id
 let _wrActiveZipFile=null // 当前打开的文件 path
+let _wrSyncMap=[]         // [{srcLine:N, id:'wr-sync-N'}] for bidirectional sync
 
 // 允许保存的文本扩展名
 const _WR_TEXT_EXTS=new Set(['.tex','.bib','.cls','.sty','.txt','.md','.cfg','.def','.clo','.bbx','.cbx'])
