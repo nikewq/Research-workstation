@@ -8300,6 +8300,103 @@ ${katexHref?`<link rel="stylesheet" href="${katexHref}">`:''}
   win.onload=()=>{win.focus();win.print()}
 }
 
+// ── 建立交叉引用映射 label → {type, num, text} ──
+function _wrBuildRefMap(raw){
+  const map={}
+  let secN=0,subN=0,subsubN=0,figN=0,tabN=0,eqN=0,lstN=0
+  // equations (numbered envs)
+  const eqRe=/\\begin\{(equation|align|alignat|gather|multline|eqnarray)(\*?)\}([\s\S]*?)\\end\{\1\2\}/g
+  let m
+  while((m=eqRe.exec(raw))!==null){
+    if(m[2]==='*')continue
+    const inner=m[3]
+    // each \\ in align counts as one equation line (unless \nonumber)
+    const lines=inner.split('\\\\').filter(l=>!l.includes('\\nonumber'))
+    for(const line of lines){
+      eqN++
+      const lm=line.match(/\\label\{([^}]*)\}/)
+      if(lm)map[lm[1]]={type:'eq',num:eqN,text:`${eqN}`}
+    }
+  }
+  // figures
+  const figRe=/\\begin\{figure\*?\}([\s\S]*?)\\end\{figure\*?\}/g
+  while((m=figRe.exec(raw))!==null){
+    figN++
+    const lm=m[1].match(/\\label\{([^}]*)\}/)
+    if(lm)map[lm[1]]={type:'fig',num:figN,text:`Figure\u00a0${figN}`}
+  }
+  // tables
+  const tabRe=/\\begin\{table\*?\}([\s\S]*?)\\end\{table\*?\}/g
+  while((m=tabRe.exec(raw))!==null){
+    tabN++
+    const lm=m[1].match(/\\label\{([^}]*)\}/)
+    if(lm)map[lm[1]]={type:'tab',num:tabN,text:`Table\u00a0${tabN}`}
+  }
+  // listings
+  const lstRe=/\\begin\{lstlisting\*?\}([\s\S]*?)\\end\{lstlisting\*?\}/g
+  while((m=lstRe.exec(raw))!==null){
+    lstN++
+    const lm=m[1].match(/\\label\{([^}]*)\}/)
+    if(lm)map[lm[1]]={type:'lst',num:lstN,text:`Listing\u00a0${lstN}`}
+  }
+  // sections (ordered scan)
+  const secRe=/\\((?:sub){0,2}section)\*?\{[^}]*\}\s*(?:\\label\{([^}]*)\})?/g
+  while((m=secRe.exec(raw))!==null){
+    const lvl=m[1]==='section'?0:m[1]==='subsection'?1:2
+    if(lvl===0){secN++;subN=0;subsubN=0}
+    else if(lvl===1){subN++;subsubN=0}
+    else subsubN++
+    const ns=lvl===0?`${secN}`:lvl===1?`${secN}.${subN}`:`${secN}.${subN}.${subsubN}`
+    if(m[2])map[m[2]]={type:'sec',num:ns,text:ns}
+  }
+  // loose labels (items, theorems, etc.) — assign generic counter
+  let miscN=0
+  const miscRe=/\\label\{([^}]*)\}/g
+  while((m=miscRe.exec(raw))!==null){
+    if(!map[m[1]]){miscN++;map[m[1]]={type:'misc',num:miscN,text:`${miscN}`}}
+  }
+  return map
+}
+
+// ── 渲染 tabular 环境 → HTML table ──
+function _wrRenderTabular(inner){
+  // Extract spec (first {xxx})
+  const specM=inner.match(/^\s*\{([^}]*)\}/)
+  const spec=specM?specM[1]:''
+  const colAligns=spec.replace(/[|@{}\s]/g,'').split('').map(c=>c==='r'?'right':c==='c'?'center':'left')
+  const body=specM?inner.slice(specM[0].length):inner
+  const rows=body.split('\\\\').map(r=>r.trim()).filter(r=>r&&!r.startsWith('\\hline')&&!r.startsWith('\\cline'))
+  const hlines=body.split('\\\\').map(r=>r.trim().includes('\\hline'))
+  let thead='',tbody=''
+  const trs=rows.map((row,ri)=>{
+    const cells=row.replace(/\\hline/g,'').split('&').map(c=>c.trim())
+    const tag=ri===0&&rows.length>1?'th':'td'
+    const tds=cells.map((c,ci)=>{
+      const align=colAligns[ci]||'left'
+      return`<${tag} style="padding:4px 10px;border:1px solid var(--border);text-align:${align}">${c}</${tag}>`
+    }).join('')
+    return`<tr style="${hlines[ri]?'border-top:2px solid var(--text)':''}">${tds}</tr>`
+  }).join('')
+  return`<table style="border-collapse:collapse;margin:10px auto;font-size:13px">${trs}</table>`
+}
+
+// ── 从 ZIP 查找图片 data URL ──
+function _wrFindImageDataUrl(imgPath){
+  if(!_wrActiveZipId)return null
+  const proj=(ld(WR_ZIP_KEY)||[]).find(p=>p.id===_wrActiveZipId)
+  if(!proj)return null
+  const basename=imgPath.replace(/^.*[\\/]/,'')
+  const exts=['.png','.jpg','.jpeg','.gif','.svg','']
+  const f=proj.files.find(f=>{
+    const fp=f.path.replace(/\\/g,'/')
+    if(!f.dataUrl)return false
+    // match by exact path, basename, or basename without extension
+    return fp===imgPath||fp.endsWith('/'+imgPath)||fp.endsWith('/'+basename)||
+      exts.some(e=>fp.endsWith('/'+basename+e)||fp===basename+e||fp===imgPath+e)
+  })
+  return f?.dataUrl||null
+}
+
 function wrRenderPreview(){
   if(_wrPreviewMode==='translate')return
   const ta=document.getElementById('wr-editor')
@@ -8348,6 +8445,54 @@ function wrRenderPreview(){
     .replace(/\\(?:author|date|thanks)\{[^}]*\}/g,'')
     .replace(/\\title\{([^}]*)\}/g,(_, t)=>`\\section{${t}}`)  // title → section heading
 
+  // ── Step 0.5: Build cross-reference map ──
+  const _refMap=_wrBuildRefMap(raw)
+
+  // ── Step 0.6: Extract figure environments into placeholders ──
+  const figBlocks=[];let fi=0
+  raw=raw.replace(/\\begin\{figure\*?\}([\s\S]*?)\\end\{figure\*?\}/g,(m,inner)=>{
+    fi++
+    const captM=inner.match(/\\caption\{((?:[^{}]|\{[^{}]*\})*)\}/)
+    const caption=captM?captM[1]:''
+    const imgM=inner.match(/\\includegraphics(?:\[[^\]]*\])?\{([^}]*)\}/)
+    const imgPath=imgM?imgM[1]:null
+    const lblM=inner.match(/\\label\{([^}]*)\}/)
+    const lblKey=lblM?lblM[1]:null
+    const figNum=lblKey&&_refMap[lblKey]?_refMap[lblKey].num:fi
+    const dataUrl=imgPath?_wrFindImageDataUrl(imgPath):null
+    const ph=`\x00FIG${fi}\x00`
+    figBlocks.push({ph,figNum,caption,imgPath,dataUrl})
+    return ph
+  })
+
+  // ── Step 0.7: Extract tabular environments into placeholders ──
+  const tabBlocks=[];let tbi=0
+  raw=raw.replace(/\\begin\{tabular\*?\}([\s\S]*?)\\end\{tabular\*?\}/g,(m,inner)=>{
+    tbi++
+    const ph=`\x00TAB${tbi}\x00`
+    tabBlocks.push({ph,html:_wrRenderTabular(inner)})
+    return ph
+  })
+  // table float: extract caption + label, keep inner tabular placeholder
+  raw=raw.replace(/\\begin\{table\*?\}([\s\S]*?)\\end\{table\*?\}/g,(m,inner)=>{
+    const captM=inner.match(/\\caption\{((?:[^{}]|\{[^{}]*\})*)\}/)
+    const caption=captM?captM[1]:''
+    const lblM=inner.match(/\\label\{([^}]*)\}/)
+    const lblKey=lblM?lblM[1]:null
+    // find which tabBlock was captured inside
+    const tabRef=inner.match(/\x00TAB(\d+)\x00/)
+    if(tabRef){
+      const idx=parseInt(tabRef[1])-1
+      if(tabBlocks[idx]){
+        const tabNum=lblKey&&_refMap[lblKey]?_refMap[lblKey].num:''
+        tabBlocks[idx].caption=caption
+        tabBlocks[idx].tabNum=tabNum
+        tabBlocks[idx].hasFloat=true
+      }
+    }
+    return inner // keep inner content (already has placeholder)
+  })
+
   // ── Step 1: Extract ALL math into placeholders (before HTML escape) ──
   const mathBlocks=[];let mi=0
   function _ph(inner,block){
@@ -8355,8 +8500,18 @@ function wrRenderPreview(){
     mathBlocks.push({p,inner:inner.trim(),block})
     return p
   }
-  // equation / align / gather environments → display math
-  raw=raw.replace(/\\begin\{(equation|align|gather|multline)\*?\}([\s\S]*?)\\end\{\1\*?\}/g,(_,_env,inner)=>_ph(inner,true))
+  // equation / align / gather environments → display math (track labels for numbering)
+  let _eqCounter=0
+  raw=raw.replace(/\\begin\{(equation|align|alignat|gather|multline|eqnarray)(\*?)\}([\s\S]*?)\\end\{\1\2\}/g,(_,env,star,inner)=>{
+    const numbered=!star
+    const lm=numbered?inner.match(/\\label\{([^}]*)\}/):null
+    const eqNum=numbered?++_eqCounter:null
+    // strip the label from the inner math (it's not valid KaTeX)
+    const cleanInner=inner.replace(/\\label\{[^}]*\}/g,'').trim()
+    const p=`\x00M${mi++}\x00`
+    mathBlocks.push({p,inner:cleanInner,block:true,eqNum,lblKey:lm?lm[1]:null})
+    return p
+  })
   // \[...\] display math
   raw=raw.replace(/\\\[([\s\S]*?)\\\]/g,(_,inner)=>_ph(inner,true))
   // $$...$$ display math
@@ -8374,7 +8529,6 @@ function wrRenderPreview(){
     // Remove invisible / layout commands
     .replace(/\\noindent\b\s*/g,'')
     .replace(/\\indent\b\s*/g,'&nbsp;&nbsp;')
-    .replace(/\\label\{[^}]*\}/g,'')
     .replace(/\\newpage\b|\\clearpage\b|\\pagebreak\b/g,'<hr style="margin:10px 0;border:none;border-top:1px dashed var(--border)">')
     .replace(/\\maketitle\b|\\tableofcontents\b|\\listoffigures\b|\\listoftables\b/g,'')
     // Spacing
@@ -8403,10 +8557,16 @@ function wrRenderPreview(){
     .replace(/\\texttt\{([^}]*)\}/g,'<code style="font-size:12px;background:var(--surface2);padding:1px 4px;border-radius:3px">$1</code>')
     .replace(/\\textsc\{([^}]*)\}/g,'<span style="font-variant:small-caps">$1</span>')
     .replace(/\\text\{([^}]*)\}/g,'$1')
-    // Cross-refs
+    // Cross-refs — resolved using _refMap
+    .replace(/\\label\{([^}]*)\}/g,(m,k)=>_refMap[k]?`<span class="wr-label-anchor" id="lbl-${k.replace(/[^a-zA-Z0-9]/g,'-')}"></span>`:'')
     .replace(/\\footnote\{([^}]*)\}/g,'<sup style="font-size:10px;color:var(--text2)" title="$1">[注]</sup>')
-    .replace(/\\ref\{([^}]*)\}/g,'<span style="color:var(--primary)">[ref:$1]</span>')
-    .replace(/\\eqref\{([^}]*)\}/g,'<span style="color:var(--primary)">(eq.$1)</span>')
+    .replace(/\\autoref\{([^}]*)\}|\\Autoref\{([^}]*)\}|\\cref\{([^}]*)\}|\\Cref\{([^}]*)\}/g,(m,k1,k2,k3,k4)=>{
+      const k=k1||k2||k3||k4;const r=_refMap[k]
+      return r?`<a href="#lbl-${k.replace(/[^a-zA-Z0-9]/g,'-')}" style="color:var(--primary);text-decoration:none">${r.text}</a>`:`<span style="color:#dc2626;font-weight:600" title="未定义的 label">[??:${k}]</span>`
+    })
+    .replace(/\\ref\{([^}]*)\}/g,(m,k)=>{const r=_refMap[k];return r?`<a href="#lbl-${k.replace(/[^a-zA-Z0-9]/g,'-')}" style="color:var(--primary);text-decoration:none">${r.text}</a>`:`<span style="color:#dc2626;font-weight:600" title="未定义的 label">[??:${k}]</span>`})
+    .replace(/\\eqref\{([^}]*)\}/g,(m,k)=>{const r=_refMap[k];return r?`<a href="#lbl-${k.replace(/[^a-zA-Z0-9]/g,'-')}" style="color:var(--primary);text-decoration:none">(${r.num})</a>`:`<span style="color:#dc2626;font-weight:600" title="未定义的 label">(??.${k})</span>`})
+    .replace(/\\pageref\{([^}]*)\}/g,(m,k)=>{const r=_refMap[k];return r?`<span style="color:var(--text2);font-size:11px">[p.${r.num}]</span>`:`<span style="color:#dc2626" title="未定义的 label">[p.??]</span>`})
     .replace(/\\citet?\*?\{([^}]*)\}/g,'<span style="color:var(--primary)">[cite:$1]</span>')
     .replace(/\\citep\*?\{([^}]*)\}/g,'<span style="color:var(--primary)">[cite:$1]</span>')
     .replace(/\\bibliography\{[^}]*\}/g,'')
@@ -8455,13 +8615,40 @@ function wrRenderPreview(){
         rendered='<code style="color:#dc2626;font-size:12px">'+m.inner.replace(/</g,'&lt;')+'</code>'
       }
     }else{
-      // KaTeX not loaded yet — show code until it loads
       rendered=m.block
         ?`<div class="wr-math-block"><code style="font-size:12px">${m.inner.replace(/</g,'&lt;')}</code></div>`
         :`<code style="background:var(--surface2);padding:1px 4px;border-radius:3px;font-size:12px">${m.inner.replace(/</g,'&lt;')}</code>`
     }
-    if(m.block)rendered='<div class="wr-math-block">'+rendered+'</div>'
+    if(m.block){
+      const anchorId=m.lblKey?` id="lbl-${m.lblKey.replace(/[^a-zA-Z0-9]/g,'-')}"`:''
+      const numTag=m.eqNum?`<span style="float:right;color:var(--text2);font-size:12px;font-style:normal;padding-top:4px">(${m.eqNum})</span>`:'';
+      rendered=`<div class="wr-math-block" style="position:relative"${anchorId}>${numTag}${rendered}</div>`
+    }
     html=html.split(m.p).join(rendered)
+  }
+
+  // ── Step 5: Restore figure placeholders ──
+  for(const fb of figBlocks){
+    const imgHtml=fb.dataUrl
+      ?`<img src="${fb.dataUrl}" style="max-width:100%;max-height:320px;object-fit:contain;border-radius:4px">`
+      :fb.imgPath
+        ?`<div style="background:var(--surface2);border:1.5px dashed var(--border);padding:24px 16px;text-align:center;color:var(--text2);font-size:12px;border-radius:6px">🖼 <code>${escHtml(fb.imgPath)}</code></div>`
+        :'<div style="background:var(--surface2);border:1.5px dashed var(--border);padding:24px;text-align:center;color:var(--text2);font-size:12px;border-radius:6px">🖼 图片</div>'
+    const capHtml=fb.caption?`<figcaption style="font-size:12px;color:var(--text2);margin-top:6px;text-align:center"><strong>Figure ${fb.figNum}:</strong> ${fb.caption}</figcaption>`:''
+    const figHtml=`<figure style="text-align:center;margin:14px 0;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">${imgHtml}${capHtml}</figure>`
+    html=html.split(fb.ph).join(figHtml)
+  }
+
+  // ── Step 6: Restore tabular/table placeholders ──
+  for(const tb of tabBlocks){
+    if(tb.hasFloat&&tb.caption!==undefined){
+      const capHtml=tb.caption?`<caption style="font-size:12px;color:var(--text2);caption-side:bottom;padding-top:4px"><strong>Table ${tb.tabNum}:</strong> ${tb.caption}</caption>`:''
+      // insert caption into table html
+      const tblWithCap=tb.html.replace('<table ','<table ')+'<!-- cap -->'
+      html=html.split(tb.ph).join(tblWithCap.replace('<!-- cap -->',capHtml))
+    }else{
+      html=html.split(tb.ph).join(tb.html)
+    }
   }
 
   preEl.innerHTML=html
@@ -8564,6 +8751,8 @@ async function wrHandleZipFile(inp){
     const firstDir=allNames[0]?.split('/')[0]
     if(firstDir&&allNames.every(n=>n.startsWith(firstDir+'/')))prefix=firstDir+'/'
 
+    const _IMG_EXTS=new Set(['.png','.jpg','.jpeg','.gif','.svg','.webp'])
+    const _IMG_MIMES={'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.webp':'image/webp'}
     const promises=Object.entries(zip.files).map(async([path,entry])=>{
       if(entry.dir)return
       const relPath=prefix?path.slice(prefix.length):path
@@ -8574,7 +8763,21 @@ async function wrHandleZipFile(inp){
           files.push({path:relPath,content})
         }catch{}
       }else{
-        files.push({path:relPath,content:null}) // binary: tracked but not editable
+        const ext=relPath.slice(relPath.lastIndexOf('.')).toLowerCase()
+        if(_IMG_EXTS.has(ext)){
+          try{
+            const ab=await entry.async('arraybuffer')
+            if(ab.byteLength<=400*1024){ // 仅存 ≤400KB 的图片
+              const mime=_IMG_MIMES[ext]||'image/png'
+              const b64=btoa(String.fromCharCode(...new Uint8Array(ab)))
+              files.push({path:relPath,content:null,dataUrl:`data:${mime};base64,${b64}`})
+            }else{
+              files.push({path:relPath,content:null})
+            }
+          }catch{files.push({path:relPath,content:null})}
+        }else{
+          files.push({path:relPath,content:null}) // binary: tracked but not editable
+        }
       }
     })
     await Promise.all(promises)
@@ -8588,11 +8791,15 @@ async function wrHandleZipFile(inp){
     try{
       sv(WR_ZIP_KEY,all)
     }catch(e){
-      toast('⚠️ 项目较大，已省略部分文件','warn')
-      // 仅保存 .tex / .bib 文件
-      proj.files=proj.files.filter(f=>f.content!==null)
+      // 先尝试不含图片
+      proj.files=proj.files.map(f=>f.dataUrl?{...f,dataUrl:undefined}:f)
       all[0]=proj
-      sv(WR_ZIP_KEY,all)
+      try{sv(WR_ZIP_KEY,all)}catch(e2){
+        toast('⚠️ 项目较大，已省略部分文件','warn')
+        proj.files=proj.files.filter(f=>f.content!==null)
+        all[0]=proj
+        sv(WR_ZIP_KEY,all)
+      }
     }
     renderWrZipProjects()
     wrOpenZipProject(proj.id)
