@@ -1588,7 +1588,6 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     </div>
   </div>
 
-
 </div>
 
 <!-- ── Gantt ── -->
@@ -8899,7 +8898,6 @@ function wrReplaceAll(){
 }
 
 // ── AI Intent (改写全文) ──
-let _wrAiIsIntent=false
 
 function wrAiIntent(){
   const menu=document.getElementById('wr-ai-menu')
@@ -8954,7 +8952,7 @@ User's intent: ${intent}
 
 Rules:
 1. Return ONLY the complete modified LaTeX source code, nothing else — no explanations, no markdown fences
-2. Preserve all LaTeX structure (\documentclass, \usepackage, \begin{document}, etc.) if present
+2. Preserve all LaTeX structure (\\documentclass, \\usepackage, \\begin{document}, etc.) if present
 3. Keep all mathematical content, citations, and labels correct
 4. Only make changes directly related to the user's intent
 
