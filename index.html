@@ -1183,6 +1183,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <input id="papers-search" placeholder="搜索标题、作者、摘要..." style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--card)" oninput="renderPapersPage()">
           <button class="btn btn-primary btn-sm" onclick="openDailyPapers()" style="font-size:11px;white-space:nowrap">+ 获取论文</button>
           <button class="btn btn-ghost btn-sm" onclick="openAddPaperPanel()" style="font-size:11px;white-space:nowrap">✏️ 手动添加</button>
+          <button class="btn btn-ghost btn-sm" onclick="openImportPapersModal()" style="font-size:11px;white-space:nowrap">📥 导入</button>
           <button class="btn btn-ghost btn-sm" onclick="clearAllPapers()" style="font-size:11px;white-space:nowrap;color:var(--text2)">🗑 清空库</button>
         </div>
         <div id="papers-area-filters" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
@@ -2457,6 +2458,76 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="btn btn-primary btn-sm" onclick="_saveNoteSettings()">保存</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('noteSettingsModal')">取消</button>
       <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:11px;color:var(--text2)" onclick="_clearNoteSettings()">清除设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Import Papers Modal ── -->
+<div class="modal-overlay" id="importPapersModal" onclick="if(event.target===this)closeModal('importPapersModal')">
+  <div class="modal-box" style="max-width:680px;width:95%;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:700">📥 导入文献到文献库</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('importPapersModal')">✕</button>
+    </div>
+    <!-- Tab 切换 -->
+    <div style="display:flex;gap:0;margin-bottom:14px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content">
+      <button id="ip-tab-bib" onclick="_ipSwitchTab('bib')" style="padding:5px 16px;font-size:12px;font-weight:600;border:none;background:var(--primary);color:#fff;cursor:pointer;transition:all .15s">📄 BibTeX</button>
+      <button id="ip-tab-pdf" onclick="_ipSwitchTab('pdf')" style="padding:5px 16px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:all .15s">📑 PDF</button>
+      <button id="ip-tab-json" onclick="_ipSwitchTab('json')" style="padding:5px 16px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:all .15s">💾 JSON</button>
+    </div>
+
+    <!-- BibTeX 面板 -->
+    <div id="ip-panel-bib">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">支持标准 BibTeX 格式（.bib），可从 Zotero / Mendeley / Google Scholar / 手动导出。</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ip-bib-file').click()">📂 选择 .bib 文件</button>
+        <span id="ip-bib-fname" style="font-size:12px;color:var(--text2)"></span>
+        <input type="file" id="ip-bib-file" accept=".bib,.txt" style="display:none" onchange="_loadBibtexFile(this)">
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">或直接粘贴 BibTeX 内容：</div>
+      <textarea id="ip-bib-text" placeholder="@article{smith2024,&#10;  title  = {Paper Title},&#10;  author = {Smith, John and Doe, Jane},&#10;  year   = {2024},&#10;  journal= {NeurIPS},&#10;  abstract= {...}&#10;}" style="width:100%;height:160px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:'SF Mono','Fira Code',monospace;border:1.5px solid var(--border);border-radius:6px;padding:8px;background:var(--card)"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="_parseBibtexInput()">📋 解析 BibTeX</button>
+        <span id="ip-bib-tip" style="font-size:12px;color:var(--text2)"></span>
+      </div>
+    </div>
+
+    <!-- PDF 面板 -->
+    <div id="ip-panel-pdf" style="display:none">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">选择本地 PDF 文件，AI 自动提取标题、作者、摘要、年份等元数据。支持批量选择（建议 ≤10 篇/次）。</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ip-pdf-files').click()">📂 选择 PDF 文件</button>
+        <span id="ip-pdf-fname" style="font-size:12px;color:var(--text2)"></span>
+        <input type="file" id="ip-pdf-files" accept=".pdf" multiple style="display:none" onchange="_onPdfFilesSelected(this)">
+      </div>
+      <div id="ip-pdf-queue" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" id="ip-pdf-btn" onclick="_processPdfFiles()" style="display:none">🤖 AI 提取元数据</button>
+        <span id="ip-pdf-tip" style="font-size:12px;color:var(--text2)"></span>
+      </div>
+    </div>
+
+    <!-- JSON 面板 -->
+    <div id="ip-panel-json" style="display:none">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">导入本 app 文献库的 JSON 备份文件，或符合格式的 JSON 数组（每条需包含 <code>title</code> 字段）。</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ip-json-file').click()">📂 选择 JSON 文件</button>
+        <span id="ip-json-fname" style="font-size:12px;color:var(--text2)"></span>
+        <input type="file" id="ip-json-file" accept=".json" style="display:none" onchange="_loadJsonFile(this)">
+      </div>
+      <span id="ip-json-tip" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+
+    <!-- 预览区（共用） -->
+    <div id="ip-preview" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <div id="ip-preview-count" style="font-size:13px;font-weight:600"></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-primary btn-sm" id="ip-import-btn" onclick="_ipImportSelected()">✅ 全部导入</button>
+          <button class="btn btn-ghost btn-sm" onclick="_ipClearPreview()">✕ 清除</button>
+        </div>
+      </div>
+      <div id="ip-preview-list" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
     </div>
   </div>
 </div>
@@ -11145,6 +11216,301 @@ function clearAllPapers(){
   document.getElementById('papers-reading-placeholder').style.display='flex'
   renderPapersPage()
   toast('文献库已清空')
+}
+
+// ══════════════════════════════════════
+//  IMPORT PAPERS
+// ══════════════════════════════════════
+let _ipPendingPapers=[]
+
+function openImportPapersModal(){
+  _ipPendingPapers=[]
+  _ipClearPreview()
+  document.getElementById('ip-bib-text').value=''
+  document.getElementById('ip-bib-tip').textContent=''
+  document.getElementById('ip-pdf-tip').textContent=''
+  document.getElementById('ip-pdf-queue').textContent=''
+  document.getElementById('ip-pdf-btn').style.display='none'
+  document.getElementById('ip-pdf-fname').textContent=''
+  document.getElementById('ip-bib-fname').textContent=''
+  document.getElementById('ip-json-fname').textContent=''
+  _ipSwitchTab('bib')
+  openModal('importPapersModal')
+}
+
+function _ipSwitchTab(tab){
+  ['bib','pdf','json'].forEach(t=>{
+    document.getElementById('ip-panel-'+t).style.display=t===tab?'':'none'
+    const btn=document.getElementById('ip-tab-'+t)
+    btn.style.background=t===tab?'var(--primary)':'transparent'
+    btn.style.color=t===tab?'#fff':'var(--text2)'
+  })
+}
+
+// ── BibTeX ──
+function _loadBibtexFile(input){
+  const file=input.files?.[0];if(!file)return
+  document.getElementById('ip-bib-fname').textContent=file.name
+  const reader=new FileReader()
+  reader.onload=e=>{document.getElementById('ip-bib-text').value=e.target.result;_parseBibtexInput()}
+  reader.readAsText(file,'UTF-8')
+}
+
+function _parseBibtexInput(){
+  const src=document.getElementById('ip-bib-text').value.trim()
+  const tip=document.getElementById('ip-bib-tip')
+  if(!src){tip.textContent='⚠️ 内容为空';return}
+  tip.textContent='解析中...'
+  try{
+    const entries=_parseBibtex(src)
+    const papers=entries.map(_bibtexToPaper).filter(p=>p.title)
+    if(!papers.length){tip.textContent='⚠️ 未找到有效条目';return}
+    tip.textContent=`✅ 解析到 ${papers.length} 条`
+    _ipShowPreview(papers)
+  }catch(e){tip.textContent='❌ 解析失败：'+e.message;console.error(e)}
+}
+
+function _parseBibtex(src){
+  const entries=[]
+  let i=0
+  while(i<src.length){
+    const at=src.indexOf('@',i);if(at<0)break
+    let j=at+1
+    while(j<src.length&&/\w/.test(src[j]))j++
+    const type=src.slice(at+1,j).toLowerCase()
+    while(j<src.length&&src[j]!=='{')j++
+    if(j>=src.length)break
+    j++ // skip {
+    // citation key
+    let k=j
+    while(k<src.length&&src[k]!==','&&src[k]!=='}')k++
+    const citeKey=src.slice(j,k).trim()
+    // extract balanced body
+    let depth=1,m=k
+    while(m<src.length&&depth>0){
+      if(src[m]==='{')depth++
+      else if(src[m]==='}')depth--
+      m++
+    }
+    const body=src.slice(k,m-1)
+    i=m
+    if(/^(string|preamble|comment)$/.test(type))continue
+    entries.push({type,key:citeKey,fields:_parseBibtexFields(body)})
+  }
+  return entries
+}
+
+function _parseBibtexFields(body){
+  const fields={}
+  let i=0
+  while(i<body.length){
+    while(i<body.length&&/[\s,]/.test(body[i]))i++
+    if(i>=body.length)break
+    let j=i
+    while(j<body.length&&/[\w-]/.test(body[j]))j++
+    if(j===i){i++;continue}
+    const name=body.slice(i,j).toLowerCase()
+    i=j
+    while(i<body.length&&body[i]!=='=')i++
+    if(i>=body.length)break
+    i++
+    while(i<body.length&&/[ \t]/.test(body[i]))i++
+    let value=''
+    if(body[i]==='{'){
+      let depth=0,k=i
+      while(k<body.length){
+        if(body[k]==='{')depth++
+        else if(body[k]==='}'){depth--;if(depth===0){k++;break}}
+        k++
+      }
+      value=body.slice(i+1,k-1);i=k
+    }else if(body[i]==='"'){
+      let k=i+1
+      while(k<body.length&&body[k]!=='"')k++
+      value=body.slice(i+1,k);i=k+1
+    }else{
+      let k=i
+      while(k<body.length&&body[k]!==','&&body[k]!=='\n')k++
+      value=body.slice(i,k).trim();i=k
+    }
+    // strip remaining LaTeX braces & basic commands
+    value=value.replace(/\{([^}]*)\}/g,'$1').replace(/\\[a-zA-Z]+\s*/g,'').replace(/\s+/g,' ').trim()
+    fields[name]=value
+  }
+  return fields
+}
+
+function _bibtexToPaper(entry){
+  const f=entry.fields
+  const rawAuth=f.author||f.authors||''
+  const authors=rawAuth.split(/\s+and\s+/i).map(a=>{
+    const p=a.split(',')
+    return p.length>=2?(p[1].trim()+' '+p[0].trim()):a.trim()
+  }).filter(Boolean).slice(0,6).join(', ')
+  const year=f.year||''
+  const doi=f.doi||''
+  const eprint=f.eprint||f.arxiv||''
+  const arxivM=(eprint+' '+(f.url||'')).match(/(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:)(\d{4}\.\d{4,})/i)
+  const arxivId=arxivM?.[1]||''
+  const url=arxivId?`https://arxiv.org/abs/${arxivId}`:(doi?`https://doi.org/${doi}`:(f.url||''))
+  return{
+    id:'bib_'+(entry.key||uid()).replace(/\W/g,'_')+'_'+Date.now(),
+    arxiv_id:arxivId,
+    title:f.title||'',
+    authors,
+    abstract:f.abstract||'',
+    url,
+    pdf_url:arxivId?`https://arxiv.org/pdf/${arxivId}`:'',
+    code_url:'',
+    date:year?(year+'-01-01'):'',
+    venue:f.journal||f.booktitle||f.howpublished||f.publisher||'',
+    area:'',figure:'',score:0,summary:''
+  }
+}
+
+// ── PDF ──
+let _ipPdfFiles=[]
+function _onPdfFilesSelected(input){
+  _ipPdfFiles=[...input.files]
+  const n=_ipPdfFiles.length
+  document.getElementById('ip-pdf-fname').textContent=`已选择 ${n} 个文件`
+  document.getElementById('ip-pdf-queue').innerHTML=_ipPdfFiles.map(f=>`<div style="color:var(--text2)">• ${escHtml(f.name)}</div>`).join('')
+  document.getElementById('ip-pdf-btn').style.display=n?'':'none'
+  document.getElementById('ip-pdf-tip').textContent=''
+  _ipClearPreview()
+}
+
+async function _processPdfFiles(){
+  if(!_ipPdfFiles.length){toast('请先选择 PDF 文件','warn');return}
+  const btn=document.getElementById('ip-pdf-btn')
+  const tip=document.getElementById('ip-pdf-tip')
+  btn.disabled=true
+  const pdfjs=await _ensurePdfJs().catch(()=>null)
+  if(!pdfjs){tip.textContent='❌ PDF.js 加载失败';btn.disabled=false;return}
+  const papers=[]
+  for(let idx=0;idx<_ipPdfFiles.length;idx++){
+    const file=_ipPdfFiles[idx]
+    tip.textContent=`处理 ${idx+1}/${_ipPdfFiles.length}：${file.name}…`
+    try{
+      const ab=await file.arrayBuffer()
+      const task=pdfjs.getDocument({data:ab,cMapUrl:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',cMapPacked:true})
+      const doc=await task.promise
+      const maxP=Math.min(doc.numPages,3)
+      let text=''
+      for(let p=1;p<=maxP;p++){
+        const page=await doc.getPage(p)
+        const tc=await page.getTextContent()
+        text+=tc.items.map(it=>it.str).join(' ')+'\n'
+      }
+      text=text.slice(0,3000)
+      // AI 提取元数据
+      const aiPrompt=`从以下 PDF 文本中提取论文元数据，返回 JSON 对象（字段：title, authors, abstract, year, venue）。
+- authors: 逗号分隔，最多5位
+- abstract: 不超过300字
+- year: 仅数字年份
+- venue: 期刊或会议名
+仅返回 JSON，不要其他内容。
+
+PDF 文本（前3页）：
+${text}`
+      const aiResp=await _callAI(aiPrompt,600)
+      let meta={}
+      try{
+        const jsonStr=(aiResp||'').replace(/^```json\n?|^```\n?|```$/gm,'').trim()
+        meta=JSON.parse(jsonStr)
+      }catch(_){
+        // fallback: try to extract title from first line
+        const firstLine=text.split('\n').find(l=>l.trim().length>10)||file.name.replace('.pdf','')
+        meta={title:firstLine.trim().slice(0,150),authors:'',abstract:'',year:'',venue:''}
+      }
+      papers.push({
+        id:'pdf_'+Date.now()+'_'+idx,
+        arxiv_id:'',
+        title:(meta.title||file.name.replace('.pdf','')).slice(0,200),
+        authors:meta.authors||'',
+        abstract:meta.abstract||'',
+        url:'',pdf_url:'',code_url:'',
+        date:meta.year?(meta.year+'-01-01'):'',
+        venue:meta.venue||'',
+        area:'',figure:'',score:0,summary:''
+      })
+    }catch(e){
+      console.warn('PDF parse failed',file.name,e)
+      papers.push({id:'pdf_err_'+Date.now()+'_'+idx,arxiv_id:'',title:file.name.replace('.pdf',''),authors:'',abstract:'',url:'',pdf_url:'',code_url:'',date:'',venue:'',area:'',figure:'',score:0,summary:''})
+    }
+  }
+  btn.disabled=false
+  if(!papers.length){tip.textContent='⚠️ 未能提取任何文献';return}
+  tip.textContent=`✅ 提取 ${papers.length} 篇`
+  _ipShowPreview(papers)
+}
+
+// ── JSON ──
+function _loadJsonFile(input){
+  const file=input.files?.[0];if(!file)return
+  document.getElementById('ip-json-fname').textContent=file.name
+  const reader=new FileReader()
+  reader.onload=e=>{
+    const tip=document.getElementById('ip-json-tip')
+    try{
+      const data=JSON.parse(e.target.result)
+      const arr=Array.isArray(data)?data:(data.papers||data.lib||[])
+      const papers=arr.filter(p=>p&&p.title).map(p=>({
+        id:'json_'+(p.id||uid())+'_'+Date.now(),
+        arxiv_id:p.arxiv_id||'',title:p.title||'',authors:p.authors||'',
+        abstract:p.abstract||'',url:p.url||'',pdf_url:p.pdf_url||'',
+        code_url:p.code_url||'',date:p.date||'',venue:p.venue||'',
+        area:p.area||'',figure:'',score:p.score||0,summary:p.summary||''
+      }))
+      if(!papers.length){tip.textContent='⚠️ 未找到有效条目';return}
+      tip.textContent=`✅ 解析到 ${papers.length} 条`
+      _ipShowPreview(papers)
+    }catch(e){document.getElementById('ip-json-tip').textContent='❌ JSON 解析失败：'+e.message}
+  }
+  reader.readAsText(file,'UTF-8')
+}
+
+// ── 预览 & 导入 ──
+function _ipShowPreview(papers){
+  _ipPendingPapers=papers
+  const lib=_ldPapLib()
+  const inLib=new Set(lib.map(p=>p.id.replace(/^(bib|pdf|json)_[^_]+_\d+/,'').replace(/^(bib|pdf|json)_/,'')))
+  // 按 title 去重已有
+  const libTitles=new Set(lib.map(p=>(p.title||'').toLowerCase().trim()))
+  const preview=document.getElementById('ip-preview')
+  const countEl=document.getElementById('ip-preview-count')
+  const listEl=document.getElementById('ip-preview-list')
+  const dup=papers.filter(p=>libTitles.has((p.title||'').toLowerCase().trim())).length
+  countEl.textContent=`共 ${papers.length} 篇${dup?`（${dup} 篇已在库中，导入时将跳过）`:''}`
+  document.getElementById('ip-import-btn').textContent=`✅ 导入 ${papers.length-dup} 篇`
+  listEl.innerHTML=papers.map(p=>{
+    const isDup=libTitles.has((p.title||'').toLowerCase().trim())
+    return`<div style="padding:7px 10px;border-radius:6px;background:var(--surface2);border-left:3px solid ${isDup?'var(--text2)':'var(--primary)'};opacity:${isDup?0.5:1}">
+      <div style="font-size:12px;font-weight:600;color:var(--text);line-height:1.4">${escHtml(p.title)}${isDup?' <span style="font-size:10px;color:var(--text2)">[已存在]</span>':''}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px">${escHtml(p.authors?p.authors.slice(0,60):'')+(p.date?' · '+p.date.slice(0,4):'')+(p.venue?' · '+p.venue.slice(0,30):'')}</div>
+    </div>`
+  }).join('')
+  preview.style.display=''
+}
+
+function _ipImportSelected(){
+  if(!_ipPendingPapers.length){toast('没有待导入的文献','warn');return}
+  const lib=_ldPapLib()
+  const libTitles=new Set(lib.map(p=>(p.title||'').toLowerCase().trim()))
+  const newPapers=_ipPendingPapers.filter(p=>!libTitles.has((p.title||'').toLowerCase().trim()))
+  if(!newPapers.length){toast('所有文献已在库中','warn');return}
+  _svPapLib([...newPapers,...lib].slice(0,500))
+  renderPapersPage()
+  closeModal('importPapersModal')
+  toast(`📚 已导入 ${newPapers.length} 篇文献到文献库`)
+}
+
+function _ipClearPreview(){
+  _ipPendingPapers=[]
+  const preview=document.getElementById('ip-preview')
+  if(preview)preview.style.display='none'
+  const listEl=document.getElementById('ip-preview-list')
+  if(listEl)listEl.innerHTML=''
 }
 
 // 手动添加面板
