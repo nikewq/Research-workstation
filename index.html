@@ -2468,34 +2468,69 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div style="font-size:16px;font-weight:700">📚 每日文献获取</div>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('dailyPapersModal')">✕</button>
     </div>
-    <!-- 研究方向选择 -->
-    <div class="card mb-12" style="padding:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">研究方向（点击选择/取消）</div>
-      <div id="dp-areas" style="display:flex;flex-wrap:wrap;gap:0"></div>
-      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="dp-custom-area" placeholder="添加自定义方向或英文关键词..." style="flex:1;min-width:180px;padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)" onkeydown="if(event.key==='Enter')addDpCustomArea()">
-        <button class="btn btn-ghost btn-sm" onclick="addDpCustomArea()">+ 添加</button>
-        <label style="font-size:12px;color:var(--text2)">每方向最多
-          <select id="dp-max" style="border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px">
-            <option value="8">8篇</option>
-            <option value="15" selected>15篇</option>
-            <option value="25">25篇</option>
-          </select>
-        </label>
+    <!-- 模式切换 -->
+    <div style="display:flex;gap:0;margin-bottom:12px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content">
+      <button id="dp-tab-areas" onclick="_dpSwitchMode('areas')" style="padding:5px 14px;font-size:12px;font-weight:600;border:none;background:var(--primary);color:#fff;cursor:pointer;transition:all .15s">📂 按方向获取</button>
+      <button id="dp-tab-search" onclick="_dpSwitchMode('search')" style="padding:5px 14px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:all .15s">🔍 关键词搜索</button>
+    </div>
+    <!-- 研究方向选择（areas 模式） -->
+    <div id="dp-panel-areas">
+      <div class="card mb-12" style="padding:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">研究方向（点击选择/取消）</div>
+        <div id="dp-areas" style="display:flex;flex-wrap:wrap;gap:0"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="dp-custom-area" placeholder="添加自定义方向或英文关键词..." style="flex:1;min-width:180px;padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--card)" onkeydown="if(event.key==='Enter')addDpCustomArea()">
+          <button class="btn btn-ghost btn-sm" onclick="addDpCustomArea()">+ 添加</button>
+          <label style="font-size:12px;color:var(--text2)">最多
+            <select id="dp-max" style="border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px">
+              <option value="8">8篇</option>
+              <option value="15" selected>15篇</option>
+              <option value="25">25篇</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="dp-fetch-btn" onclick="fetchDailyPapers()">🔍 获取今日论文</button>
+        <div id="dp-status" style="font-size:12px;color:var(--text2)">选择研究方向后点击获取</div>
       </div>
     </div>
-    <!-- 获取按钮 + 状态 -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <button class="btn btn-primary" id="dp-fetch-btn" onclick="fetchDailyPapers()">🔍 获取今日论文</button>
-      <div id="dp-status" style="font-size:12px;color:var(--text2)">选择研究方向后点击获取</div>
+    <!-- 关键词搜索（search 模式） -->
+    <div id="dp-panel-search" style="display:none">
+      <div class="card mb-12" style="padding:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">AI 搜索论文</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">支持：关键词（如 <code>causal OOD generalization</code>）、文章标题片段、作者姓名（如 <code>Bernhard Schölkopf</code>）。建议优先使用英文。</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="dp-search-input" placeholder="输入关键词、标题片段、作者名..." style="flex:1;min-width:200px;padding:7px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--card)" onkeydown="if(event.key==='Enter')searchDailyPapers()">
+          <label style="font-size:12px;color:var(--text2);white-space:nowrap">最多
+            <select id="dp-search-max" style="border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px">
+              <option value="10">10篇</option>
+              <option value="20" selected>20篇</option>
+              <option value="40">40篇</option>
+            </select>
+          </label>
+        </div>
+        <!-- 搜索类型快捷标签 -->
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--text2);line-height:22px">快捷：</span>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px" onclick="_dpInsertSearch('causal representation learning OOD')">因果表征+OOD</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px" onclick="_dpInsertSearch('out-of-distribution generalization')">OOD泛化</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px" onclick="_dpInsertSearch('image restoration blind degradation')">图像修复</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px" onclick="_dpInsertSearch('invariant learning spurious correlation')">不变学习</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="dp-search-btn" onclick="searchDailyPapers()">🤖 AI 搜索</button>
+        <div id="dp-search-status" style="font-size:12px;color:var(--text2)">输入查询后点击搜索</div>
+      </div>
     </div>
-    <!-- 操作栏 -->
+    <!-- 操作栏（共用） -->
     <div id="dp-action-bar" style="display:none;padding:10px 0 12px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:12px;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm" style="font-size:12px" onclick="downloadPapersHTML()">💾 下载为 HTML</button>
       <button class="btn btn-sm" style="font-size:12px;background:var(--primary-soft);color:var(--primary)" onclick="savePapersToLib()">📚 保存到文献库</button>
       <div style="font-size:11px;color:var(--text2);margin-left:4px" id="dp-save-status"></div>
     </div>
-    <!-- 结果区 -->
+    <!-- 结果区（共用） -->
     <div id="dp-results"></div>
   </div>
 </div>
@@ -10551,6 +10586,116 @@ function openDailyPapers(){
   if(ab)ab.style.display='none'
   window._dpCurrentPapers=null
   openModal('dailyPapersModal')
+}
+
+// 模式切换
+function _dpSwitchMode(mode){
+  const isSearch=mode==='search'
+  document.getElementById('dp-panel-areas').style.display=isSearch?'none':''
+  document.getElementById('dp-panel-search').style.display=isSearch?'':'none'
+  document.getElementById('dp-tab-areas').style.background=isSearch?'transparent':'var(--primary)'
+  document.getElementById('dp-tab-areas').style.color=isSearch?'var(--text2)':'#fff'
+  document.getElementById('dp-tab-search').style.background=isSearch?'var(--primary)':'transparent'
+  document.getElementById('dp-tab-search').style.color=isSearch?'#fff':'var(--text2)'
+  document.getElementById('dp-results').innerHTML=''
+  document.getElementById('dp-action-bar').style.display='none'
+  window._dpCurrentPapers=null
+  if(isSearch){
+    document.getElementById('dp-search-status').textContent='输入查询后点击搜索'
+    setTimeout(()=>document.getElementById('dp-search-input')?.focus(),50)
+  }else{
+    document.getElementById('dp-status').textContent='选择研究方向后点击获取'
+  }
+}
+
+// 快捷填充搜索词
+function _dpInsertSearch(q){
+  const inp=document.getElementById('dp-search-input')
+  if(inp){inp.value=q;inp.focus()}
+}
+
+// AI 关键词搜索（主函数）
+async function searchDailyPapers(){
+  const rawQuery=document.getElementById('dp-search-input')?.value.trim()
+  if(!rawQuery){toast('请输入搜索内容','warn');return}
+  const limit=parseInt(document.getElementById('dp-search-max')?.value||'20')
+  const statusEl=document.getElementById('dp-search-status')
+  const resultsEl=document.getElementById('dp-results')
+  const searchBtn=document.getElementById('dp-search-btn')
+  const ab=document.getElementById('dp-action-bar')
+  searchBtn.disabled=true
+  resultsEl.innerHTML=''
+  ab.style.display='none'
+  window._dpCurrentPapers=null
+  // 若含中文，先用 AI 翻译为英文学术关键词
+  let query=rawQuery
+  const hasChinese=/[\u4e00-\u9fa5]/.test(rawQuery)
+  if(hasChinese){
+    statusEl.innerHTML=`<span class="spinner"></span> AI 翻译查询词...`
+    try{
+      const tr=await _callAI(`将以下中文学术搜索词翻译为简洁的英文学术关键词（5-10词，用空格分隔，直接输出）：${rawQuery}`,100)
+      if(tr&&tr.trim())query=tr.trim().replace(/\n.*/,'')
+    }catch(_){}
+  }
+  // 三源依次尝试
+  statusEl.innerHTML=`<span class="spinner"></span> 搜索「${escHtml(rawQuery)}」...`
+  let papers=[]
+  const errs=[]
+  for(const[name,fn]of[
+    ['OpenAlex',()=>_fetchOpenAlex(query,limit+10)],
+    ['Semantic Scholar',()=>_fetchS2(query,limit)],
+    ['CrossRef',()=>_fetchCrossRef(query,limit)]
+  ]){
+    try{
+      statusEl.innerHTML=`<span class="spinner"></span> ${name} 搜索中...`
+      papers=await fn()
+      if(papers.length>0){console.log(`[search] ${name} OK: ${papers.length}`);break}
+      errs.push(`${name}: 0条`)
+    }catch(e){errs.push(`${name}: ${e.message?.slice(0,60)}`);console.warn(`[search] ${name} failed`,e)}
+  }
+  if(!papers.length){
+    statusEl.textContent=`未找到结果：${errs.join(' | ')}`
+    searchBtn.disabled=false;return
+  }
+  // 去重
+  const seen=new Set()
+  papers=papers.filter(p=>{const k=p.arxiv_id||p.id;if(seen.has(k))return false;seen.add(k);return true})
+    .slice(0,limit)
+  papers.forEach(p=>{p.area=rawQuery})
+  // AI 评分与摘要
+  statusEl.innerHTML=`<span class="spinner"></span> AI 分析 ${papers.length} 篇...`
+  const batch=papers.slice(0,25)
+  const summaryPrompt=`你是论文速读助手。以下是 ${batch.length} 篇搜索结果，用户搜索词为「${rawQuery}」。
+
+对每篇论文：
+1. score(1-30)：与搜索词的相关性评分
+2. summary：4-5条中文摘要，格式"- **字段**: 内容"，字段为：解决的问题/研究方法/创新点/主要结果/数据集
+3. area：用3-5字概括该论文的核心方向（中文）
+
+返回 JSON 数组，每项：{"id":"...","score":数字,"summary":"...","area":"..."}
+只返回 JSON。
+
+论文：
+${batch.map((p,i)=>`${i}.{"id":"${p.id}","title":"${(p.title||'').slice(0,100)}","abstract":"${(p.abstract||'').slice(0,400)}"}`).join('\n')}`
+  try{
+    const aiResp=await _callAI(summaryPrompt,3200)
+    if(aiResp){
+      const summaries=_extractJSONArray(aiResp)
+      if(Array.isArray(summaries)){
+        summaries.forEach(s=>{
+          const paper=papers.find(p=>p.id===s.id)
+          if(paper){paper.score=Number(s.score)||15;paper.summary=s.summary||'';if(s.area)paper.area=s.area}
+        })
+      }
+    }
+  }catch(e){console.warn('AI search summarize failed',e)}
+  papers.sort((a,b)=>(b.score||0)-(a.score||0))
+  window._dpCurrentPapers=papers
+  _renderDpResults(papers)
+  statusEl.innerHTML=`✅ 找到 <strong>${papers.length}</strong> 篇，已 AI 排序`
+  if(hasChinese&&query!==rawQuery)statusEl.innerHTML+=`<span style="color:var(--text2);margin-left:6px">（英文查询：${escHtml(query)}）</span>`
+  ab.style.display='flex'
+  searchBtn.disabled=false
 }
 
 // 添加自定义方向
