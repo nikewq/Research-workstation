@@ -1403,7 +1403,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
               <div class="wr-ai-menu-item" onclick="wrAiAction('translate')">🌐 翻译成中文</div>
               <div class="wr-ai-menu-item" onclick="wrAiAction('abstract')">📄 生成摘要</div>
               <div style="border-top:1px solid var(--border);margin:4px 0"></div>
-              <div class="wr-ai-menu-item" onclick="wrAiIntent()">🎯 按意图改写全文...</div>
+              <div class="wr-ai-menu-item" onclick="wrAiIntent()">🎯 AI 问答 / 改写...</div>
               <div style="border-top:1px solid var(--border);margin:4px 0"></div>
               <div class="wr-ai-menu-item" style="color:var(--text2);font-size:11px" onclick="wrOpenAiCfg()">⚙️ AI 模型配置</div>
             </div>
@@ -1451,8 +1451,8 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           </div>
           <!-- 意图输入行（仅 intent 模式显示） -->
           <div id="wr-ai-intent-row">
-            <span style="font-size:11px;color:var(--primary);white-space:nowrap;font-weight:600">🎯 改写意图：</span>
-            <input id="wr-ai-intent-input" placeholder="描述你的修改目的，AI 将按此意图改写全文..." onkeydown="if(event.key==='Enter')wrAiIntentSubmit()">
+            <span style="font-size:11px;color:var(--primary);white-space:nowrap;font-weight:600">🎯 意图：</span>
+            <input id="wr-ai-intent-input" placeholder="提问 or 改写描述（AI 自动判断：问答直接回答，改写操作才修改全文）" onkeydown="if(event.key==='Enter')wrAiIntentSubmit()">
             <button class="btn btn-primary btn-sm" style="font-size:11px;white-space:nowrap" onclick="wrAiIntentSubmit()">执行</button>
             <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrAiIntentCancel()">取消</button>
           </div>
@@ -8929,7 +8929,7 @@ function wrAiIntentCancel(){
 
 async function wrAiIntentSubmit(){
   const intent=document.getElementById('wr-ai-intent-input')?.value?.trim()
-  if(!intent){toast('请输入改写意图','warning');return}
+  if(!intent){toast('请输入意图或问题','warning');return}
   const ta=document.getElementById('wr-editor')
   const src=ta?.value||''
   if(!src.trim()){toast('编辑器内容为空','warning');return}
@@ -8941,20 +8941,18 @@ async function wrAiIntentSubmit(){
   const acceptBtn=document.getElementById('wr-ai-accept-btn')
   if(!panel||!resultEl)return
   panel.classList.add('visible')
-  if(labelEl)labelEl.textContent='🎯 AI 意图改写中...'
+  if(labelEl)labelEl.textContent='🎯 AI 处理中...'
   if(acceptBtn)acceptBtn.style.display='none'
   ta.classList.add('wr-ai-pending')
-  resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 正在按意图改写全文…</span></div>`
+  resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 处理中…</span></div>`
 
-  const prompt=`You are an expert LaTeX academic writing assistant. The user wants you to modify the entire LaTeX document according to their stated intent.
+  const prompt=`You are an expert LaTeX academic writing assistant. The user has a request about their LaTeX document.
 
-User's intent: ${intent}
+Decide based on the request type:
+- If the request is a QUESTION or asks for explanation/analysis (e.g. "what does this mean?", "explain X", "is this correct?", "how do I..."), answer concisely. Start your reply with exactly "ANSWER:" followed by your answer.
+- If the request requires MODIFYING the document (rewrite, edit, add, delete, change wording, fix grammar, translate sections, restructure, etc.), return ONLY the complete modified LaTeX source code — no explanations, no markdown fences, no "ANSWER:" prefix.
 
-Rules:
-1. Return ONLY the complete modified LaTeX source code, nothing else — no explanations, no markdown fences
-2. Preserve all LaTeX structure (\\documentclass, \\usepackage, \\begin{document}, etc.) if present
-3. Keep all mathematical content, citations, and labels correct
-4. Only make changes directly related to the user's intent
+User's request: ${intent}
 
 LaTeX document:
 ${src}`
@@ -8967,8 +8965,18 @@ ${src}`
     return
   }
 
-  // 清理 AI 可能输出的 markdown 代码块包装
   let cleaned=result.trim()
+  // Detect answer mode vs rewrite mode
+  const isAnswer=cleaned.startsWith('ANSWER:')
+  if(isAnswer){
+    const answerText=cleaned.slice(7).trim()
+    ta.classList.remove('wr-ai-pending')
+    resultEl.innerHTML=`<div style="padding:12px 14px;font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap">${escHtml(answerText)}</div>`
+    if(labelEl)labelEl.textContent='💬 AI 回答'
+    if(acceptBtn)acceptBtn.style.display='none'
+    return
+  }
+  // Rewrite mode: clean markdown fences
   if(cleaned.startsWith('```latex'))cleaned=cleaned.slice(7)
   else if(cleaned.startsWith('```tex'))cleaned=cleaned.slice(6)
   else if(cleaned.startsWith('```'))cleaned=cleaned.slice(3)
@@ -8977,11 +8985,9 @@ ${src}`
 
   _wrAiResult=cleaned
   _wrAiIsIntent=true
-  // 设置 selStart/End 为全文范围
   _wrAiSelStart=0
   _wrAiSelEnd=src.length
 
-  // 显示 diff summary（字符数变化）
   const diffInfo=`改写完成：${src.length} → ${cleaned.length} 字符`
   resultEl.innerHTML=`<div style="padding:6px 14px;font-size:11px;color:var(--text2);background:var(--surface2);border-bottom:1px solid var(--border)">${escHtml(diffInfo)}</div><div style="padding:12px 14px;font-size:12px;line-height:1.7;white-space:pre-wrap;color:var(--text);font-family:'JetBrains Mono',monospace;max-height:180px;overflow-y:auto">${escHtml(cleaned.slice(0,3000))}${cleaned.length>3000?'\n\n…（预览截断，接受后查看完整内容）':''}</div>`
 
@@ -9496,6 +9502,37 @@ function _wrExtOpt(s, from, def=''){
   return{val:s.slice(i+1,j),end:j+1}
 }
 
+// Handle {\color{name}content} group-scoped color — finds { \color{name} ... }
+function _wrApplyGroupColorCmd(html, colResolver){
+  let result='',i=0
+  while(i<html.length){
+    const braceIdx=html.indexOf('{',i)
+    if(braceIdx<0){result+=html.slice(i);break}
+    // peek past optional whitespace for \color{
+    let j=braceIdx+1
+    while(j<html.length&&(html[j]===' '||html[j]==='\n'))j++
+    if(html.slice(j,j+7)==='\\color{'){
+      const nameStart=j+7
+      const nameEnd=html.indexOf('}',nameStart)
+      if(nameEnd<0){result+=html.slice(i,braceIdx+1);i=braceIdx+1;continue}
+      const colorName=html.slice(nameStart,nameEnd)
+      // find balanced closing } for the outer group
+      let depth=1,k=nameEnd+1
+      while(k<html.length&&depth>0){
+        if(html[k]==='{')depth++
+        else if(html[k]==='}')depth--
+        k++
+      }
+      const content=html.slice(nameEnd+1,k-1)
+      result+=`<span style="color:${colResolver(colorName)}">${content}</span>`
+      i=k
+    }else{
+      result+=html.slice(i,braceIdx+1);i=braceIdx+1
+    }
+  }
+  return result
+}
+
 function _wrApplyColorAnnotations(html, rawSrc){
   // Collect custom colors defined in source
   const customColors=_wrParseDefineColors(rawSrc||'')
@@ -9523,12 +9560,13 @@ function _wrApplyColorAnnotations(html, rawSrc){
     return`<span style="background:${colBg(bg)};border:1.5px solid ${col(bc)};padding:1px 5px;border-radius:3px">${text}</span>`
   })
 
-  // ── 4. \color{color} — switch color for the rest of current group ──
-  // Simple approach: wrap remaining content until next } or end
-  html=html.replace(/\\color\{([^}]+)\}/g,(m,c)=>{
-    const css=col(c)
-    return`<span style="color:${css}">`
-  })
+  // ── 4. \color{color} — group-scoped: {\color{name}...} ──
+  // First pass: handle explicit groups {\color{name}content}
+  html=_wrApplyGroupColorCmd(html,col)
+  // Second pass: remaining standalone \color{name} — open span, close at \n\n or end
+  html=html.replace(/\\color\{([^}]+)\}/g,(m,c)=>`<span style="color:${col(c)}">`)
+  // Close any unclosed color spans at double-newlines or end-of-string
+  html=html.replace(/(<span style="color:[^"]+">)([\s\S]*?)(\n\n|$)/g,(m,open,body,term)=>open+body+'</span>'+term)
 
   // ── 5. soul / ulem annotation commands ──
   // \hl{text} — yellow highlight
