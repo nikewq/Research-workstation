@@ -1369,6 +1369,7 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
           </div>
           <span id="wr-prev-subtitle" style="font-size:10px;font-weight:400;color:var(--text2)">KaTeX 数学渲染</span>
           <button id="wr-prev-retrans-btn" onclick="wrRetranslate()" style="display:none;margin-left:auto;padding:2px 8px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text2);cursor:pointer">↺ 重新翻译</button>
+          <button onclick="wrDownloadPdf()" title="下载 PDF" style="margin-left:auto;padding:2px 8px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:3px" onmouseenter="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">⬇ PDF</button>
         </div>
         <div id="wr-preview-area"></div>
         <!-- 翻译面板（固定在预览下方） -->
@@ -8267,6 +8268,36 @@ function _wrExpandDefs(raw,cmds,envs){
     if(!changed)break
   }
   return raw
+}
+
+function wrDownloadPdf(){
+  const preEl=document.getElementById('wr-preview-area')
+  if(!preEl||!preEl.innerHTML.trim()){toast('请先编写内容并等待预览生成');return}
+  const proj=document.getElementById('wr-proj-title')?.textContent||'LaTeX预览'
+  // 收集页面中已加载的 KaTeX CSS
+  const katexLink=Array.from(document.querySelectorAll('link[rel="stylesheet"]')).find(l=>l.href.includes('katex'))
+  const katexHref=katexLink?katexLink.href:''
+  const win=window.open('','_blank')
+  win.document.write(`<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<title>${proj}</title>
+${katexHref?`<link rel="stylesheet" href="${katexHref}">`:''}
+<style>
+  body{font-family:"Times New Roman",serif;font-size:12pt;line-height:1.8;color:#000;background:#fff;margin:2cm 2.5cm;max-width:none}
+  h1,h2,h3,h4{font-family:"Times New Roman",serif;margin-top:1.2em;margin-bottom:.4em}
+  h2{font-size:14pt;border-bottom:1px solid #ccc;padding-bottom:2px}
+  h3{font-size:12pt}
+  p{margin:.5em 0;text-align:justify}
+  .katex-display{margin:1em 0;overflow-x:auto}
+  pre,code{font-family:"Courier New",monospace;font-size:10pt;background:#f5f5f5;padding:2px 4px;border-radius:2px}
+  pre{padding:8px;overflow-x:auto}
+  table{border-collapse:collapse;width:100%;margin:1em 0}
+  th,td{border:1px solid #ccc;padding:4px 8px}
+  @media print{body{margin:0}@page{margin:2cm 2.5cm;size:A4}}
+</style>
+</head><body>${preEl.innerHTML}</body></html>`)
+  win.document.close()
+  win.onload=()=>{win.focus();win.print()}
 }
 
 function wrRenderPreview(){
