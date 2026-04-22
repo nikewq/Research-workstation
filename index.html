@@ -691,6 +691,24 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 .wr-ai-dot:nth-child(2){animation-delay:.2s}
 .wr-ai-dot:nth-child(3){animation-delay:.4s}
 @keyframes wr-ai-pulse{0%,80%,100%{opacity:.25}40%{opacity:1}}
+/* ── Line numbers ── */
+#wr-editor-wrap{position:relative;flex:1;display:flex;min-height:0;overflow:hidden}
+#wr-line-nums{width:36px;flex-shrink:0;background:#f8f8f8;border-right:1px solid var(--border);font-family:'JetBrains Mono','Fira Mono',Consolas,monospace;font-size:13px;line-height:1.7;color:#aaa;text-align:right;padding:16px 6px 16px 0;overflow:hidden;pointer-events:none;user-select:none;box-sizing:border-box;white-space:pre}
+body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:var(--border)}
+#wr-editor-wrap #wr-editor{padding-left:12px;flex:1;min-width:0}
+/* ── Autocomplete ── */
+#wr-autocomplete{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:1200;min-width:200px;max-width:320px;max-height:240px;overflow-y:auto;display:none}
+#wr-autocomplete.open{display:block}
+.wr-ac-item{padding:5px 12px;font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.wr-ac-item:hover,.wr-ac-item.selected{background:var(--primary-soft);color:var(--primary)}
+.wr-ac-tag{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--surface2);color:var(--text2);flex-shrink:0}
+/* ── LaTeX error gutter ── */
+#wr-err-gutter{width:16px;flex-shrink:0;background:transparent;position:relative;overflow:hidden}
+.wr-err-mark{position:absolute;right:2px;width:8px;height:8px;border-radius:50%;background:#dc2626;cursor:pointer}
+.wr-err-panel{flex-shrink:0;background:#fef2f2;border-top:2px solid #dc2626;padding:6px 12px;font-size:11px;color:#dc2626;display:none;max-height:120px;overflow-y:auto}
+.wr-err-panel.visible{display:block}
+.wr-err-item{padding:2px 0;display:flex;gap:6px;align-items:center}
+.wr-err-line{font-weight:700;cursor:pointer;text-decoration:underline;flex-shrink:0}
 /* ── Find & Replace bar ── */
 #wr-find-bar{display:none;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap}
 #wr-find-bar.open{display:flex}
@@ -1409,7 +1427,16 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
           <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 7px" onclick="wrReplaceAll()">全部替换</button>
           <button style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text2);line-height:1" onclick="wrCloseFindBar()" title="关闭">×</button>
         </div>
-        <textarea id="wr-editor" placeholder="在此编写 LaTeX 内容...&#10;&#10;% 示例：&#10;\section{Introduction}&#10;This paper studies...&#10;&#10;% 行内公式：$E = mc^2$&#10;% 块级公式：&#10;$$\sum_{i=1}^{n} x_i = \mu$$" oninput="wrOnEdit(this)" onkeydown="wrHandleKey(event)"></textarea>
+        <!-- 行号 + 错误边栏 + 编辑器 -->
+        <div id="wr-editor-wrap">
+          <div id="wr-line-nums" aria-hidden="true"></div>
+          <textarea id="wr-editor" placeholder="在此编写 LaTeX 内容...&#10;&#10;% 示例：&#10;\section{Introduction}&#10;This paper studies...&#10;&#10;% 行内公式：$E = mc^2$&#10;% 块级公式：&#10;$$\sum_{i=1}^{n} x_i = \mu$$" oninput="wrOnEdit(this)" onkeydown="wrHandleKey(event)" onscroll="wrSyncLineNums()"></textarea>
+          <div id="wr-err-gutter"></div>
+        </div>
+        <!-- 自动补全浮层（全局，fixed定位） -->
+        <div id="wr-autocomplete"></div>
+        <!-- 错误提示栏 -->
+        <div id="wr-err-panel" class="wr-err-panel"></div>
         <!-- AI 结果面板（折叠在编辑器下方） -->
         <div id="wr-ai-panel">
           <div class="wr-ai-panel-header" id="wr-ai-panel-header">
@@ -7485,6 +7512,11 @@ function initWritingPanel(){
   _ensureKatex()
   _wrUpdateAiBtnLabel()
   _wrInitSyncClick()
+  wrUpdateLineNums()
+  // 点击编辑器以外区域关闭补全
+  document.addEventListener('click',e=>{
+    if(!document.getElementById('wr-editor')?.contains(e.target)&&!document.getElementById('wr-autocomplete')?.contains(e.target))wrAcClose()
+  })
   // 自动打开第一篇草稿（若无 ZIP 项目激活）
   if(!_wrActiveZipId&&!_wrCurrentDocId){
     const docs=ld(WR_DOCS_KEY)||[]
@@ -7720,6 +7752,7 @@ function wrOpenDoc(id){
   if(editorEl){
     editorEl.value=d.content||''
     _wrUpdateCounts(editorEl)
+    wrUpdateLineNums()
   }
   renderWrDocsList()
   wrRenderPreview()
@@ -7860,11 +7893,20 @@ function wrDocTitleChanged(){
 // ── On edit (debounced autosave + preview) ──
 function wrOnEdit(ta){
   _wrUpdateCounts(ta)
+  wrUpdateLineNums()
+  wrAcUpdate(ta)
   clearTimeout(_wrAutoSaveTimer)
   _wrAutoSaveTimer=setTimeout(wrSaveDoc,800)
   clearTimeout(_wrPreviewTimer)
   _wrPreviewTimer=setTimeout(wrRenderPreview,300)
+  // error check debounced
+  clearTimeout(_wrErrTimer)
+  _wrErrTimer=setTimeout(()=>{
+    const errs=wrCheckErrors(ta.value)
+    wrRenderErrors(errs)
+  },600)
 }
+let _wrErrTimer=null
 
 function _wrUpdateCounts(ta){
   const charEl=document.getElementById('wr-char-count')
@@ -7882,6 +7924,20 @@ function _wrUpdateCounts(ta){
 // ── Key handler ──
 function wrHandleKey(e){
   const ta=e.target
+  // autocomplete navigation takes priority
+  if(_wrAcOpen){
+    if(e.key==='ArrowDown'){e.preventDefault();wrAcNav(1);return}
+    if(e.key==='ArrowUp'){e.preventDefault();wrAcNav(-1);return}
+    if(e.key==='Enter'||e.key==='Tab'){
+      e.preventDefault()
+      const ac=document.getElementById('wr-autocomplete')
+      const sel=ac?.querySelector('.wr-ac-item.selected')
+      if(sel){wrAcAccept(null,sel.dataset.cmd)}
+      else wrAcClose()
+      return
+    }
+    if(e.key==='Escape'){wrAcClose();return}
+  }
   if(e.key==='Tab'){
     e.preventDefault()
     const s=ta.selectionStart,en=ta.selectionEnd
@@ -7897,7 +7953,7 @@ function wrHandleKey(e){
     wrToggleFindBar()
   }else if(e.key==='Escape'){
     const bar=document.getElementById('wr-find-bar')
-    if(bar&&bar.classList.contains('open'))wrCloseFindBar()
+    if(bar&&bar.classList.contains('open')){wrCloseFindBar();return}
   }
 }
 
@@ -8369,6 +8425,313 @@ function wrAiClose(){
   if(qb)qb.style.display='none'
   const ir=document.getElementById('wr-ai-intent-row')
   if(ir)ir.classList.remove('visible')
+}
+
+// ── Line numbers ──
+function wrUpdateLineNums(){
+  const ta=document.getElementById('wr-editor')
+  const ln=document.getElementById('wr-line-nums')
+  if(!ta||!ln)return
+  const lines=ta.value.split('\n').length
+  if(ln._lastLines===lines)return
+  ln._lastLines=lines
+  ln.textContent=Array.from({length:lines},(_,i)=>i+1).join('\n')
+  wrSyncLineNums()
+}
+function wrSyncLineNums(){
+  const ta=document.getElementById('wr-editor')
+  const ln=document.getElementById('wr-line-nums')
+  if(!ta||!ln)return
+  ln.scrollTop=ta.scrollTop
+}
+
+// ── LaTeX autocomplete ──
+const _WR_AC_CMDS=[
+  // structure
+  {cmd:'\\documentclass{article}',tag:'结构'},
+  {cmd:'\\usepackage{}',tag:'包'},
+  {cmd:'\\begin{document}',tag:'结构'},
+  {cmd:'\\end{document}',tag:'结构'},
+  {cmd:'\\begin{abstract}',tag:'环境'},
+  {cmd:'\\end{abstract}',tag:'环境'},
+  {cmd:'\\begin{equation}',tag:'数学'},
+  {cmd:'\\end{equation}',tag:'数学'},
+  {cmd:'\\begin{align}',tag:'数学'},
+  {cmd:'\\end{align}',tag:'数学'},
+  {cmd:'\\begin{figure}[h]',tag:'图'},
+  {cmd:'\\end{figure}',tag:'图'},
+  {cmd:'\\begin{table}[h]',tag:'表'},
+  {cmd:'\\end{table}',tag:'表'},
+  {cmd:'\\begin{tabular}{ll}',tag:'表'},
+  {cmd:'\\end{tabular}',tag:'表'},
+  {cmd:'\\begin{itemize}',tag:'列表'},
+  {cmd:'\\end{itemize}',tag:'列表'},
+  {cmd:'\\begin{enumerate}',tag:'列表'},
+  {cmd:'\\end{enumerate}',tag:'列表'},
+  {cmd:'\\begin{theorem}',tag:'定理'},
+  {cmd:'\\begin{proof}',tag:'证明'},
+  {cmd:'\\begin{definition}',tag:'定义'},
+  // sections
+  {cmd:'\\section{}',tag:'章节'},
+  {cmd:'\\subsection{}',tag:'章节'},
+  {cmd:'\\subsubsection{}',tag:'章节'},
+  {cmd:'\\paragraph{}',tag:'章节'},
+  // text
+  {cmd:'\\textbf{}',tag:'文本'},
+  {cmd:'\\textit{}',tag:'文本'},
+  {cmd:'\\emph{}',tag:'文本'},
+  {cmd:'\\underline{}',tag:'文本'},
+  {cmd:'\\texttt{}',tag:'文本'},
+  {cmd:'\\footnote{}',tag:'文本'},
+  {cmd:'\\label{}',tag:'引用'},
+  {cmd:'\\ref{}',tag:'引用'},
+  {cmd:'\\eqref{}',tag:'引用'},
+  {cmd:'\\cite{}',tag:'引用'},
+  {cmd:'\\bibliography{}',tag:'引用'},
+  {cmd:'\\bibliographystyle{plain}',tag:'引用'},
+  // math
+  {cmd:'\\frac{}{}',tag:'数学'},
+  {cmd:'\\sum_{i=1}^{n}',tag:'数学'},
+  {cmd:'\\int_{0}^{\\infty}',tag:'数学'},
+  {cmd:'\\mathbb{}',tag:'数学'},
+  {cmd:'\\mathcal{}',tag:'数学'},
+  {cmd:'\\hat{}',tag:'数学'},
+  {cmd:'\\bar{}',tag:'数学'},
+  {cmd:'\\vec{}',tag:'数学'},
+  {cmd:'\\left(',tag:'数学'},
+  {cmd:'\\right)',tag:'数学'},
+  {cmd:'\\alpha',tag:'希腊'},
+  {cmd:'\\beta',tag:'希腊'},
+  {cmd:'\\gamma',tag:'希腊'},
+  {cmd:'\\delta',tag:'希腊'},
+  {cmd:'\\epsilon',tag:'希腊'},
+  {cmd:'\\lambda',tag:'希腊'},
+  {cmd:'\\mu',tag:'希腊'},
+  {cmd:'\\sigma',tag:'希腊'},
+  {cmd:'\\theta',tag:'希腊'},
+  {cmd:'\\omega',tag:'希腊'},
+  {cmd:'\\infty',tag:'数学'},
+  {cmd:'\\partial',tag:'数学'},
+  {cmd:'\\nabla',tag:'数学'},
+  {cmd:'\\cdot',tag:'数学'},
+  {cmd:'\\times',tag:'数学'},
+  {cmd:'\\leq',tag:'数学'},
+  {cmd:'\\geq',tag:'数学'},
+  {cmd:'\\neq',tag:'数学'},
+  {cmd:'\\approx',tag:'数学'},
+  {cmd:'\\in',tag:'数学'},
+  {cmd:'\\subset',tag:'数学'},
+  {cmd:'\\cup',tag:'数学'},
+  {cmd:'\\cap',tag:'数学'},
+  // figure/table helpers
+  {cmd:'\\includegraphics[width=\\linewidth]{}',tag:'图'},
+  {cmd:'\\caption{}',tag:'图/表'},
+  {cmd:'\\centering',tag:'图/表'},
+  {cmd:'\\hline',tag:'表'},
+  {cmd:'\\toprule',tag:'表'},
+  {cmd:'\\midrule',tag:'表'},
+  {cmd:'\\bottomrule',tag:'表'},
+  {cmd:'\\newcommand{}{}',tag:'宏'},
+  {cmd:'\\renewcommand{}{}',tag:'宏'},
+]
+let _wrAcIdx=-1
+let _wrAcPrefix=''
+let _wrAcOpen=false
+
+function _wrGetAcTrigger(ta){
+  const pos=ta.selectionStart
+  const before=ta.value.slice(0,pos)
+  // find last \ not preceded by another \
+  const m=before.match(/\\([a-zA-Z{}]*)$/)
+  if(!m)return null
+  return{prefix:m[0],start:pos-m[0].length,end:pos}
+}
+
+function wrAcUpdate(ta){
+  const trigger=_wrGetAcTrigger(ta)
+  const ac=document.getElementById('wr-autocomplete')
+  if(!ac)return
+  if(!trigger){wrAcClose();return}
+  const prefix=trigger.prefix.toLowerCase()
+  const matches=_WR_AC_CMDS.filter(c=>c.cmd.toLowerCase().startsWith(prefix)).slice(0,12)
+  if(!matches.length){wrAcClose();return}
+  // position
+  const coords=_wrCaretCoords(ta,trigger.start)
+  ac.style.left=Math.min(coords.x,window.innerWidth-330)+'px'
+  ac.style.top=(coords.y+20)+'px'
+  _wrAcPrefix=trigger.prefix
+  _wrAcOpen=true
+  _wrAcIdx=0
+  ac.innerHTML=matches.map((m,i)=>`<div class="wr-ac-item${i===0?' selected':''}" data-idx="${i}" data-cmd="${escHtml(m.cmd)}" onmousedown="wrAcAccept(event,'${escHtml(m.cmd)}')"><span style="flex:1">${escHtml(m.cmd)}</span><span class="wr-ac-tag">${escHtml(m.tag)}</span></div>`).join('')
+  ac.classList.add('open')
+}
+
+function _wrCaretCoords(ta,pos){
+  // approximate caret x,y using a mirror div trick
+  const style=getComputedStyle(ta)
+  const div=document.createElement('div')
+  div.style.cssText=`position:fixed;top:-9999px;left:-9999px;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;`
+  ;['font','fontSize','fontFamily','lineHeight','padding','width','boxSizing','tabSize'].forEach(k=>{div.style[k]=style[k]})
+  div.style.width=ta.clientWidth+'px'
+  const text=ta.value.slice(0,pos)
+  div.textContent=text
+  const span=document.createElement('span')
+  span.textContent='|'
+  div.appendChild(span)
+  document.body.appendChild(div)
+  const r=ta.getBoundingClientRect()
+  const sr=span.getBoundingClientRect()
+  document.body.removeChild(div)
+  return{x:r.left+(sr.left-r.left),y:r.top+(sr.top-r.top)-ta.scrollTop+ta.scrollTop}
+}
+
+function wrAcClose(){
+  const ac=document.getElementById('wr-autocomplete')
+  if(ac)ac.classList.remove('open')
+  _wrAcOpen=false
+  _wrAcIdx=-1
+}
+
+function wrAcAccept(e,cmd){
+  if(e)e.preventDefault()
+  const ta=document.getElementById('wr-editor')
+  if(!ta||!cmd)return
+  const trigger=_wrGetAcTrigger(ta)
+  if(!trigger)return
+  const val=ta.value
+  ta.value=val.slice(0,trigger.start)+cmd+val.slice(trigger.end)
+  // put cursor inside first {}
+  const firstBrace=cmd.indexOf('{')
+  const cursorPos=firstBrace>=0?trigger.start+firstBrace+1:trigger.start+cmd.length
+  ta.selectionStart=ta.selectionEnd=cursorPos
+  ta.focus()
+  wrAcClose()
+  _wrUpdateCounts(ta)
+  wrOnEdit(ta)
+}
+
+function wrAcNav(dir){
+  const ac=document.getElementById('wr-autocomplete')
+  if(!ac||!_wrAcOpen)return false
+  const items=ac.querySelectorAll('.wr-ac-item')
+  if(!items.length)return false
+  items[Math.max(0,_wrAcIdx)]?.classList.remove('selected')
+  _wrAcIdx=(_wrAcIdx+dir+items.length)%items.length
+  const sel=items[_wrAcIdx]
+  sel.classList.add('selected')
+  sel.scrollIntoView({block:'nearest'})
+  return true
+}
+
+// ── LaTeX error checking ──
+function wrCheckErrors(src){
+  const errs=[]
+  const lines=src.split('\n')
+  // 1. 未闭合 {}
+  let depth=0,inMath=false
+  for(let li=0;li<lines.length;li++){
+    const ln=lines[li]
+    for(let ci=0;ci<ln.length;ci++){
+      const ch=ln[ci]
+      if(ch==='%')break // comment
+      if(ch==='{')depth++
+      else if(ch==='}'){depth--;if(depth<0){errs.push({line:li+1,msg:'多余的 }'});depth=0}}
+    }
+  }
+  if(depth>0)errs.push({line:lines.length,msg:`有 ${depth} 个 { 未闭合`})
+  // 2. 未闭合 $ (inline)
+  let dollarCount=0
+  for(let li=0;li<lines.length;li++){
+    const ln=lines[li]
+    let i=0
+    while(i<ln.length){
+      if(ln[i]==='%')break
+      if(ln[i]==='\\'){i+=2;continue}
+      if(ln.slice(i,i+2)==='$$'){i+=2;continue}
+      if(ln[i]==='$'){dollarCount++;i++;continue}
+      i++
+    }
+  }
+  if(dollarCount%2!==0)errs.push({line:null,msg:'$ 数量为奇数，可能有未闭合的行内公式'})
+  // 3. \begin 无对应 \end
+  const begins=[]
+  for(let li=0;li<lines.length;li++){
+    const ln=lines[li]
+    const bm=ln.match(/\\begin\{([^}]+)\}/g)
+    const em=ln.match(/\\end\{([^}]+)\}/g)
+    if(bm)bm.forEach(b=>{const n=b.match(/\\begin\{([^}]+)\}/)[1];begins.push({env:n,line:li+1})})
+    if(em)em.forEach(e=>{const n=e.match(/\\end\{([^}]+)\}/)[1];const idx=begins.map(b=>b.env).lastIndexOf(n);if(idx>=0)begins.splice(idx,1);else errs.push({line:li+1,msg:`\\end{${n}} 无对应 \\begin`})})
+  }
+  begins.forEach(b=>errs.push({line:b.line,msg:`\\begin{${b.env}} 未闭合`}))
+  return errs.slice(0,20)
+}
+
+function wrRenderErrors(errs){
+  const panel=document.getElementById('wr-err-panel')
+  const gutter=document.getElementById('wr-err-gutter')
+  if(!panel)return
+  if(!errs.length){
+    panel.classList.remove('visible')
+    if(gutter)gutter.innerHTML=''
+    return
+  }
+  panel.classList.add('visible')
+  panel.innerHTML='<b style="display:block;margin-bottom:4px">⚠️ LaTeX 错误提示</b>'+
+    errs.map(e=>`<div class="wr-err-item"><span class="wr-err-line" ${e.line?`onclick="_wrJumpEditorToLine(${e.line})"`:''}>L${e.line||'?'}</span><span>${escHtml(e.msg)}</span></div>`).join('')
+  // gutter marks
+  if(gutter){
+    const ta=document.getElementById('wr-editor')
+    const lh=ta?parseFloat(getComputedStyle(ta).lineHeight)||22:22
+    const pad=ta?parseFloat(getComputedStyle(ta).paddingTop)||16:16
+    gutter.innerHTML=errs.filter(e=>e.line).map(e=>{
+      const top=pad+(e.line-1)*lh-((ta&&ta.scrollTop)||0)
+      return`<div class="wr-err-mark" style="top:${top}px" title="${escHtml(e.msg)}" onclick="_wrJumpEditorToLine(${e.line})"></div>`
+    }).join('')
+  }
+}
+
+// ── Insert citation into .tex ──
+function insertCiteToTex(paperId){
+  const p=(window._dpLibMap&&window._dpLibMap[paperId])||_ldPapLib().find(x=>x.id===paperId)
+  if(!p){toast('找不到该文献','warn');return}
+  // generate cite key: firstAuthorLastName + year
+  const firstAuthor=(p.authors||'').split(/[,;]/)[0].trim().split(' ').pop().replace(/[^a-zA-Z]/g,'')
+  const year=(p.date||'').match(/\d{4}/)?.[0]||'2024'
+  const key=(firstAuthor||'author')+year
+  const citeCmd=`\\cite{${key}}`
+  // build bib entry
+  const title=p.title||'Unknown Title'
+  const authors=(p.authors||'Unknown').split(/[;,]/).map(a=>a.trim()).join(' and ')
+  const venue=p.venue||'arXiv'
+  const bibEntry=`\n@article{${key},\n  title={${title}},\n  author={${authors}},\n  year={${year}},\n  journal={${venue}},\n  url={${p.url||''}}\n}\n`
+  // insert \cite{} into active editor
+  const ta=document.getElementById('wr-editor')
+  if(!ta){
+    // copy to clipboard if editor not open
+    navigator.clipboard.writeText(citeCmd+'\n\n% BibTeX:\n'+bibEntry)
+    toast(`📋 已复制 ${citeCmd} 到剪贴板（写作区未打开）`)
+    return
+  }
+  // insert \cite{key} at cursor
+  const pos=ta.selectionStart
+  const val=ta.value
+  ta.value=val.slice(0,pos)+citeCmd+val.slice(pos)
+  ta.selectionStart=ta.selectionEnd=pos+citeCmd.length
+  ta.focus()
+  _wrUpdateCounts(ta)
+  wrOnEdit(ta)
+  // append .bib entry to end of doc if not already there
+  if(!ta.value.includes(`{${key},`)){
+    const bibPos=ta.value.lastIndexOf('\\end{document}')
+    if(bibPos>=0){
+      ta.value=ta.value.slice(0,bibPos)+bibEntry+ta.value.slice(bibPos)
+    }else{
+      ta.value+=bibEntry
+    }
+    _wrUpdateCounts(ta)
+    wrOnEdit(ta)
+  }
+  toast(`📎 已插入 ${citeCmd} 并追加 BibTeX 条目`,'success')
 }
 
 // ── Find & Replace ──
@@ -9331,8 +9694,12 @@ function wrRenderPreview(){
   }
 
   preEl.innerHTML=html
-  // Update outline panel after render
   _wrUpdateOutline()
+  // Update line numbers (content may have changed via accept)
+  wrUpdateLineNums()
+  // Error check on rendered content
+  const _errTa=document.getElementById('wr-editor')
+  if(_errTa){wrRenderErrors(wrCheckErrors(_errTa.value))}
 }
 
 // ── Add Overleaf project ──
@@ -10049,6 +10416,7 @@ function renderPapersPage(){
       </div>
       <div style="display:flex;align-items:flex-start;gap:4px;flex-shrink:0;margin-left:8px;padding-top:2px">
         <span class="dp-score">⭐${p.score||0}</span>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px;color:var(--primary);border-color:var(--primary)" title="插入引用到写作区" onclick="event.stopPropagation();insertCiteToTex('${escHtml(p.id)}')">📎 引用</button>
         <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:12px;color:var(--text2)" title="删除" onclick="event.stopPropagation();delFromLib('${escHtml(p.id)}')">🗑</button>
       </div>
     </div>`
