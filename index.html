@@ -673,7 +673,7 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 /* AI 写作面板 */
 .wr-ai-btn{position:relative;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:1px solid var(--primary);border-radius:4px;background:var(--primary-soft);color:var(--primary);font-size:11px;cursor:pointer;font-weight:600;transition:background .12s}
 .wr-ai-btn:hover{background:var(--primary);color:#fff}
-.wr-ai-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:900;min-width:160px;padding:4px 0;display:none}
+.wr-ai-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:9500;min-width:160px;padding:4px 0;display:none}
 .wr-ai-menu.open{display:block}
 .wr-ai-menu-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;cursor:pointer;color:var(--text);transition:background .1s;white-space:nowrap}
 .wr-ai-menu-item:hover{background:var(--primary-soft);color:var(--primary)}
@@ -1400,7 +1400,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
               <div class="wr-ai-menu-item" onclick="wrAiAction('concise')">✂️ 精简句子</div>
               <div class="wr-ai-menu-item" onclick="wrAiAction('expand')">📝 扩写段落</div>
               <div class="wr-ai-menu-item" onclick="wrAiAction('grammar')">🔍 修正语法</div>
-              <div class="wr-ai-menu-item" onclick="wrAiAction('translate')">🌐 翻译成英文</div>
+              <div class="wr-ai-menu-item" onclick="wrAiAction('translate')">🌐 翻译成中文</div>
               <div class="wr-ai-menu-item" onclick="wrAiAction('abstract')">📄 生成摘要</div>
               <div style="border-top:1px solid var(--border);margin:4px 0"></div>
               <div class="wr-ai-menu-item" onclick="wrAiIntent()">🎯 按意图改写全文...</div>
@@ -8152,9 +8152,9 @@ const _WR_AI_PROMPTS={
     user:(t)=>`Fix grammar errors in this LaTeX text:\n\n${t}`
   },
   translate:{
-    label:'🌐 翻译成英文',
-    sys:'You are a professional academic translator. Translate the following text into academic English suitable for a research paper. If it is already in English, improve its academic tone. Keep LaTeX commands intact. Return ONLY the translation.',
-    user:(t)=>`Translate to academic English:\n\n${t}`
+    label:'🌐 翻译成中文',
+    sys:'你是专业的学术翻译专家。请将以下内容翻译成流畅的中文学术表达。如果内容已是中文，则润色使其更符合中文学术规范。保留所有 LaTeX 命令不变。只输出翻译结果，不要任何解释。',
+    user:(t)=>`请翻译成中文：\n\n${t}`
   },
   abstract:{
     label:'📄 生成摘要',
