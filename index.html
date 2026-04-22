@@ -691,6 +691,19 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 .wr-ai-dot:nth-child(2){animation-delay:.2s}
 .wr-ai-dot:nth-child(3){animation-delay:.4s}
 @keyframes wr-ai-pulse{0%,80%,100%{opacity:.25}40%{opacity:1}}
+/* ── Find & Replace bar ── */
+#wr-find-bar{display:none;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap}
+#wr-find-bar.open{display:flex}
+.wr-find-input{font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);outline:none;width:150px;transition:border-color .15s}
+.wr-find-input:focus{border-color:var(--primary)}
+.wr-find-count{font-size:11px;color:var(--text2);min-width:60px}
+.wr-find-opt{font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text2);transition:background .12s,color .12s}
+.wr-find-opt.active{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
+.wr-find-sep{width:1px;height:16px;background:var(--border);margin:0 2px}
+/* ── AI intent panel (inside ai-panel) ── */
+#wr-ai-intent-row{display:none;align-items:center;gap:6px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0}
+#wr-ai-intent-row.visible{display:flex}
+#wr-ai-intent-input{flex:1;font-size:12px;padding:4px 10px;border:1.5px solid var(--primary);border-radius:6px;background:var(--bg);color:var(--text);outline:none}
 .wr-prev-mode-btn{padding:3px 10px;font-size:10px;font-weight:600;background:transparent;color:var(--text2);border:none;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}
 .wr-prev-mode-btn.active{background:var(--primary);color:#fff}
 .wr-prev-mode-btn:not(.active):hover{background:var(--surface2);color:var(--text)}
@@ -1356,6 +1369,7 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
           <button class="wr-tb-btn" onclick="wrInsert('\\section{','}')" title="章节">§</button>
           <button class="wr-tb-btn" onclick="wrInsert('\\cite{','}')" title="引用">📎</button>
           <button class="wr-tb-btn" onclick="wrInsertTable()" title="插入表格">⊞</button>
+          <button class="wr-tb-btn" onclick="wrToggleFindBar()" title="查找与替换（Ctrl+H）" id="wr-find-toggle-btn">⌕</button>
           <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
           <!-- AI 写作按钮 -->
           <div style="position:relative">
@@ -1368,6 +1382,8 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
               <div class="wr-ai-menu-item" onclick="wrAiAction('translate')">🌐 翻译成英文</div>
               <div class="wr-ai-menu-item" onclick="wrAiAction('abstract')">📄 生成摘要</div>
               <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+              <div class="wr-ai-menu-item" onclick="wrAiIntent()">🎯 按意图改写全文...</div>
+              <div style="border-top:1px solid var(--border);margin:4px 0"></div>
               <div class="wr-ai-menu-item" style="color:var(--text2);font-size:11px" onclick="wrOpenAiCfg()">⚙️ AI 模型配置</div>
             </div>
           </div>
@@ -1375,6 +1391,23 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
           <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrSaveCurrent()">💾 保存</button>
           <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrExportCurrent()">⬇ 导出</button>
           <button class="btn btn-ghost btn-sm" id="wr-del-btn" style="font-size:11px;color:#dc2626" onclick="wrDeleteCurrent()">🗑</button>
+        </div>
+        <!-- Find & Replace bar -->
+        <div id="wr-find-bar">
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap">查找</span>
+          <input class="wr-find-input" id="wr-find-input" placeholder="查找..." oninput="wrFindUpdate()" onkeydown="wrFindKey(event)">
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap">替换为</span>
+          <input class="wr-find-input" id="wr-replace-input" placeholder="替换为..." onkeydown="if(event.key==='Enter')wrReplace()">
+          <span class="wr-find-count" id="wr-find-count"></span>
+          <button class="wr-find-opt" id="wr-find-opt-case" onclick="wrFindOptToggle('case')" title="区分大小写">Aa</button>
+          <button class="wr-find-opt" id="wr-find-opt-word" onclick="wrFindOptToggle('word')" title="全字匹配">ab</button>
+          <button class="wr-find-opt" id="wr-find-opt-regex" onclick="wrFindOptToggle('regex')" title="正则表达式">.*</button>
+          <div class="wr-find-sep"></div>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 7px" onclick="wrFindPrev()" title="上一个">↑</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 7px" onclick="wrFindNext()" title="下一个">↓</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 7px" onclick="wrReplace()">替换</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 7px" onclick="wrReplaceAll()">全部替换</button>
+          <button style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text2);line-height:1" onclick="wrCloseFindBar()" title="关闭">×</button>
         </div>
         <textarea id="wr-editor" placeholder="在此编写 LaTeX 内容...&#10;&#10;% 示例：&#10;\section{Introduction}&#10;This paper studies...&#10;&#10;% 行内公式：$E = mc^2$&#10;% 块级公式：&#10;$$\sum_{i=1}^{n} x_i = \mu$$" oninput="wrOnEdit(this)" onkeydown="wrHandleKey(event)"></textarea>
         <!-- AI 结果面板（折叠在编辑器下方） -->
@@ -1385,6 +1418,13 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
             <button id="wr-ai-accept-btn" class="btn btn-primary btn-sm" style="font-size:11px;transition:background .2s,color .2s" onclick="wrAiAccept()">✓ 接受替换</button>
             <button class="btn btn-ghost btn-sm" style="font-size:11px;margin-left:4px" onclick="wrAiCopy()">📋 复制</button>
             <button class="btn btn-ghost btn-sm" style="font-size:11px;margin-left:4px;color:var(--text2)" onclick="wrAiClose()">✕</button>
+          </div>
+          <!-- 意图输入行（仅 intent 模式显示） -->
+          <div id="wr-ai-intent-row">
+            <span style="font-size:11px;color:var(--primary);white-space:nowrap;font-weight:600">🎯 改写意图：</span>
+            <input id="wr-ai-intent-input" placeholder="描述你的修改目的，AI 将按此意图改写全文..." onkeydown="if(event.key==='Enter')wrAiIntentSubmit()">
+            <button class="btn btn-primary btn-sm" style="font-size:11px;white-space:nowrap" onclick="wrAiIntentSubmit()">执行</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="wrAiIntentCancel()">取消</button>
           </div>
           <div id="wr-ai-quote-bar" class="wr-ai-quote" style="display:none"></div>
           <div id="wr-ai-result"></div>
@@ -7852,6 +7892,12 @@ function wrHandleKey(e){
     e.preventDefault()
     if(_wrActiveZipId&&_wrActiveZipFile)wrSaveZipFile()
     else wrSaveDoc()
+  }else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='h'){
+    e.preventDefault()
+    wrToggleFindBar()
+  }else if(e.key==='Escape'){
+    const bar=document.getElementById('wr-find-bar')
+    if(bar&&bar.classList.contains('open'))wrCloseFindBar()
   }
 }
 
@@ -7883,7 +7929,7 @@ function wrInsertTable(){
 // ✨ AI 写作辅助
 // ══════════════════════════════════════════════
 
-let _wrAiSelStart=0,_wrAiSelEnd=0,_wrAiResult=''
+let _wrAiSelStart=0,_wrAiSelEnd=0,_wrAiResult='',_wrAiIsIntent=false
 
 // ── 写作模块独立 AI 配置 ──
 const WR_AI_CFG_KEY='phd_wr_ai_cfg_v1'
@@ -8276,21 +8322,20 @@ let _wrAiPendingTimer=null
 function wrAiAccept(){
   if(!_wrAiResult)return
   const btn=document.getElementById('wr-ai-accept-btn')
+  const baseLabel=_wrAiIsIntent?'✓ 接受全文替换':'✓ 接受替换'
   if(!_wrAiPendingAccept){
-    // 第一次点击：进入确认状态
     _wrAiPendingAccept=true
     if(btn){btn.textContent='✅ 确认替换？';btn.style.background='#059669';btn.style.borderColor='#059669'}
     clearTimeout(_wrAiPendingTimer)
     _wrAiPendingTimer=setTimeout(()=>{
       _wrAiPendingAccept=false
-      if(btn){btn.textContent='✓ 接受替换';btn.style.background='';btn.style.borderColor=''}
+      if(btn){btn.textContent=baseLabel;btn.style.background='';btn.style.borderColor=''}
     },4000)
     return
   }
-  // 第二次点击：执行替换
   clearTimeout(_wrAiPendingTimer)
   _wrAiPendingAccept=false
-  if(btn){btn.textContent='✓ 接受替换';btn.style.background='';btn.style.borderColor=''}
+  if(btn){btn.textContent=baseLabel;btn.style.background='';btn.style.borderColor=''}
   const ta=document.getElementById('wr-editor')
   if(!ta)return
   const val=ta.value
@@ -8302,7 +8347,7 @@ function wrAiAccept(){
   wrOnEdit(ta)
   wrAiClose()
   document.getElementById('wr-editor')?.classList.remove('wr-ai-pending')
-  toast('✅ 已替换原文','success')
+  toast(_wrAiIsIntent?'✅ 已按意图改写全文':'✅ 已替换原文','success')
 }
 
 function wrAiCopy(){
@@ -8314,15 +8359,252 @@ function wrAiClose(){
   const panel=document.getElementById('wr-ai-panel')
   if(panel)panel.classList.remove('visible')
   _wrAiResult=''
-  // reset pending accept state
+  _wrAiIsIntent=false
   clearTimeout(_wrAiPendingTimer)
   _wrAiPendingAccept=false
   const btn=document.getElementById('wr-ai-accept-btn')
   if(btn){btn.textContent='✓ 接受替换';btn.style.background='';btn.style.borderColor=''}
-  // 清除编辑器高亮 + quote bar
   document.getElementById('wr-editor')?.classList.remove('wr-ai-pending')
   const qb=document.getElementById('wr-ai-quote-bar')
   if(qb)qb.style.display='none'
+  const ir=document.getElementById('wr-ai-intent-row')
+  if(ir)ir.classList.remove('visible')
+}
+
+// ── Find & Replace ──
+let _wrFindMatches=[]
+let _wrFindIdx=0
+let _wrFindOpts={case:false,word:false,regex:false}
+
+function wrToggleFindBar(){
+  const bar=document.getElementById('wr-find-bar')
+  const btn=document.getElementById('wr-find-toggle-btn')
+  if(!bar)return
+  const open=bar.classList.toggle('open')
+  if(btn)btn.style.background=open?'var(--primary-soft)':''
+  if(open){
+    const inp=document.getElementById('wr-find-input')
+    // 如果有选中文本，预填到查找框
+    const ta=document.getElementById('wr-editor')
+    if(ta){
+      const sel=ta.value.slice(ta.selectionStart,ta.selectionEnd).trim()
+      if(sel&&sel.length<200&&inp){inp.value=sel}
+    }
+    if(inp){inp.focus();inp.select()}
+    wrFindUpdate()
+  }else{
+    _wrFindMatches=[]
+    document.getElementById('wr-find-count').textContent=''
+  }
+}
+
+function wrCloseFindBar(){
+  const bar=document.getElementById('wr-find-bar')
+  if(bar)bar.classList.remove('open')
+  const btn=document.getElementById('wr-find-toggle-btn')
+  if(btn)btn.style.background=''
+  _wrFindMatches=[]
+  document.getElementById('wr-find-count').textContent=''
+}
+
+function wrFindOptToggle(opt){
+  _wrFindOpts[opt]=!_wrFindOpts[opt]
+  const el=document.getElementById('wr-find-opt-'+opt)
+  if(el)el.classList.toggle('active',_wrFindOpts[opt])
+  wrFindUpdate()
+}
+
+function _wrBuildPattern(q){
+  if(!q)return null
+  try{
+    let src=_wrFindOpts.regex?q:q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
+    if(_wrFindOpts.word)src='\\b'+src+'\\b'
+    return new RegExp(src,_wrFindOpts.case?'g':'gi')
+  }catch{return null}
+}
+
+function wrFindUpdate(){
+  const q=document.getElementById('wr-find-input')?.value||''
+  const ta=document.getElementById('wr-editor')
+  const cntEl=document.getElementById('wr-find-count')
+  if(!ta||!q){if(cntEl)cntEl.textContent='';_wrFindMatches=[];return}
+  const re=_wrBuildPattern(q)
+  if(!re){if(cntEl)cntEl.textContent='无效正则';return}
+  const text=ta.value
+  _wrFindMatches=[]
+  let m
+  while((m=re.exec(text))!==null){
+    _wrFindMatches.push({start:m.index,end:m.index+m[0].length})
+    if(_wrFindMatches.length>5000)break
+  }
+  if(_wrFindMatches.length===0){
+    if(cntEl)cntEl.textContent='无匹配'
+    return
+  }
+  // 定位到当前光标附近最近的匹配
+  const cur=ta.selectionStart
+  _wrFindIdx=_wrFindMatches.findIndex(m=>m.start>=cur)
+  if(_wrFindIdx<0)_wrFindIdx=0
+  _wrFindGo()
+}
+
+function _wrFindGo(){
+  const ta=document.getElementById('wr-editor')
+  const cntEl=document.getElementById('wr-find-count')
+  if(!ta||!_wrFindMatches.length)return
+  if(_wrFindIdx<0)_wrFindIdx=_wrFindMatches.length-1
+  if(_wrFindIdx>=_wrFindMatches.length)_wrFindIdx=0
+  const m=_wrFindMatches[_wrFindIdx]
+  ta.focus()
+  ta.setSelectionRange(m.start,m.end)
+  // scroll into view
+  const lh=parseFloat(getComputedStyle(ta).lineHeight)||20
+  const linesBefore=ta.value.slice(0,m.start).split('\n').length-1
+  ta.scrollTop=Math.max(0,linesBefore*lh-ta.clientHeight/2)
+  if(cntEl)cntEl.textContent=`${_wrFindIdx+1} / ${_wrFindMatches.length}`
+}
+
+function wrFindNext(){
+  if(!_wrFindMatches.length){wrFindUpdate();return}
+  _wrFindIdx++
+  _wrFindGo()
+}
+
+function wrFindPrev(){
+  if(!_wrFindMatches.length){wrFindUpdate();return}
+  _wrFindIdx--
+  _wrFindGo()
+}
+
+function wrFindKey(e){
+  if(e.key==='Enter'){e.shiftKey?wrFindPrev():wrFindNext()}
+  else if(e.key==='Escape')wrCloseFindBar()
+}
+
+function wrReplace(){
+  const ta=document.getElementById('wr-editor')
+  const repVal=document.getElementById('wr-replace-input')?.value||''
+  if(!ta||!_wrFindMatches.length)return
+  _wrFindIdx=Math.max(0,Math.min(_wrFindIdx,_wrFindMatches.length-1))
+  const m=_wrFindMatches[_wrFindIdx]
+  if(ta.selectionStart!==m.start||ta.selectionEnd!==m.end){_wrFindGo();return}
+  const v=ta.value
+  ta.value=v.slice(0,m.start)+repVal+v.slice(m.end)
+  _wrUpdateCounts(ta)
+  wrOnEdit(ta)
+  wrFindUpdate()
+  toast(`已替换 1 处`,'success')
+}
+
+function wrReplaceAll(){
+  const ta=document.getElementById('wr-editor')
+  const q=document.getElementById('wr-find-input')?.value||''
+  const repVal=document.getElementById('wr-replace-input')?.value||''
+  if(!ta||!q)return
+  const re=_wrBuildPattern(q)
+  if(!re){toast('无效的正则表达式','warning');return}
+  let count=0
+  const newVal=ta.value.replace(re,()=>{count++;return repVal})
+  if(count===0){toast('未找到匹配内容','warning');return}
+  ta.value=newVal
+  _wrUpdateCounts(ta)
+  wrOnEdit(ta)
+  _wrFindMatches=[]
+  document.getElementById('wr-find-count').textContent=''
+  toast(`已替换 ${count} 处`,'success')
+}
+
+// ── AI Intent (改写全文) ──
+let _wrAiIsIntent=false
+
+function wrAiIntent(){
+  const menu=document.getElementById('wr-ai-menu')
+  if(menu)menu.classList.remove('open')
+  const ta=document.getElementById('wr-editor')
+  if(!ta||!ta.value.trim()){toast('编辑器内容为空','warning');return}
+  // 打开 AI 面板，显示意图行
+  const panel=document.getElementById('wr-ai-panel')
+  const labelEl=document.getElementById('wr-ai-action-label')
+  const resultEl=document.getElementById('wr-ai-result')
+  const intentRow=document.getElementById('wr-ai-intent-row')
+  const qb=document.getElementById('wr-ai-quote-bar')
+  const acceptBtn=document.getElementById('wr-ai-accept-btn')
+  if(!panel)return
+  _wrAiIsIntent=true
+  _wrAiResult=''
+  panel.classList.add('visible')
+  if(labelEl)labelEl.textContent='🎯 AI 意图改写'
+  if(resultEl)resultEl.innerHTML='<div style="padding:16px;font-size:12px;color:var(--text2)">在上方输入改写意图，点击「执行」后 AI 将按意图修改全文。<br>例：「删除所有 TODO 注释」「把正文语言改为英文」「在 Introduction 末尾加一段 motivation」</div>'
+  if(intentRow)intentRow.classList.add('visible')
+  if(qb)qb.style.display='none'
+  if(acceptBtn){acceptBtn.textContent='✓ 接受全文替换';acceptBtn.style.display='none'}
+  setTimeout(()=>document.getElementById('wr-ai-intent-input')?.focus(),50)
+}
+
+function wrAiIntentCancel(){
+  wrAiClose()
+}
+
+async function wrAiIntentSubmit(){
+  const intent=document.getElementById('wr-ai-intent-input')?.value?.trim()
+  if(!intent){toast('请输入改写意图','warning');return}
+  const ta=document.getElementById('wr-editor')
+  const src=ta?.value||''
+  if(!src.trim()){toast('编辑器内容为空','warning');return}
+  if(src.length>20000){toast('文档过长（上限 20000 字符），请缩短后再试','warning');return}
+
+  const panel=document.getElementById('wr-ai-panel')
+  const resultEl=document.getElementById('wr-ai-result')
+  const labelEl=document.getElementById('wr-ai-action-label')
+  const acceptBtn=document.getElementById('wr-ai-accept-btn')
+  if(!panel||!resultEl)return
+  panel.classList.add('visible')
+  if(labelEl)labelEl.textContent='🎯 AI 意图改写中...'
+  if(acceptBtn)acceptBtn.style.display='none'
+  ta.classList.add('wr-ai-pending')
+  resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 正在按意图改写全文…</span></div>`
+
+  const prompt=`You are an expert LaTeX academic writing assistant. The user wants you to modify the entire LaTeX document according to their stated intent.
+
+User's intent: ${intent}
+
+Rules:
+1. Return ONLY the complete modified LaTeX source code, nothing else — no explanations, no markdown fences
+2. Preserve all LaTeX structure (\documentclass, \usepackage, \begin{document}, etc.) if present
+3. Keep all mathematical content, citations, and labels correct
+4. Only make changes directly related to the user's intent
+
+LaTeX document:
+${src}`
+
+  const result=await _wrCallAI(prompt,6000)
+
+  if(!result){
+    resultEl.innerHTML='<div style="padding:12px;color:#dc2626;font-size:13px">⚠️ AI 暂时不可用，请稍后重试</div>'
+    ta.classList.remove('wr-ai-pending')
+    return
+  }
+
+  // 清理 AI 可能输出的 markdown 代码块包装
+  let cleaned=result.trim()
+  if(cleaned.startsWith('```latex'))cleaned=cleaned.slice(7)
+  else if(cleaned.startsWith('```tex'))cleaned=cleaned.slice(6)
+  else if(cleaned.startsWith('```'))cleaned=cleaned.slice(3)
+  if(cleaned.endsWith('```'))cleaned=cleaned.slice(0,-3)
+  cleaned=cleaned.trim()
+
+  _wrAiResult=cleaned
+  _wrAiIsIntent=true
+  // 设置 selStart/End 为全文范围
+  _wrAiSelStart=0
+  _wrAiSelEnd=src.length
+
+  // 显示 diff summary（字符数变化）
+  const diffInfo=`改写完成：${src.length} → ${cleaned.length} 字符`
+  resultEl.innerHTML=`<div style="padding:6px 14px;font-size:11px;color:var(--text2);background:var(--surface2);border-bottom:1px solid var(--border)">${escHtml(diffInfo)}</div><div style="padding:12px 14px;font-size:12px;line-height:1.7;white-space:pre-wrap;color:var(--text);font-family:'JetBrains Mono',monospace;max-height:180px;overflow-y:auto">${escHtml(cleaned.slice(0,3000))}${cleaned.length>3000?'\n\n…（预览截断，接受后查看完整内容）':''}</div>`
+
+  if(labelEl)labelEl.textContent='🎯 AI 意图改写完成'
+  if(acceptBtn){acceptBtn.style.display='';acceptBtn.textContent='✓ 接受全文替换'}
 }
 
 // ── Export .tex ──
