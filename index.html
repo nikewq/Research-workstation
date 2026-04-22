@@ -667,6 +667,9 @@ body.wr-resizing *{pointer-events:none!important;cursor:col-resize!important}
 .wr-rem-block{background:var(--surface2);border-color:var(--border);font-style:italic}
 .wr-ex-block{background:rgba(16,185,129,.05);border-color:#10b981}
 .wr-proof-block{margin:10px 0;padding:8px 14px;font-size:13px;color:var(--text2);border-left:3px solid var(--border)}
+/* Annotation / color commands */
+#wr-preview-area mark{padding:0 2px;border-radius:2px}
+#wr-preview-area s{opacity:.8}
 /* AI 写作面板 */
 .wr-ai-btn{position:relative;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:1px solid var(--primary);border-radius:4px;background:var(--primary-soft);color:var(--primary);font-size:11px;cursor:pointer;font-weight:600;transition:background .12s}
 .wr-ai-btn:hover{background:var(--primary);color:#fff}
@@ -8533,6 +8536,24 @@ const _WR_AC_CMDS=[
   {cmd:'\\bottomrule',tag:'表'},
   {cmd:'\\newcommand{}{}',tag:'宏'},
   {cmd:'\\renewcommand{}{}',tag:'宏'},
+  // color & annotation
+  {cmd:'\\textcolor{}{}',tag:'颜色'},
+  {cmd:'\\colorbox{}{}',tag:'颜色'},
+  {cmd:'\\fcolorbox{}{}{}',tag:'颜色'},
+  {cmd:'\\color{}',tag:'颜色'},
+  {cmd:'\\definecolor{}{}{}',tag:'颜色'},
+  {cmd:'\\hl{}',tag:'批注'},
+  {cmd:'\\st{}',tag:'批注'},
+  {cmd:'\\sout{}',tag:'批注'},
+  {cmd:'\\uwave{}',tag:'批注'},
+  {cmd:'\\ul{}',tag:'批注'},
+  {cmd:'\\todo{}',tag:'批注'},
+  {cmd:'\\todo[inline]{}',tag:'批注'},
+  {cmd:'\\marginpar{}',tag:'批注'},
+  {cmd:'\\usepackage{xcolor}',tag:'包'},
+  {cmd:'\\usepackage[normalem]{ulem}',tag:'包'},
+  {cmd:'\\usepackage{soul}',tag:'包'},
+  {cmd:'\\usepackage[colorinlistoftodos]{todonotes}',tag:'包'},
 ]
 let _wrAcIdx=-1
 let _wrAcPrefix=''
@@ -9367,6 +9388,298 @@ function _wrFindImageDataUrl(imgPath){
   return{url:null,isPdf:false}
 }
 
+// ── xcolor standard color table ──
+const _WR_XCOLORS={
+  // dvipsnames + xcolor base
+  red:'#e53e3e',blue:'#2b6cb0',green:'#276749',yellow:'#d69e2e',
+  cyan:'#00b5d8',magenta:'#b83280',black:'#1a1a1a',white:'#ffffff',
+  gray:'#718096',darkgray:'#4a5568',lightgray:'#e2e8f0',
+  brown:'#744210',lime:'#68d391',olive:'#854d0e',orange:'#dd6b20',
+  pink:'#ed64a6',purple:'#6b46c1',teal:'#2c7a7b',violet:'#553c9a',
+  // dvipsnames common
+  Aquamarine:'#2dd4bf',Bittersweet:'#f97316',BrickRed:'#b91c1c',
+  BurntOrange:'#ea580c',CadetBlue:'#4a90d9',CarnationPink:'#fb7185',
+  CornflowerBlue:'#60a5fa',Dandelion:'#fbbf24',DarkOrchid:'#9333ea',
+  Emerald:'#10b981',ForestGreen:'#166534',Fuchsia:'#d946ef',
+  Goldenrod:'#ca8a04',JungleGreen:'#059669',Lavender:'#a78bfa',
+  Mahogany:'#92400e',Maroon:'#881337',Melon:'#fca5a5',
+  MidnightBlue:'#1e3a8a',Mulberry:'#86198f',NavyBlue:'#1e40af',
+  OliveGreen:'#365314',OrangeRed:'#dc2626',Orchid:'#c084fc',
+  Peach:'#fcd34d',Periwinkle:'#818cf8',PineGreen:'#14532d',
+  Plum:'#7e22ce',ProcessBlue:'#0284c7',RawSienna:'#92400e',
+  RedOrange:'#ea580c',RedViolet:'#9d174d',Rhodamine:'#ec4899',
+  RoyalBlue:'#1d4ed8',RoyalPurple:'#7c3aed',RubineRed:'#be185d',
+  Salmon:'#f87171',SeaGreen:'#16a34a',Sepia:'#78350f',
+  SkyBlue:'#38bdf8',SpringGreen:'#4ade80',TealBlue:'#0e7490',
+  Thistle:'#d8b4fe',Turquoise:'#22d3ee',VioletRed:'#db2777',
+  WildStrawberry:'#f43f5e',YellowGreen:'#84cc16',YellowOrange:'#f59e0b',
+}
+
+function _wrHexToRgb(hex){
+  const h=hex.replace('#','')
+  if(h.length===3)return[parseInt(h[0]+h[0],16),parseInt(h[1]+h[1],16),parseInt(h[2]+h[2],16)]
+  return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]
+}
+
+function _wrResolveColor(name, customColors={}){
+  if(!name)return null
+  const n=name.trim()
+  if(customColors[n])return customColors[n]
+  // xcolor mix syntax: color1!pct or color1!pct!color2
+  const mixM=n.match(/^([a-zA-Z]+)!(\d+)(?:!([a-zA-Z]+))?$/)
+  if(mixM){
+    const [,c1,pctStr,c2]=mixM
+    const pct=parseInt(pctStr)/100
+    const col1=_wrResolveColor(c1,customColors)
+    const col2=c2?(_wrResolveColor(c2,customColors)||'#ffffff'):'#ffffff'
+    if(col1&&col2){
+      try{
+        const r1=_wrHexToRgb(col1),r2=_wrHexToRgb(col2)
+        const r=Math.round(r1[0]*pct+r2[0]*(1-pct))
+        const g=Math.round(r1[1]*pct+r2[1]*(1-pct))
+        const b=Math.round(r1[2]*pct+r2[2]*(1-pct))
+        return`rgb(${r},${g},${b})`
+      }catch{}
+    }
+  }
+  // direct lookup (case-insensitive)
+  const lower=n.toLowerCase()
+  for(const [k,v] of Object.entries(_WR_XCOLORS)){
+    if(k.toLowerCase()===lower)return v
+  }
+  // already a CSS color (hex, rgb, etc.)
+  if(/^#[0-9a-fA-F]{3,8}$/.test(n)||/^rgb/.test(n))return n
+  return null
+}
+
+function _wrParseDefineColors(src){
+  // \definecolor{name}{model}{spec}
+  // models: rgb, RGB, HTML, gray, cmyk, named
+  const colors={}
+  const re=/\\definecolor\{([^}]+)\}\{([^}]+)\}\{([^}]+)\}/g
+  let m
+  while((m=re.exec(src))!==null){
+    const[,name,model,spec]=m
+    let css=null
+    if(model==='HTML'||model==='html'){
+      css='#'+spec.replace('#','')
+    }else if(model==='rgb'){
+      const parts=spec.split(',').map(Number)
+      if(parts.length===3)css=`rgb(${parts.map(v=>Math.round(v*255)).join(',')})`
+    }else if(model==='RGB'){
+      const parts=spec.split(',').map(Number)
+      if(parts.length===3)css=`rgb(${parts.join(',')})`
+    }else if(model==='gray'){
+      const v=Math.round(parseFloat(spec)*255)
+      css=`rgb(${v},${v},${v})`
+    }else if(model==='named'){
+      css=_wrResolveColor(spec)
+    }
+    if(css)colors[name]=css
+  }
+  return colors
+}
+
+// Extract one balanced-brace argument starting just after '{'
+function _wrExtArg(s, from){
+  if(from>=s.length||s[from]!=='{')return{val:'',end:from}
+  let d=1,i=from+1
+  while(i<s.length&&d>0){if(s[i]==='{')d++;else if(s[i]==='}')d--;i++}
+  return{val:s.slice(from+1,i-1),end:i}
+}
+
+// Extract optional [...] argument or return default
+function _wrExtOpt(s, from, def=''){
+  let i=from
+  while(i<s.length&&(s[i]===' '||s[i]==='\n'))i++
+  if(s[i]!=='[')return{val:def,end:from}
+  let j=i+1
+  while(j<s.length&&s[j]!==']')j++
+  return{val:s.slice(i+1,j),end:j+1}
+}
+
+function _wrApplyColorAnnotations(html, rawSrc){
+  // Collect custom colors defined in source
+  const customColors=_wrParseDefineColors(rawSrc||'')
+
+  // Helper: resolve + fallback to a safe CSS value
+  const col=(name)=>_wrResolveColor(name,customColors)||'currentColor'
+  const colBg=(name)=>{const c=_wrResolveColor(name,customColors);return c||'rgba(255,255,255,0.1)'}
+
+  // ── 1. \textcolor{color}{text} ──
+  // Use iterative approach to handle nested braces
+  html=_wrApplyTwoArgCmd(html,'textcolor',(color,text)=>{
+    const c=col(color)
+    return`<span style="color:${c}">${text}</span>`
+  })
+
+  // ── 2. \colorbox{color}{text} ──
+  html=_wrApplyTwoArgCmd(html,'colorbox',(color,text)=>{
+    const c=colBg(color)
+    // ensure readable text contrast
+    return`<span style="background:${c};padding:1px 4px;border-radius:2px">${text}</span>`
+  })
+
+  // ── 3. \fcolorbox{border}{bg}{text} ──
+  html=_wrApplyThreeArgCmd(html,'fcolorbox',(bc,bg,text)=>{
+    return`<span style="background:${colBg(bg)};border:1.5px solid ${col(bc)};padding:1px 5px;border-radius:3px">${text}</span>`
+  })
+
+  // ── 4. \color{color} — switch color for the rest of current group ──
+  // Simple approach: wrap remaining content until next } or end
+  html=html.replace(/\\color\{([^}]+)\}/g,(m,c)=>{
+    const css=col(c)
+    return`<span style="color:${css}">`
+  })
+
+  // ── 5. soul / ulem annotation commands ──
+  // \hl{text} — yellow highlight
+  html=_wrApplyOneArgCmd(html,'hl',text=>
+    `<mark style="background:#fef08a;color:#1a1a1a;padding:0 2px;border-radius:2px">${text}</mark>`)
+  // \st{text} — strikethrough (soul)
+  html=_wrApplyOneArgCmd(html,'st',text=>`<s>${text}</s>`)
+  // \sout{text} — strikethrough (ulem)
+  html=_wrApplyOneArgCmd(html,'sout',text=>`<s>${text}</s>`)
+  // \uline{text} / \ul{text} — underline
+  html=_wrApplyOneArgCmd(html,'uline',text=>`<u>${text}</u>`)
+  html=_wrApplyOneArgCmd(html,'ul',text=>`<u>${text}</u>`)
+  // \uwave{text} — wavy underline
+  html=_wrApplyOneArgCmd(html,'uwave',text=>
+    `<span style="text-decoration:underline wavy">${text}</span>`)
+  // \uuline{text} — double underline
+  html=_wrApplyOneArgCmd(html,'uuline',text=>
+    `<span style="text-decoration:underline double">${text}</span>`)
+  // \xout{text} / \dashuline — cross/dash
+  html=_wrApplyOneArgCmd(html,'xout',text=>
+    `<span style="text-decoration:line-through double">${text}</span>`)
+  html=_wrApplyOneArgCmd(html,'dashuline',text=>
+    `<span style="text-decoration:underline dashed">${text}</span>`)
+  // \dotuline — dotted underline
+  html=_wrApplyOneArgCmd(html,'dotuline',text=>
+    `<span style="text-decoration:underline dotted">${text}</span>`)
+
+  // ── 6. \todo[options]{text} / \todo{text} — todonotes ──
+  // inline todo
+  html=html.replace(/\\todo\[([^\]]*)\]\{/g,(m,opts)=>{
+    const isInline=/inline/i.test(opts)
+    const colorM=opts.match(/color\s*=\s*([a-zA-Z!0-9]+)/)
+    const bg=colorM?colBg(colorM[1]):'#fef9c3'
+    if(isInline)return`\x00TODOINLINE:${bg}\x00{`
+    return`\x00TODO:${bg}\x00{`
+  })
+  html=html.replace(/\\todo\{/g,`\x00TODO:#fef9c3\x00{`)
+  // now extract the content
+  html=_wrApplyMarkedCmd(html,'TODO',(bg,text)=>
+    `<span style="display:inline-block;background:${bg};border:1px solid #ca8a04;color:#92400e;font-size:11px;padding:1px 6px;border-radius:3px;margin:0 2px" title="TODO">📝 ${text}</span>`)
+  html=_wrApplyMarkedCmd(html,'TODOINLINE',(bg,text)=>
+    `<div style="background:${bg};border-left:3px solid #ca8a04;color:#92400e;font-size:12px;padding:5px 10px;margin:6px 0;border-radius:0 4px 4px 0">📝 <strong>TODO:</strong> ${text}</div>`)
+
+  // ── 7. \note / \Note / \Comment / \comment ──
+  for(const cmd of['note','Note','Comment','comment']){
+    html=_wrApplyOneArgCmd(html,cmd,text=>
+      `<span style="background:#e0f2fe;border:1px solid #38bdf8;color:#0369a1;font-size:11px;padding:1px 6px;border-radius:3px;margin:0 2px" title="${cmd}">💬 ${text}</span>`)
+  }
+
+  // ── 8. \marginpar{text} ──
+  html=_wrApplyOneArgCmd(html,'marginpar',text=>
+    `<span style="display:inline-block;background:var(--surface2);border-left:2px solid var(--border);color:var(--text2);font-size:11px;padding:1px 8px;margin-left:8px;border-radius:0 4px 4px 0;font-style:italic" title="Margin note">⟵ ${text}</span>`)
+
+  // ── 9. \texthl / \hlc (common custom cmds in papers) ──
+  html=_wrApplyTwoArgCmd(html,'hlc',(color,text)=>{
+    const c=colBg(color)
+    return`<mark style="background:${c};padding:0 2px;border-radius:2px">${text}</mark>`
+  })
+  html=_wrApplyOneArgCmd(html,'texthl',text=>
+    `<mark style="background:#fef08a;color:#1a1a1a;padding:0 2px;border-radius:2px">${text}</mark>`)
+
+  // ── 10. \newthought / \smallcaps (tufte-like) ──
+  html=_wrApplyOneArgCmd(html,'newthought',text=>
+    `<span style="font-variant:small-caps;font-size:0.95em;letter-spacing:0.05em">${text}</span>`)
+
+  // remove definecolor declarations (now consumed)
+  html=html.replace(/\\definecolor\{[^}]+\}\{[^}]+\}\{[^}]+\}/g,'')
+
+  return html
+}
+
+// ── Generic balanced-brace cmd appliers ──
+function _wrApplyOneArgCmd(html, cmd, fn){
+  // matches \cmd{ ... } with balanced braces
+  const marker=`\\${cmd}{`
+  let result=''
+  let i=0
+  while(i<html.length){
+    const idx=html.indexOf(marker,i)
+    if(idx<0){result+=html.slice(i);break}
+    result+=html.slice(i,idx)
+    const{val,end}=_wrExtArg(html,idx+marker.length-1)
+    result+=fn(val)
+    i=end
+  }
+  return result
+}
+
+function _wrApplyTwoArgCmd(html, cmd, fn){
+  const marker=`\\${cmd}{`
+  let result=''
+  let i=0
+  while(i<html.length){
+    const idx=html.indexOf(marker,i)
+    if(idx<0){result+=html.slice(i);break}
+    result+=html.slice(i,idx)
+    const a1=_wrExtArg(html,idx+marker.length-1)
+    const a2=_wrExtArg(html,a1.end)
+    result+=fn(a1.val,a2.val)
+    i=a2.end
+  }
+  return result
+}
+
+function _wrApplyThreeArgCmd(html, cmd, fn){
+  const marker=`\\${cmd}{`
+  let result=''
+  let i=0
+  while(i<html.length){
+    const idx=html.indexOf(marker,i)
+    if(idx<0){result+=html.slice(i);break}
+    result+=html.slice(i,idx)
+    const a1=_wrExtArg(html,idx+marker.length-1)
+    const a2=_wrExtArg(html,a1.end)
+    const a3=_wrExtArg(html,a2.end)
+    result+=fn(a1.val,a2.val,a3.val)
+    i=a3.end
+  }
+  return result
+}
+
+function _wrApplyMarkedCmd(html, marker, fn){
+  // handles \x00MARKER:PARAM\x00{ ... }
+  const re=new RegExp(`\x00${marker}:([^\x00]*)\x00\\{`,'g')
+  let result=''
+  let last=0,m
+  re.lastIndex=0
+  // can't use replace easily with balanced braces, use manual loop
+  const src=html
+  let i=0
+  while(i<src.length){
+    const startMark=`\x00${marker}:`
+    const idx=src.indexOf(startMark,i)
+    if(idx<0){result+=src.slice(i);break}
+    result+=src.slice(i,idx)
+    // extract param until \x00
+    const paramEnd=src.indexOf('\x00',idx+startMark.length)
+    if(paramEnd<0){result+=src.slice(idx);break}
+    const param=src.slice(idx+startMark.length,paramEnd)
+    // now expect '{'
+    const bracePos=paramEnd+1
+    if(src[bracePos]!=='{'){result+=src.slice(idx,bracePos);i=bracePos;continue}
+    const{val,end}=_wrExtArg(src,bracePos)
+    result+=fn(param,val)
+    i=end
+  }
+  return result
+}
+
 function wrRenderPreview(){
   if(_wrPreviewMode==='translate')return
   const ta=document.getElementById('wr-editor')
@@ -9599,7 +9912,9 @@ function wrRenderPreview(){
     .replace(/\\citep\*?\{([^}]*)\}/g,'<span style="color:var(--primary)">[cite:$1]</span>')
     .replace(/\\bibliography\{[^}]*\}/g,'')
     .replace(/\\bibliographystyle\{[^}]*\}/g,'')
-    // Special chars
+    // ── Color & annotation commands ──
+    // handled by dedicated pass below (see _wrApplyColorAnnotations)
+    // ── Special chars
     .replace(/\\%/g,'%').replace(/\\&amp;/g,'&amp;').replace(/\\_/g,'_')
     .replace(/\\ldots\b|\\dots\b/g,'…').replace(/\\cdots\b/g,'⋯')
     .replace(/---/g,'—').replace(/--/g,'–')
@@ -9618,7 +9933,9 @@ function wrRenderPreview(){
     // Remaining unknown environments: drop begin/end markers, keep content
     .replace(/\\begin\{[a-zA-Z*]+\}/g,'').replace(/\\end\{[a-zA-Z*]+\}/g,'')
     // Comment lines (% ...)
-    .replace(/(^|\n)([ \t]*%[^\n]*)/g,(m,pre,line)=>pre+`<span style="color:var(--text2);font-style:italic;font-size:12px">${line}</span>`)
+    .replace(/(^|\n)([ \t]*%[^\n]*)/g,(m,pre,line)=>pre+`<span class="wr-comment">${line}</span>`)
+  // ── Color & annotation pass (after HTML escape, before final cleanup) ──
+  html=_wrApplyColorAnnotations(html,raw)
     // Double newline → paragraph
     .replace(/\n\n+/g,'</p><p style="margin:0 0 8px">')
     // Single newline → space (LaTeX ignores single newlines)
