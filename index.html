@@ -1638,6 +1638,18 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         </div>
       </div>
     </div>
+    <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(234,88,12,0.08) 100%);border:1px solid #ea580c44;border-radius:12px;padding:16px;cursor:pointer;transition:all .15s" onclick="openMonthlyReport()" onmouseenter="this.style.borderColor='#ea580c'" onmouseleave="this.style.borderColor='#ea580c44'">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:28px;line-height:1;flex-shrink:0">📆</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+            <span style="font-weight:700;font-size:14px;color:#ea580c">本月月报</span>
+            <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(234,88,12,0.12);color:#ea580c">▶ 点击运行</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">汇总本月周报与反思日记，AI 按项目整理，生成可编辑月报，一键保存到本地</div>
+        </div>
+      </div>
+    </div>
     <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(37,99,235,0.08) 100%);border:1px solid #2563eb44;border-radius:12px;padding:16px;cursor:pointer;transition:all .15s" onclick="openDailyPapers()" onmouseenter="this.style.borderColor='#2563eb'" onmouseleave="this.style.borderColor='#2563eb44'">
       <div style="display:flex;align-items:flex-start;gap:12px">
         <div style="font-size:28px;line-height:1;flex-shrink:0">📚</div>
@@ -2047,6 +2059,31 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     </div>
     <input type="hidden" id="wr-week-start">
     <input type="hidden" id="wr-week-num">
+  </div>
+</div>
+
+<div class="modal-overlay" id="monthlyReportModal" onclick="if(event.target===this)closeModal('monthlyReportModal')">
+  <div class="modal-box" style="max-width:660px;width:95%;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin-bottom:0">📆 本月月报</div>
+      <div style="font-size:12px;color:var(--text2)" id="mr-date-label"></div>
+    </div>
+    <div id="mr-data-preview" style="margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="_genMonthlyReport()" id="mr-gen-btn" style="background:#ea580c;border-color:#ea580c">🤖 AI 生成月报</button>
+      <span id="mr-gen-tip" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div id="mr-result-wrap" style="display:none">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">✏️ 月报内容（可直接编辑）</div>
+      <textarea id="mr-result" style="width:100%;height:340px;font-size:13px;line-height:1.7;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="_mrSaveToReflection()" style="background:#ea580c;border-color:#ea580c">📝 存入反思日记</button>
+        <button class="btn btn-ghost btn-sm" onclick="_mrCopyMd()">📋 复制 Markdown</button>
+        <button class="btn btn-ghost btn-sm" onclick="_mrOpenNote()">🔗 打开笔记空间</button>
+        <button class="btn btn-ghost btn-sm" onclick="_mrDownload()">💾 下载 .md</button>
+      </div>
+    </div>
+    <input type="hidden" id="mr-year-month">
   </div>
 </div>
 
@@ -4266,6 +4303,132 @@ function _wrDownload(){
 }
 
 // ══════════════════════════════════════
+//  MONTHLY REPORT
+// ══════════════════════════════════════
+function openMonthlyReport(){
+  openModal('monthlyReportModal');
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth();
+  const yearMonthStr=`${year}-${String(month+1).padStart(2,'0')}`;
+  const firstDay=`${yearMonthStr}-01`;
+  const lastDayDate=new Date(year,month+1,0);
+  const lastDay=localDate(lastDayDate);
+  document.getElementById('mr-year-month').value=yearMonthStr;
+  document.getElementById('mr-date-label').textContent=`${firstDay} ~ ${lastDay}`;
+  const refs=ld(K.refs).filter(r=>r.date>=firstDay&&r.date<=lastDay);
+  const weeklyRefs=refs.filter(r=>r.type==='weekly');
+  const tasks=ld(K.tasks).filter(t=>t.done&&t.done>=firstDay&&t.done<=lastDay);
+  const cfg=getCfg(),projMap={};
+  (cfg.projects||[]).forEach(p=>{projMap[p.id]=p.name;});
+  const tasksByProj={};
+  tasks.forEach(t=>{const n=projMap[t.proj]||t.proj||'通用';if(!tasksByProj[n])tasksByProj[n]=[];tasksByProj[n].push(t.title);});
+  const projLines=Object.entries(tasksByProj).map(([p,ts])=>`<div style="font-size:12px;color:var(--text2)"><b>${p}</b>：${ts.slice(0,3).join('、')}${ts.length>3?`…等${ts.length}项`:''}</div>`).join('');
+  document.getElementById('mr-data-preview').innerHTML=`
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:10px">
+      <div><div style="font-size:20px;font-weight:700;color:#ea580c">${weeklyRefs.length}</div><div style="font-size:11px;color:var(--text2)">本月周报</div></div>
+      <div><div style="font-size:20px;font-weight:700;color:var(--primary)">${refs.length-weeklyRefs.length}</div><div style="font-size:11px;color:var(--text2)">反思日记</div></div>
+      <div><div style="font-size:20px;font-weight:700;color:#0d9488">${tasks.length}</div><div style="font-size:11px;color:var(--text2)">完成任务</div></div>
+      <div><div style="font-size:20px;font-weight:700;color:#f59e0b">${Object.keys(tasksByProj).length}</div><div style="font-size:11px;color:var(--text2)">涉及项目</div></div>
+    </div>
+    ${projLines?`<div style="margin-top:4px">${projLines}</div>`:''}`;
+  document.getElementById('mr-result-wrap').style.display='none';
+  document.getElementById('mr-gen-btn').disabled=false;
+  document.getElementById('mr-gen-tip').textContent=refs.length||tasks.length?'':'⚠️ 本月暂无数据';
+}
+async function _genMonthlyReport(){
+  const yearMonth=document.getElementById('mr-year-month').value;
+  const year=yearMonth.slice(0,4),month=yearMonth.slice(5,7);
+  const firstDay=`${yearMonth}-01`;
+  const lastDayDate=new Date(parseInt(year),parseInt(month),0);
+  const lastDay=localDate(lastDayDate);
+  const refs=ld(K.refs).filter(r=>r.date>=firstDay&&r.date<=lastDay);
+  const weeklyRefs=refs.filter(r=>r.type==='weekly');
+  const dailyRefs=refs.filter(r=>r.type!=='weekly');
+  const tasks=ld(K.tasks).filter(t=>t.done&&t.done>=firstDay&&t.done<=lastDay);
+  const cfg=getCfg(),projMap={};
+  (cfg.projects||[]).forEach(p=>{projMap[p.id]=p.name;});
+  const tasksByProj={};
+  tasks.forEach(t=>{const n=projMap[t.proj]||t.proj||'通用';if(!tasksByProj[n])tasksByProj[n]=[];tasksByProj[n].push(t.title);});
+  const btn=document.getElementById('mr-gen-btn'),tip=document.getElementById('mr-gen-tip');
+  btn.disabled=true;tip.textContent='AI 生成中…';
+  const weeklyText=weeklyRefs.map(r=>`【${r.date} 周报】\n${r.wins||'无'}`).join('\n\n');
+  const dailyText=dailyRefs.map(r=>`【${r.date} ${r.mood||''}】\n收获：${r.wins||'无'}\n困难：${r.struggles||'无'}`).join('\n\n');
+  const taskText=Object.entries(tasksByProj).map(([p,ts])=>`${p}：${ts.join('、')}`).join('\n');
+  const header=`# ${year}年${month}月 月报\n\n**时间范围：** ${firstDay} ~ ${lastDay}\n\n`;
+  if(!refs.length&&!tasks.length){
+    document.getElementById('mr-result').value=header+'暂无本月数据。';
+    document.getElementById('mr-result-wrap').style.display='';
+    btn.disabled=false;tip.textContent='';return;
+  }
+  const prompt=`你是帮助博士生整理月报的助手。根据以下${year}年${month}月的周报、反思日记和完成任务，生成一份简洁月报。
+
+要求：
+1. 输出 4 个 Markdown 二级标题：## 本月收获 / ## 本月困难 / ## 下月计划 / ## 本月感恩
+2. 每个部分内按项目分点（格式：**项目名：** 内容），若无项目区分则直接列点
+3. 语言简洁直接，整合同类信息，避免重复，保留原始内容关键信息
+4. 仅输出月报正文，不要加文件名或额外标题
+
+---
+本月周报（共${weeklyRefs.length}篇）：
+${weeklyText||'（无）'}
+
+本月反思日记（共${dailyRefs.length}篇）：
+${dailyText||'（无）'}
+
+本月完成任务（按项目）：
+${taskText||'（无）'}`;
+  const result=await _callAI(prompt,2500);
+  if(!result){
+    document.getElementById('mr-result').value=header+`## 本月完成任务\n\n${taskText||'无'}\n\n## 周报摘要\n\n${weeklyRefs.map(r=>`**${r.date}**\n${r.wins||''}`).join('\n\n')}`;
+    tip.textContent='⚠️ AI 失败，已展示原始汇总';
+  }else{
+    document.getElementById('mr-result').value=header+result;
+    tip.textContent='✅ 生成完成';
+  }
+  document.getElementById('mr-result-wrap').style.display='';
+  btn.disabled=false;
+}
+async function _mrSaveToReflection(){
+  const content=document.getElementById('mr-result')?.value.trim();
+  if(!content){toast('请先生成月报');return}
+  const yearMonth=document.getElementById('mr-year-month').value;
+  const mrFilename=`${yearMonth}-月报`;
+  const list=ld(K.refs);
+  list.unshift({id:uid(),date:yearMonth+'-01',mood:'📆',type:'monthly',
+    wins:content,struggles:'',tomorrow:'',gratitude:'',
+    ts:new Date().toLocaleString('zh-CN'),label:`${yearMonth}月报`});
+  sv(K.refs,list);renderRefHistory();
+  closeModal('monthlyReportModal');
+  const savedLocal=await _writeToReflectionDir(mrFilename+'.md',content);
+  toast(savedLocal?`📝 已存入反思日记，并保存到 科研空间/反思日记/${mrFilename}.md`:'📝 月报已存入反思日记！')
+  switchPage('reflection')
+}
+function _mrCopyMd(){
+  const content=document.getElementById('mr-result')?.value.trim();
+  if(!content){toast('请先生成月报');return}
+  navigator.clipboard?.writeText(content).then(()=>toast('📋 已复制 Markdown！')).catch(()=>toast('❌ 复制失败'));
+}
+function _mrOpenNote(){
+  const content=document.getElementById('mr-result')?.value.trim();
+  if(!content){toast('请先生成月报');return}
+  const yearMonth=document.getElementById('mr-year-month').value;
+  const cfg=JSON.parse(localStorage.getItem(_NOTE_LINKS_KEY)||'{}');
+  if(!cfg.url&&cfg.type!=='obsidian'){_showNoteSettings();toast('请先设置笔记空间链接');return}
+  if(cfg.type==='obsidian'){
+    window.location.href=`obsidian://new?vault=${encodeURIComponent(cfg.vault||'')}&file=${encodeURIComponent(`月报/${yearMonth}-月报`)}&content=${encodeURIComponent(content)}`;
+  }else{window.open(cfg.url,'_blank')}
+}
+function _mrDownload(){
+  const content=document.getElementById('mr-result')?.value.trim();
+  if(!content){toast('请先生成月报');return}
+  const yearMonth=document.getElementById('mr-year-month').value;
+  const filename=`${yearMonth}-月报.md`;
+  const blob=new Blob([content],{type:'text/markdown;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+  toast('💾 已下载月报文件！');
+}
+
+// ══════════════════════════════════════
 //  PERSONAL SKILLS PANEL
 // ══════════════════════════════════════
 const SKILLS_CORE=[
@@ -4363,10 +4526,10 @@ function renderRefHistory(){
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">🌙</div><p>暂无记录</p></div>';return;}
   el.innerHTML=list.slice(0,60).map(r=>{
     const bms=r.bookmarks||[];
-    const isWeekly=r.type==='weekly',isDaily=r.type==='daily';
+    const isWeekly=r.type==='weekly',isDaily=r.type==='daily',isMonthly=r.type==='monthly';
     const preview=escHtml((r.wins||'').replace(/\n/g,' ').slice(0,60)||(bms.length?`📌 ${bms.length}条摸鱼收藏`:'无内容'));
-    const labelBadge=isWeekly?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(13,148,136,0.12);color:#0d9488;margin-left:4px">${r.label||'周报'}</span>`:isDaily?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(124,58,237,0.1);color:var(--primary);margin-left:4px">${r.label||'今日简报'}</span>`:'';
-    const borderStyle=isWeekly?'border-left:3px solid #0d9488;':isDaily?'border-left:3px solid var(--primary);':'';
+    const labelBadge=isMonthly?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(234,88,12,0.12);color:#ea580c;margin-left:4px">${r.label||'月报'}</span>`:isWeekly?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(13,148,136,0.12);color:#0d9488;margin-left:4px">${r.label||'周报'}</span>`:isDaily?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(124,58,237,0.1);color:var(--primary);margin-left:4px">${r.label||'今日简报'}</span>`:'';
+    const borderStyle=isMonthly?'border-left:3px solid #ea580c;':isWeekly?'border-left:3px solid #0d9488;':isDaily?'border-left:3px solid var(--primary);':'';
     return `<div class="ref-entry" style="transition:background .15s;${borderStyle}" onmouseenter="this.style.background='var(--primary-soft)'" onmouseleave="this.style.background=''">
       <div style="display:flex;align-items:flex-start;gap:6px">
         <div style="flex:1;min-width:0;cursor:pointer" onclick="openRefEntry('${r.id}')">
@@ -9512,9 +9675,10 @@ function _wrApplyGroupColorCmd(html, colResolver){
     let j=braceIdx+1
     while(j<html.length&&(html[j]===' '||html[j]==='\n'))j++
     if(html.slice(j,j+7)==='\\color{'){
+      result+=html.slice(i,braceIdx)  // flush content before the opening {
       const nameStart=j+7
       const nameEnd=html.indexOf('}',nameStart)
-      if(nameEnd<0){result+=html.slice(i,braceIdx+1);i=braceIdx+1;continue}
+      if(nameEnd<0){result+=html.slice(braceIdx,braceIdx+1);i=braceIdx+1;continue}
       const colorName=html.slice(nameStart,nameEnd)
       // find balanced closing } for the outer group
       let depth=1,k=nameEnd+1
