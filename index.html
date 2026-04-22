@@ -8402,23 +8402,27 @@ function _wrParseDefs(text,cmds,envs){
 
 // 收集当前 ZIP 项目中所有 cls/sty 文件 + tex preamble 的自定义定义
 function _wrGetProjectDefs(){
-  const cmds={},envs={}
-  if(!_wrActiveZipId)return{cmds,envs}
+  const cmds={},envs={},colTypes={}
+  if(!_wrActiveZipId)return{cmds,envs,colTypes}
   const all=ld(WR_ZIP_KEY)||[]
   const proj=all.find(p=>p.id===_wrActiveZipId)
-  if(!proj)return{cmds,envs}
+  if(!proj)return{cmds,envs,colTypes}
   for(const f of proj.files){
     if(!f.content)continue
     const ext=(f.path.match(/\.[^.]+$/)??[''])[0].toLowerCase()
-    if(ext==='.cls'||ext==='.sty'){
-      _wrParseDefs(f.content,cmds,envs)
-    }else if(ext==='.tex'){
-      // 仅解析 preamble（\begin{document} 之前）
-      const docIdx=f.content.indexOf('\\begin{document}')
-      _wrParseDefs(docIdx>=0?f.content.slice(0,docIdx):f.content,cmds,envs)
+    const src=(ext==='.tex')?(()=>{const d=f.content.indexOf('\\begin{document}');return d>=0?f.content.slice(0,d):f.content})():f.content
+    if(ext==='.cls'||ext==='.sty'||ext==='.tex'){
+      _wrParseDefs(src,cmds,envs)
+      // Parse \newcolumntype{X}[n]{spec}
+      const nctRe=/\\newcolumntype\{([a-zA-Z])\}(?:\[\d+\])?\{([^}]*)\}/g
+      let nm
+      while((nm=nctRe.exec(src))!==null){
+        const parsed=_parseTabColSpec(nm[2],{})
+        if(parsed.length)colTypes[nm[1]]=parsed[0]
+      }
     }
   }
-  return{cmds,envs}
+  return{cmds,envs,colTypes}
 }
 
 // 将自定义命令/环境展开到文本中
@@ -8559,42 +8563,163 @@ function _wrBuildRefMap(raw){
 }
 
 // ── 渲染 tabular 环境 → HTML table ──
-function _wrRenderTabular(inner){
-  // Extract spec (first {xxx})
-  const specM=inner.match(/^\s*\{([^}]*)\}/)
-  const spec=specM?specM[1]:''
-  const colAligns=spec.replace(/[|@{}\s]/g,'').split('').map(c=>c==='r'?'right':c==='c'?'center':'left')
-  const body=specM?inner.slice(specM[0].length):inner
-  const rows=body.split('\\\\').map(r=>r.trim()).filter(r=>r&&!r.startsWith('\\hline')&&!r.startsWith('\\cline'))
-  const hlines=body.split('\\\\').map(r=>r.trim().includes('\\hline'))
-  let thead='',tbody=''
-  const trs=rows.map((row,ri)=>{
-    const cells=row.replace(/\\hline/g,'').split('&').map(c=>c.trim())
-    const tag=ri===0&&rows.length>1?'th':'td'
-    const tds=cells.map((c,ci)=>{
-      const align=colAligns[ci]||'left'
-      return`<${tag} style="padding:4px 10px;border:1px solid var(--border);text-align:${align}">${c}</${tag}>`
-    }).join('')
-    return`<tr style="${hlines[ri]?'border-top:2px solid var(--text)':''}">${tds}</tr>`
-  }).join('')
-  return`<table style="border-collapse:collapse;margin:10px auto;font-size:13px">${trs}</table>`
+// ── Brace-aware split ──
+function _wrBraceSplit(str,sep){
+  const parts=[],n=sep.length
+  let depth=0,start=0,i=0
+  while(i<str.length){
+    if(str[i]==='{')depth++
+    else if(str[i]==='}')depth--
+    else if(depth===0&&str.slice(i,i+n)===sep){parts.push(str.slice(start,i));start=i+n;i+=n;continue}
+    i++
+  }
+  parts.push(str.slice(start))
+  return parts
 }
 
-// ── 从 ZIP 查找图片 data URL ──
-function _wrFindImageDataUrl(imgPath){
-  if(!_wrActiveZipId)return null
-  const proj=(ld(WR_ZIP_KEY)||[]).find(p=>p.id===_wrActiveZipId)
-  if(!proj)return null
-  const basename=imgPath.replace(/^.*[\\/]/,'')
-  const exts=['.png','.jpg','.jpeg','.gif','.svg','']
-  const f=proj.files.find(f=>{
-    const fp=f.path.replace(/\\/g,'/')
-    if(!f.dataUrl)return false
-    // match by exact path, basename, or basename without extension
-    return fp===imgPath||fp.endsWith('/'+imgPath)||fp.endsWith('/'+basename)||
-      exts.some(e=>fp.endsWith('/'+basename+e)||fp===basename+e||fp===imgPath+e)
+// ── Parse LaTeX column spec into [{align,width,borderLeft,borderRight}] ──
+function _parseTabColSpec(spec,colTypeMap={}){
+  const cols=[]
+  let i=0,pendingBL=false
+  const _skipBraces=(s,pos)=>{let d=0;while(pos<s.length){if(s[pos]==='{')d++;else if(s[pos]==='}'){d--;if(d<=0)return pos+1}pos++}return pos}
+  while(i<spec.length){
+    const c=spec[i]
+    if(c==='|'){if(cols.length)cols[cols.length-1].borderRight=true;else pendingBL=true;i++}
+    else if(c==='l'||c==='c'||c==='r'){cols.push({align:c==='c'?'center':c==='r'?'right':'left',borderLeft:pendingBL});pendingBL=false;i++}
+    else if(c==='p'||c==='m'||c==='b'){
+      i++;let w='auto'
+      if(spec[i]==='{'){const e=spec.indexOf('}',i);w=_normLatexDim(spec.slice(i+1,e));i=e+1}
+      cols.push({align:'left',width:w,wrap:true,borderLeft:pendingBL});pendingBL=false
+    }else if(c==='X'){cols.push({align:'left',flex:true,borderLeft:pendingBL});pendingBL=false;i++}
+    else if(c==='@'||c==='!'||c==='>'||c==='<'){i++;if(spec[i]==='{')i=_skipBraces(spec,i)}
+    else if(c==='*'){
+      // *{n}{spec}
+      i++;let n=0
+      if(spec[i]==='{'){const e=spec.indexOf('}',i);n=parseInt(spec.slice(i+1,e))||1;i=e+1}
+      if(spec[i]==='{'){
+        let d=0,j=i,inner=''
+        while(j<spec.length){if(spec[j]==='{'){d++;if(d>1)inner+=spec[j]}else if(spec[j]==='}'){d--;if(d===0)break;else inner+=spec[j]}else if(d>0)inner+=spec[j];j++}
+        i=j+1
+        const sub=_parseTabColSpec(inner,colTypeMap)
+        for(let k=0;k<n;k++)sub.forEach(s=>cols.push({...s}))
+      }
+    }else if(colTypeMap[c]){cols.push({...colTypeMap[c],borderLeft:pendingBL});pendingBL=false;i++}
+    else i++
+  }
+  return cols.length?cols:[{align:'left'}]
+}
+
+function _normLatexDim(dim){
+  if(!dim)return'auto'
+  const m=dim.match(/([0-9.]+)\s*\\(?:textwidth|linewidth|columnwidth)/)
+  if(m)return`${Math.round(parseFloat(m[1])*100)}%`
+  if(/[0-9.]+(cm|mm|pt|in|em|ex)/.test(dim))return dim.trim()
+  return'auto'
+}
+
+// ── Full tabular renderer ──
+function _wrRenderTabular(inner,colTypeMap={}){
+  const specM=inner.match(/^\s*\*?\{([^}]*)\}/)
+  const spec=specM?specM[1]:'l'
+  const body=specM?inner.slice(specM[0].length):inner
+  const cols=_parseTabColSpec(spec,colTypeMap)
+
+  // Split into row segments by \\ (brace-aware)
+  const rowSegs=_wrBraceSplit(body,'\\\\')
+  const rows=[]
+  let pendingTopBorder=''
+
+  rowSegs.forEach((seg)=>{
+    const s=seg.replace(/\[[^\]]*\]/,'').trim() // strip \\[len] optional
+    if(!s)return
+    const hasToprule=/\\toprule\b/.test(s)
+    const hasBottomrule=/\\bottomrule\b/.test(s)
+    const hasMidrule=/\\midrule\b/.test(s)
+    const hasHline=/\\hline\b/.test(s)
+    const clineM=s.match(/\\cline\{(\d+)-(\d+)\}/)
+    const cleanSeg=s.replace(/\\(toprule|bottomrule|midrule|hline)\b/g,'').replace(/\\cline\{[^}]*\}/g,'').trim()
+
+    const borderTop=hasToprule?'2px solid':hasMidrule||hasHline?'1px solid':pendingTopBorder?pendingTopBorder:''
+    const borderBot=hasBottomrule?'2px solid':''
+    pendingTopBorder=''
+
+    if(!cleanSeg){
+      // pure rule line — carry border to next row
+      if(borderTop)pendingTopBorder=borderTop
+      return
+    }
+    const cellStrs=_wrBraceSplit(cleanSeg,'&')
+    const cells=[]
+    let ci=0
+    cellStrs.forEach(cs=>{
+      const cs2=cs.trim()
+      const mcM=cs2.match(/^\\multicolumn\{(\d+)\}\{([^}]*)\}\{([\s\S]*)\}$/)
+      if(mcM){
+        const span=parseInt(mcM[1])
+        const mspec=mcM[2]
+        const mcAlign=mspec.includes('c')?'center':mspec.includes('r')?'right':'left'
+        cells.push({content:mcM[3],span,align:mcAlign,mc:true})
+        ci+=span
+      }else{
+        const col=cols[ci]||{align:'left'}
+        cells.push({content:cs2,span:1,align:col.align,width:col.width,wrap:col.wrap,bl:col.borderLeft,br:col.borderRight})
+        ci++
+      }
+    })
+    rows.push({cells,borderTop,borderBot})
   })
-  return f?.dataUrl||null
+
+  if(!rows.length)return''
+  // first data row → th if more than one row
+  const useHead=rows.length>1
+  let html='<div style="overflow-x:auto;margin:10px 0"><table style="border-collapse:collapse;font-size:13px;margin:0 auto;min-width:60%">'
+  rows.forEach((row,ri)=>{
+    const btStyle=row.borderTop?`border-top:${row.borderTop} var(--text);`:''
+    const bbStyle=row.borderBot?`border-bottom:${row.borderBot} var(--text);`:''
+    html+=`<tr style="${btStyle}${bbStyle}">`
+    row.cells.forEach(cell=>{
+      const tag=(useHead&&ri===0)?'th':'td'
+      const blS=cell.bl?'border-left:1px solid var(--border);':''
+      const brS=cell.br?'border-right:1px solid var(--border);':''
+      const wS=cell.width?`width:${cell.width};`:'';const wpS=cell.wrap?'white-space:normal;':'white-space:nowrap;'
+      const style=`padding:5px 12px;text-align:${cell.align};vertical-align:top;${blS}${brS}${wS}${wpS}`
+      const cs=cell.span>1?` colspan="${cell.span}"`:'';
+      html+=`<${tag}${cs} style="${style}">${cell.content}</${tag}>`
+    })
+    html+='</tr>'
+  })
+  html+='</table></div>'
+  return html
+}
+
+// ── 从 ZIP 查找图片 data URL（增强路径匹配）──
+function _wrFindImageDataUrl(imgPath){
+  if(!_wrActiveZipId)return{url:null,isPdf:false}
+  const proj=(ld(WR_ZIP_KEY)||[]).find(p=>p.id===_wrActiveZipId)
+  if(!proj)return{url:null,isPdf:false}
+  const norm=p=>p.replace(/\\/g,'/').toLowerCase()
+  const np=norm(imgPath)
+  const basename=np.replace(/^.*\//,'').replace(/\.[^.]+$/,'')  // strip path & ext
+  const imgExts=['.png','.jpg','.jpeg','.gif','.svg','.webp']
+  const pdfExts=['.pdf','.eps','.ps']
+
+  // 1. Direct match with dataUrl
+  for(const f of proj.files){
+    if(!f.dataUrl)continue
+    const fp=norm(f.path)
+    const fb=fp.replace(/^.*\//,'').replace(/\.[^.]+$/,'')
+    if(fp===np||fp.endsWith('/'+np)||fb===basename||
+       imgExts.some(e=>fp===np+e||fp.endsWith('/'+np+e)||fb===basename))
+      return{url:f.dataUrl,isPdf:false}
+  }
+  // 2. PDF/EPS reference (can't render, show placeholder)
+  for(const f of proj.files){
+    const fp=norm(f.path)
+    const fb=fp.replace(/^.*\//,'').replace(/\.[^.]+$/,'')
+    if(pdfExts.some(e=>fp===np+e||fp.endsWith('/'+np+e)||fb===basename||fp.endsWith('/'+basename+e)))
+      return{url:null,isPdf:true,name:f.path.replace(/^.*\//,'')}
+  }
+  return{url:null,isPdf:false}
 }
 
 function wrRenderPreview(){
@@ -8688,18 +8813,20 @@ function wrRenderPreview(){
     const lblM=inner.match(/\\label\{([^}]*)\}/)
     const lblKey=lblM?lblM[1]:null
     const figNum=lblKey&&_refMap[lblKey]?_refMap[lblKey].num:fi
-    const dataUrl=imgPath?_wrFindImageDataUrl(imgPath):null
+    const imgResult=imgPath?_wrFindImageDataUrl(imgPath):{url:null,isPdf:false}
     const ph=`\x00FIG${fi}\x00`
-    figBlocks.push({ph,figNum,caption,imgPath,dataUrl})
+    figBlocks.push({ph,figNum,caption,imgPath,dataUrl:imgResult.url,isPdf:imgResult.isPdf,pdfName:imgResult.name})
     return ph
   })
 
   // ── Step 0.7: Extract tabular environments into placeholders ──
+  // Pass column type map from project defs (already collected in step 0)
+  const _colTypeMap=_wrActiveZipId?(_wrGetProjectDefs().colTypes||{}):{} // reuse cached defs
   const tabBlocks=[];let tbi=0
   raw=raw.replace(/\\begin\{tabular\*?\}([\s\S]*?)\\end\{tabular\*?\}/g,(m,inner)=>{
     tbi++
     const ph=`\x00TAB${tbi}\x00`
-    tabBlocks.push({ph,html:_wrRenderTabular(inner)})
+    tabBlocks.push({ph,html:_wrRenderTabular(inner,_colTypeMap)})
     return ph
   })
   // table float: extract caption + label, keep inner tabular placeholder
@@ -8885,12 +9012,26 @@ function wrRenderPreview(){
 
   // ── Step 5: Restore figure placeholders ──
   for(const fb of figBlocks){
-    const imgHtml=fb.dataUrl
-      ?`<img src="${fb.dataUrl}" style="max-width:100%;max-height:320px;object-fit:contain;border-radius:4px">`
-      :fb.imgPath
-        ?`<div style="background:var(--surface2);border:1.5px dashed var(--border);padding:24px 16px;text-align:center;color:var(--text2);font-size:12px;border-radius:6px">🖼 <code>${escHtml(fb.imgPath)}</code></div>`
-        :'<div style="background:var(--surface2);border:1.5px dashed var(--border);padding:24px;text-align:center;color:var(--text2);font-size:12px;border-radius:6px">🖼 图片</div>'
-    const capHtml=fb.caption?`<figcaption style="font-size:12px;color:var(--text2);margin-top:6px;text-align:center"><strong>Figure ${fb.figNum}:</strong> ${fb.caption}</figcaption>`:''
+    let imgHtml
+    if(fb.dataUrl){
+      imgHtml=`<img src="${fb.dataUrl}" style="max-width:100%;max-height:360px;object-fit:contain;border-radius:4px" loading="lazy">`
+    }else if(fb.isPdf){
+      // PDF/EPS: can't render in browser, show styled placeholder
+      imgHtml=`<div style="background:var(--surface2);border:1.5px dashed var(--border);padding:28px 16px;text-align:center;color:var(--text2);font-size:12px;border-radius:6px">
+        <div style="font-size:22px;margin-bottom:6px">📄</div>
+        <code style="font-size:11px">${escHtml(fb.pdfName||fb.imgPath||'')}</code>
+        <div style="font-size:10px;margin-top:4px;opacity:.7">PDF/EPS 图片（浏览器预览不支持，导出 PDF 后可见）</div>
+      </div>`
+    }else if(fb.imgPath){
+      imgHtml=`<div style="background:var(--surface2);border:1.5px dashed var(--border);padding:24px 16px;text-align:center;color:var(--text2);font-size:12px;border-radius:6px">
+        <div style="font-size:20px;margin-bottom:4px">🖼</div>
+        <code style="font-size:11px">${escHtml(fb.imgPath)}</code>
+        <div style="font-size:10px;margin-top:4px;opacity:.7">图片未加载（请重新导入 ZIP 以包含图片）</div>
+      </div>`
+    }else{
+      imgHtml=`<div style="background:var(--surface2);border:1.5px dashed var(--border);padding:24px;text-align:center;color:var(--text2);font-size:12px;border-radius:6px">🖼 图片</div>`
+    }
+    const capHtml=fb.caption?`<figcaption style="font-size:12px;color:var(--text2);margin-top:8px;text-align:center"><strong>Figure&nbsp;${fb.figNum}:</strong> ${fb.caption}</figcaption>`:''
     const figHtml=`<figure style="text-align:center;margin:14px 0;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">${imgHtml}${capHtml}</figure>`
     html=html.split(fb.ph).join(figHtml)
   }
