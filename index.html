@@ -4668,22 +4668,23 @@ function renderOverview(){
   renderIdentityCard();
   if(typeof _renderDailyQuote==='function')_renderDailyQuote();
   const _pOrd={high:0,med:1,low:2};
-  const tasks=ld(K.tasks).filter(t=>t.status!=='done')
+  const allPending=ld(K.tasks).filter(t=>t.status!=='done')
     .sort((a,b)=>{
-      const pd=(_pOrd[a.prio]||1)-(_pOrd[b.prio]||1);if(pd!==0)return pd;
+      const pd=(_pOrd[a.prio]??1)-(_pOrd[b.prio]??1);if(pd!==0)return pd;
       if(a.due&&b.due)return a.due>b.due?1:-1;
       if(a.due)return -1;if(b.due)return 1;
       return (b.created||'')>(a.created||'')?1:-1;
-    }).slice(0,5);
+    });
+  const tasks=allPending.slice(0,8);
   const tEl=document.getElementById('ov-tasks');
-  if(tEl)tEl.innerHTML=tasks.length?tasks.map(t=>`<div class="task-item">
+  if(tEl)tEl.innerHTML=tasks.length?`<div style="max-height:320px;overflow-y:auto">`+tasks.map(t=>`<div class="task-item">
     <div class="task-checkbox" onclick="toggleTask('${t.id}')"></div>
     <div class="task-body">
       <div class="task-title">${t.title}${t.note?` <span style="font-size:10px;color:var(--primary);opacity:.7">📝</span>`:''}</div>
       <div class="task-meta">${projTagHtml(t.proj)}${t.due&&t.due<today()?`<span class="task-due overdue">📅 ${t.due} ⚠️</span>`:t.due?`<span class="task-due">📅 ${t.due}</span>`:''}</div>
     </div>
     <div class="task-actions"><button onclick="openTaskNote('${t.id}')" title="任务笔记" style="opacity:.6${t.note?';color:var(--primary);opacity:1':''}">📝</button></div>
-  </div>`).join(''):'<div class="empty-state" style="padding:20px"><div class="icon">✅</div><p>今日任务全部完成！</p></div>';
+  </div>`).join('')+(allPending.length>8?`<div style="text-align:center;padding:6px 0;font-size:11px;color:var(--text2)">还有 ${allPending.length-8} 条任务 · <span style="cursor:pointer;color:var(--primary)" onclick="switchPage('tasks')">查看全部</span></div>`:'')+`</div>`:'<div class="empty-state" style="padding:20px"><div class="icon">✅</div><p>今日任务全部完成！</p></div>';
 
   const subs=ld(K.subs).slice(0,4),sEl=document.getElementById('ov-subs');
   if(sEl)sEl.innerHTML=subs.length?subs.map(s=>{
