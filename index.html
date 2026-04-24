@@ -5975,7 +5975,7 @@ function _clearNoteSettings(){
 function _collectTodayData(){
   const td=today()
   const allTasks=ld(K.tasks)
-  const doneTasks=allTasks.filter(t=>t.status==='done'&&t.completedAt===td)
+  const doneTasks=allTasks.filter(t=>t.status==='done'&&t.done===td)
   const activeTasks=allTasks.filter(t=>t.status!=='done')
   const pomos=ld(K.pomos).filter(p=>p.date===td)
   const defs=getHabitDefs()
