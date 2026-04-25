@@ -1618,8 +1618,19 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     <div id="lab-lock-err" style="font-size:12px;color:var(--red);display:none">同步码错误</div>
   </div>
   <div id="lab-dash" style="display:none">
-    <div style="font-size:20px;font-weight:700;margin-bottom:4px">🔬 实验进展</div>
-    <div style="color:var(--text2);font-size:13px;margin-bottom:20px" id="lab-updated">四项目 · GitHub · GPU 实时状态</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:20px;font-weight:700">🔬 实验进展</div>
+      <button class="btn btn-ghost btn-sm" onclick="fetchLabStatus()" style="font-size:11px">↻ 刷新简报</button>
+    </div>
+    <div style="color:var(--text2);font-size:13px;margin-bottom:12px" id="lab-updated">四项目 · GitHub · GPU 实时状态</div>
+
+    <!-- 今日简报 -->
+    <div id="lab-briefing" style="margin-bottom:16px;display:none">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 今日简报</div>
+      <div id="lab-briefing-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      <div id="lab-gpu-brief" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:var(--primary)" id="lab-papers">4</div><div style="font-size:12px;color:var(--text2)">进行中论文</div></div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#059669" id="lab-gpus">2</div><div style="font-size:12px;color:var(--text2)">GPU 在线</div></div>
@@ -3159,7 +3170,7 @@ function renderLabDash(){
   }
   renderLabProjects();
   const tok=localStorage.getItem('phd_gh_token');
-  if(tok){document.getElementById('lab-token-input').value=tok;fetchLabCommits();}
+  if(tok){document.getElementById('lab-token-input').value=tok;fetchLabCommits();fetchLabStatus();}
 }
 function renderLabProjects(){
   const ps=getLabProjects();
@@ -3265,7 +3276,47 @@ function deleteLabProject(pi){
   closeModal('lab-edit-modal');
   renderLabProjects();
 }
-function saveLabToken(){const tok=document.getElementById('lab-token-input').value.trim();if(tok){localStorage.setItem('phd_gh_token',tok);fetchLabCommits();toast('Token 已保存');}}
+function saveLabToken(){const tok=document.getElementById('lab-token-input').value.trim();if(tok){localStorage.setItem('phd_gh_token',tok);fetchLabCommits();fetchLabStatus();toast('Token 已保存');}}
+
+async function fetchLabStatus(){
+  const tok=localStorage.getItem('phd_gh_token');
+  if(!tok)return;
+  const briefing=document.getElementById('lab-briefing');
+  const body=document.getElementById('lab-briefing-body');
+  const gpuEl=document.getElementById('lab-gpu-brief');
+  body.innerHTML='<div style="color:var(--text2);font-size:12px;grid-column:1/-1">加载今日简报…</div>';
+  briefing.style.display='block';
+  try{
+    const r=await fetch('https://api.github.com/repos/nikewq/lab-status/contents/status.json',
+      {headers:{Authorization:'token '+tok,Accept:'application/vnd.github.v3+json'}});
+    if(!r.ok){body.innerHTML='<div style="color:var(--red);font-size:12px;grid-column:1/-1">简报获取失败 ('+r.status+') · 请确认 Token 有私有仓库读取权限</div>';return;}
+    const meta=await r.json();
+    const status=JSON.parse(atob(meta.content));
+    const genTime=new Date(status.generated_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('lab-updated').textContent='简报生成: '+genTime+' · 每日 09:00 自动更新';
+
+    const PROJ_MAP={pearl:'#7c3aed',dgbaryir:'#3b82f6',pirm:'#059669',dgcar:'#f59e0b'};
+    body.innerHTML=Object.entries(status.projects||{}).map(([key,p])=>{
+      const pending=(p.pending||[]).map(t=>`<div style="font-size:11px;color:var(--text2);padding:2px 0">• ${t}</div>`).join('');
+      const results=(p.results||[]).map(r=>`<div style="font-size:11px;font-family:monospace;color:var(--text)">${r}</div>`).join('');
+      return `<div style="background:var(--surface2);border-radius:10px;padding:12px;border-left:3px solid ${PROJ_MAP[key]||'var(--primary)'}">
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">${p.name} <span style="font-size:10px;color:var(--text2);font-weight:400">${p.venue||''}</span></div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">${p.state||''}</div>
+        ${results?`<div style="margin-bottom:4px">${results}</div>`:''}
+        ${p.running?`<div style="font-size:11px;color:#059669;margin-bottom:4px">⚙ ${p.running}</div>`:''}
+        ${pending?`<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">${pending}</div>`:''}
+      </div>`;
+    }).join('');
+
+    gpuEl.innerHTML=(status.gpus||[]).map(g=>{
+      const dot=g.online?'#059669':'#ef4444';
+      const info=g.online?` ${g.util} · ${g.mem}`:'';
+      return `<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid ${dot};color:${dot};font-weight:600">● ${g.name}${info}</span>`;
+    }).join('');
+  }catch(e){
+    body.innerHTML=`<div style="color:var(--red);font-size:12px;grid-column:1/-1">解析失败: ${e.message}</div>`;
+  }
+}
 async function fetchLabCommits(){
   const tok=localStorage.getItem('phd_gh_token');
   const ps=getLabProjects();
