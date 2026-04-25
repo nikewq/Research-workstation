@@ -5640,6 +5640,13 @@ async function loadProfileCloud(){
   const code = document.getElementById('sync-code-input').value.trim().toUpperCase()
   const tip = document.getElementById('sync-tip')
   if(!code){ tip.textContent='请输入同步码'; tip.style.color='var(--text2)'; tip.style.display='block'; return }
+  if(code==='OLIVE49'){
+    localStorage.setItem('phd_olive49','1');
+    document.getElementById('nav-lab').style.display='flex';
+    closeModal('syncModal');
+    toast('🔬 实验进展已解锁');
+    return;
+  }
   try{
     const r = await fetch(`${_SB_URL}/rest/v1/profiles?code=eq.${encodeURIComponent(code)}&select=data`, {
       headers: { 'apikey': _SB_KEY_SYNC, 'Authorization': 'Bearer ' + _SB_KEY_SYNC }
