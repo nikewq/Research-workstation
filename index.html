@@ -3060,7 +3060,7 @@ function initApp() {
 // ══════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════
-const _VALID_PAGES=new Set(['overview','tasks','focus','habits','submissions','gantt','tools','reflection','stats','intel','procure','settings'])
+const _VALID_PAGES=new Set(['overview','tasks','focus','habits','submissions','gantt','tools','reflection','stats','intel','procure','settings','lab'])
 function switchPage(name) {
   if(!_VALID_PAGES.has(name))name='overview'
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
