@@ -1633,7 +1633,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:var(--primary)" id="lab-papers">4</div><div style="font-size:12px;color:var(--text2)">进行中论文</div></div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#059669" id="lab-gpus">2</div><div style="font-size:12px;color:var(--text2)">GPU 在线</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#059669" id="lab-gpus">5</div><div style="font-size:12px;color:var(--text2)">GPU 在线</div></div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#f59e0b" id="lab-commits-count">—</div><div style="font-size:12px;color:var(--text2)">今日 commits</div></div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#3b82f6" id="lab-deadline">—</div><div style="font-size:12px;color:var(--text2)">最近截稿(天)</div></div>
     </div>
@@ -1643,16 +1643,24 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">⚡ GPU 状态</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">A100 · 10.20.104.115:16035</div><div style="font-size:11px;color:var(--text2);margin-top:2px">PEARL baselines · DGBaryIR fm_baryaug</div></div>
+            <div><div style="font-size:13px;font-weight:600">A100 · 10.20.104.115:16035</div><div style="font-size:11px;color:var(--text2);margin-top:2px">PEARL LISA+DFR 运行中</div></div>
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(59,130,246,.15);color:#3b82f6">在线</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westc:55434</div><div style="font-size:11px;color:var(--text2);margin-top:2px">PIRM cmnist_10s 进行中</div></div>
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westc:55434</div><div style="font-size:11px;color:var(--text2);margin-top:2px">PIRM CMNIST 70.4% ✓ · CelebA 待定</div></div>
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(59,130,246,.15);color:#3b82f6">在线</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">L20 · 172.18.18.189:32241</div><div style="font-size:11px;color:var(--text2);margin-top:2px">空闲</div></div>
-            <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(139,148,158,.15);color:var(--text2)">离线</span>
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westd:20597 (B78)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">DGCAR gowalla S2 seed2026 运行中 · ~12h</div></div>
+            <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westd:43253 (A75)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">DGCAR yelp2018 Stage1 seed2026 · ~18h</div></div>
+            <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westb:51795 (A73)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">DGCAR yelp2018 MultiVAE 5-run · ~20h</div></div>
+            <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
           </div>
         </div>
       </div>
