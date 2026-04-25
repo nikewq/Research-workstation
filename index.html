@@ -1984,6 +1984,14 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 
 </main>
 
+<!-- ── Lab Edit Modal ── -->
+<div class="modal-overlay" id="lab-edit-modal" onclick="if(event.target===this)closeModal('lab-edit-modal')">
+  <div class="modal" style="max-width:500px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title">✏️ 编辑项目</div>
+    <div id="lab-edit-body"></div>
+  </div>
+</div>
+
 <!-- ── Edit Task Modal ── -->
 <div class="modal-overlay" id="syncModal">
   <div class="modal" style="max-width:420px">
@@ -3082,79 +3090,180 @@ const showPage=switchPage
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
 
 // ══════════════════════════════════════
-//  LAB PAGE (OLIVE49 gated)
+//  LAB PAGE (OLIVE49 gated — all data in localStorage, nothing in source)
 // ══════════════════════════════════════
-const LAB_PROJECTS=[
-  {id:'pearl',name:'PEARL',venue:'Neurocomputing',color:'#7c3aed',github:'nikewq/pearl',gpu:'A100',results:'WB 91.8%±1.0% · CC 78.7%±0.4%',running:'CelebA 重跑 / 写作中',deadline:'2026-07-01',sections:{Abstract:true,Introduction:true,'Related Work':true,Method:true,Experiments:true,Conclusion:false,Appendix:false}},
-  {id:'dgbaryir',name:'DGBaryIR',venue:'NeurIPS 2026',color:'#3b82f6',github:'nikewq/dgbaryir',gpu:'A100',results:'fm_baryaug ep13/50 运行中',running:'fm_wgeo2 · fm_green VelocityField',deadline:'2026-05-16',sections:{Abstract:false,Introduction:true,'Related Work':false,Method:true,Experiments:false,Conclusion:false,Appendix:false}},
-  {id:'pirm',name:'PIRM',venue:'NeurIPS 2026',color:'#059669',github:'nikewq/pirm',gpu:'RTX5090',results:'CMNIST 70.4%±1.8% (3-seed)',running:'cmnist_10s 进行中',deadline:'2026-05-16',sections:{Abstract:false,Introduction:false,'Related Work':false,Method:false,Experiments:false,Conclusion:false,Appendix:false}},
-  {id:'dgcar',name:'DGCAR',venue:'TBD',color:'#f59e0b',github:'nikewq/dgcar-OOD-Recommendation-',gpu:'—',results:'λ_e adapter 已验证',running:'MultiVAE baseline / yelp 重跑',deadline:'',sections:{Abstract:false,Introduction:false,'Related Work':false,Method:false,Experiments:false,Conclusion:false,Appendix:false}}
-];
+const LAB_KEY='phd_lab_projects';
+const LAB_SECS=['Abstract','Introduction','Related Work','Method','Experiments','Conclusion','Appendix'];
+const LAB_COLORS=['#7c3aed','#3b82f6','#059669','#f59e0b','#ef4444','#ec4899'];
+const LAB_EMPTY_PROJECT=()=>({id:'p'+Date.now(),name:'新项目',venue:'',color:'#7c3aed',github:'',gpu:'',results:'',running:'',deadline:'',sections:Object.fromEntries(LAB_SECS.map(s=>[s,false]))});
+
+function getLabProjects(){
+  try{return JSON.parse(localStorage.getItem(LAB_KEY))||[];}catch{return [];}
+}
+function saveLabProjects(ps){localStorage.setItem(LAB_KEY,JSON.stringify(ps));}
+
 function unlockLab(){
   const v=document.getElementById('lab-code-input').value.trim().toUpperCase();
-  if(v==='OLIVE49'){localStorage.setItem('phd_olive49','1');document.getElementById('nav-lab').style.display='flex';document.getElementById('lab-lock').style.display='none';document.getElementById('lab-dash').style.display='block';renderLabDash();}
-  else{document.getElementById('lab-lock-err').style.display='block';}
+  if(v==='OLIVE49'){
+    localStorage.setItem('phd_olive49','1');
+    document.getElementById('nav-lab').style.display='flex';
+    document.getElementById('lab-lock').style.display='none';
+    document.getElementById('lab-dash').style.display='block';
+    renderLabDash();
+  } else {document.getElementById('lab-lock-err').style.display='block';}
 }
 function renderLab(){
-  if(localStorage.getItem('phd_olive49')==='1'){document.getElementById('lab-lock').style.display='none';document.getElementById('lab-dash').style.display='block';renderLabDash();}
-  else{document.getElementById('lab-lock').style.display='flex';document.getElementById('lab-dash').style.display='none';}
+  if(localStorage.getItem('phd_olive49')==='1'){
+    document.getElementById('lab-lock').style.display='none';
+    document.getElementById('lab-dash').style.display='block';
+    renderLabDash();
+  } else {
+    document.getElementById('lab-lock').style.display='flex';
+    document.getElementById('lab-dash').style.display='none';
+  }
 }
 function renderLabDash(){
-  document.getElementById('lab-updated').textContent='四项目 · GitHub · GPU 实时状态 · '+new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-  const dls=LAB_PROJECTS.map(p=>p.deadline).filter(d=>d).map(d=>new Date(d));
-  const nearest=dls.reduce((a,b)=>a<b?a:b,new Date('2099-01-01'));
-  const days=Math.ceil((nearest-new Date())/86400000);
-  document.getElementById('lab-deadline').textContent=days>0?days:'已过';
+  document.getElementById('lab-updated').textContent='数据存于本地浏览器 · 更新: '+new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const ps=getLabProjects();
+  document.getElementById('lab-papers').textContent=ps.length||'—';
+  const dls=ps.map(p=>p.deadline).filter(d=>d).map(d=>new Date(d));
+  if(dls.length){
+    const nearest=dls.reduce((a,b)=>a<b?a:b);
+    const days=Math.ceil((nearest-new Date())/86400000);
+    document.getElementById('lab-deadline').textContent=days>0?days+'d':'已过';
+  }
   renderLabProjects();
   const tok=localStorage.getItem('phd_gh_token');
   if(tok){document.getElementById('lab-token-input').value=tok;fetchLabCommits();}
 }
 function renderLabProjects(){
+  const ps=getLabProjects();
   const c=document.getElementById('lab-projects');
-  c.innerHTML=LAB_PROJECTS.map(p=>{
-    const secs=Object.entries(p.sections);
+  if(!ps.length){
+    c.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text2)">
+      <div style="font-size:32px;margin-bottom:12px">🔬</div>
+      <div style="font-size:14px;margin-bottom:16px">还没有项目，点击下方按钮添加</div>
+      <button class="btn btn-primary" onclick="addLabProject()">+ 添加项目</button>
+    </div>`;
+    return;
+  }
+  c.innerHTML=ps.map((p,pi)=>{
+    const secs=Object.entries(p.sections||{});
     const done=secs.filter(([,v])=>v).length;
-    const pct=Math.round(done/secs.length*100);
-    const secsHtml=secs.map(([k,v])=>`<span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:${v?'rgba(5,150,105,.15)':'var(--border)'};color:${v?'#059669':'var(--text2)'}">${k}</span>`).join('');
+    const pct=secs.length?Math.round(done/secs.length*100):0;
+    const secsHtml=secs.map(([k,v])=>`<span onclick="labToggleSec(${pi},'${k}')" style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;background:${v?'rgba(5,150,105,.15)':'var(--border)'};color:${v?'#059669':'var(--text2)'}" title="点击切换">${v?'✓ ':''} ${k}</span>`).join('');
     const dl=p.deadline?Math.ceil((new Date(p.deadline)-new Date())/86400000):null;
     const dlHtml=dl!==null?`<span style="font-size:11px;color:${dl<14?'var(--red)':'var(--text2)'}">${dl>0?dl+'d 截稿':'已截稿'}</span>`:'';
+    const ghName=p.github?p.github.split('/').pop():'—';
+    const ghLink=p.github?`<a href="https://github.com/${p.github}" target="_blank" style="font-size:10px;color:var(--primary);text-decoration:none">⎇ ${ghName}</a>`:`<span style="font-size:10px;color:var(--text2)">⎇ 未设置</span>`;
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${p.color}"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${p.color||'#7c3aed'}"></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div><div style="font-size:15px;font-weight:700">${p.name}</div><div style="font-size:11px;color:var(--text2)">${p.venue}</div></div>
-        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">${dlHtml}<a href="https://github.com/${p.github}" target="_blank" style="font-size:10px;color:var(--primary);text-decoration:none">⎇ ${p.github.split('/')[1]}</a></div>
+        <div><div style="font-size:15px;font-weight:700">${p.name||'未命名'}</div><div style="font-size:11px;color:var(--text2)">${p.venue||'—'}</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">${dlHtml}${ghLink}<button onclick="editLabProject(${pi})" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0">编辑 ✎</button></div>
       </div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:3px">📊 ${p.results}</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">⚙️ GPU: <b style="color:var(--text)">${p.gpu}</b> · ${p.running}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px"><span>写作进度</span><span style="color:${p.color};font-weight:700">${pct}%</span></div>
-      <div style="height:6px;background:var(--border);border-radius:3px;margin-bottom:8px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${p.color};width:${pct}%"></div></div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:3px">📊 ${p.results||'暂无数据'}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">⚙️ GPU: <b style="color:var(--text)">${p.gpu||'—'}</b>${p.running?' · '+p.running:''}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px"><span>写作进度</span><span style="color:${p.color||'var(--primary)'};font-weight:700">${pct}%</span></div>
+      <div style="height:6px;background:var(--border);border-radius:3px;margin-bottom:8px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${p.color||'#7c3aed'};width:${pct}%"></div></div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">${secsHtml}</div>
     </div>`;
   }).join('');
 }
+function labToggleSec(pi,sec){
+  const ps=getLabProjects();
+  if(!ps[pi])return;
+  ps[pi].sections[sec]=!ps[pi].sections[sec];
+  saveLabProjects(ps);
+  renderLabProjects();
+}
+function addLabProject(){
+  const ps=getLabProjects();
+  ps.push(LAB_EMPTY_PROJECT());
+  saveLabProjects(ps);
+  editLabProject(ps.length-1);
+}
+function editLabProject(pi){
+  const ps=getLabProjects();
+  const p=ps[pi];
+  const colorOpts=LAB_COLORS.map(c=>`<span onclick="document.getElementById('ledit-color').value='${c}';document.querySelectorAll('.ledit-cswatch').forEach(s=>s.style.outline='none');this.style.outline='2px solid white'" class="ledit-cswatch" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${c};cursor:pointer;${p.color===c?'outline:2px solid white':''}"></span>`).join('');
+  document.getElementById('lab-edit-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label>项目名称</label><input id="ledit-name" value="${p.name||''}"></div>
+      <div><label>目标期刊/会议</label><input id="ledit-venue" value="${p.venue||''}"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label>GitHub (user/repo)</label><input id="ledit-github" value="${p.github||''}"></div>
+      <div><label>截稿日期</label><input id="ledit-deadline" type="date" value="${p.deadline||''}"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label>GPU</label><input id="ledit-gpu" value="${p.gpu||''}"></div>
+      <div><label>颜色</label><div style="display:flex;align-items:center;gap:8px;margin-top:4px">${colorOpts}<input id="ledit-color" value="${p.color||'#7c3aed'}" style="width:60px;padding:2px 4px;height:26px"></div></div>
+    </div>
+    <div style="margin-bottom:10px"><label>核心实验结果</label><input id="ledit-results" value="${p.results||''}"></div>
+    <div style="margin-bottom:10px"><label>正在运行</label><input id="ledit-running" value="${p.running||''}"></div>
+    <div style="margin-bottom:4px"><label>写作进度（点击切换）</label></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
+      ${LAB_SECS.map(s=>`<span onclick="this.dataset.done=this.dataset.done==='1'?'0':'1';this.style.background=this.dataset.done==='1'?'rgba(5,150,105,.2)':'var(--border)';this.style.color=this.dataset.done==='1'?'#059669':'var(--text2)'" data-sec="${s}" data-done="${p.sections?.[s]?'1':'0'}" style="padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;background:${p.sections?.[s]?'rgba(5,150,105,.2)':'var(--border)'};color:${p.sections?.[s]?'#059669':'var(--text2)'}">${s}</span>`).join('')}
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px">
+      <button class="btn" style="color:var(--red)" onclick="deleteLabProject(${pi})">删除项目</button>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="closeModal('lab-edit-modal')">取消</button><button class="btn btn-primary" onclick="saveLabEdit(${pi})">保存</button></div>
+    </div>`;
+  openModal('lab-edit-modal');
+}
+function saveLabEdit(pi){
+  const ps=getLabProjects();
+  const secs={};
+  document.querySelectorAll('#lab-edit-body [data-sec]').forEach(el=>{secs[el.dataset.sec]=el.dataset.done==='1';});
+  ps[pi]={...ps[pi],
+    name:document.getElementById('ledit-name').value.trim(),
+    venue:document.getElementById('ledit-venue').value.trim(),
+    github:document.getElementById('ledit-github').value.trim(),
+    deadline:document.getElementById('ledit-deadline').value,
+    gpu:document.getElementById('ledit-gpu').value.trim(),
+    color:document.getElementById('ledit-color').value,
+    results:document.getElementById('ledit-results').value.trim(),
+    running:document.getElementById('ledit-running').value.trim(),
+    sections:secs
+  };
+  saveLabProjects(ps);
+  closeModal('lab-edit-modal');
+  renderLabDash();
+  toast('已保存');
+}
+function deleteLabProject(pi){
+  if(!confirm('确认删除这个项目？'))return;
+  const ps=getLabProjects();
+  ps.splice(pi,1);
+  saveLabProjects(ps);
+  closeModal('lab-edit-modal');
+  renderLabProjects();
+}
 function saveLabToken(){const tok=document.getElementById('lab-token-input').value.trim();if(tok){localStorage.setItem('phd_gh_token',tok);fetchLabCommits();toast('Token 已保存');}}
 async function fetchLabCommits(){
   const tok=localStorage.getItem('phd_gh_token');
+  const ps=getLabProjects();
   const el=document.getElementById('lab-commits-list');
   const hdr=tok?{Authorization:'token '+tok}:{};
   el.innerHTML='<div style="color:var(--text2);font-size:12px">获取中...</div>';
   const rows=[];let todayCount=0;const today=new Date().toDateString();
-  for(const p of LAB_PROJECTS){
+  for(const p of ps.filter(p=>p.github)){
     try{
       const r=await fetch(`https://api.github.com/repos/${p.github}/commits?per_page=2`,{headers:hdr});
-      if(!r.ok){rows.push({proj:p.name,color:p.color,sha:'—',msg:r.status===404?'私有/无权限':'请求失败 '+r.status,time:''});continue;}
+      if(!r.ok){rows.push({proj:p.name,color:p.color||'#7c3aed',sha:'—',msg:r.status===404?'私有/需Token':'请求失败 '+r.status,time:''});continue;}
       const data=await r.json();
-      data.forEach(c=>{const t=new Date(c.commit.author.date);if(t.toDateString()===today)todayCount++;rows.push({proj:p.name,color:p.color,sha:c.sha.slice(0,7),msg:c.commit.message.split('\n')[0].slice(0,60),time:t.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});});
-    }catch(e){rows.push({proj:p.name,color:p.color,sha:'err',msg:'网络错误',time:''});}
+      data.forEach(c=>{const t=new Date(c.commit.author.date);if(t.toDateString()===today)todayCount++;rows.push({proj:p.name,color:p.color||'#7c3aed',sha:c.sha.slice(0,7),msg:c.commit.message.split('\n')[0].slice(0,60),time:t.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});});
+    }catch(e){rows.push({proj:p.name,color:p.color||'#7c3aed',sha:'err',msg:'网络错误',time:''});}
   }
-  document.getElementById('lab-commits-count').textContent=todayCount;
+  document.getElementById('lab-commits-count').textContent=todayCount||'—';
   rows.sort((a,b)=>b.time.localeCompare(a.time));
   el.innerHTML=rows.slice(0,8).map(r=>`<div style="display:flex;gap:10px;padding:7px 10px;background:var(--surface2);border-radius:6px;font-size:12px;margin-bottom:6px">
-    <span style="width:52px;font-size:11px;font-weight:700;color:${r.color};flex-shrink:0">${r.proj}</span>
+    <span style="width:56px;font-size:11px;font-weight:700;color:${r.color};flex-shrink:0">${r.proj}</span>
     <span style="font-family:monospace;color:var(--primary);flex-shrink:0">${r.sha}</span>
     <span style="flex:1;color:var(--text)">${r.msg}</span>
     <span style="color:var(--text2);flex-shrink:0">${r.time}</span>
-  </div>`).join('')||'<div style="color:var(--text2);font-size:12px">暂无记录</div>';
+  </div>`).join('')||'<div style="color:var(--text2);font-size:12px">暂无记录 · 请先添加项目并设置 Token</div>';
 }
 if(localStorage.getItem('phd_olive49')==='1')document.getElementById('nav-lab').style.display='flex';
 
