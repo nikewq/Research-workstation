@@ -895,6 +895,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     <div class="nav-item" data-page="habits" data-label="习惯打卡" data-label-key="nav.habits"><span class="nav-icon">🔥</span><span class="nav-label" data-i18n="nav.habits">习惯打卡</span></div>
     <div class="nav-group" data-i18n="g.research">科研</div>
     <div class="nav-item" data-page="submissions" data-label="文献 & 投稿" data-label-key="nav.papers"><span class="nav-icon">📖</span><span class="nav-label" data-i18n="nav.papers">文献 & 投稿</span></div>
+    <div class="nav-item" id="nav-lab" data-page="lab" data-label="实验进展" style="display:none"><span class="nav-icon">🔬</span><span class="nav-label">实验进展</span></div>
     <div class="nav-item" data-page="gantt" data-label="项目甘特图" data-label-key="nav.gantt"><span class="nav-icon">📅</span><span class="nav-label" data-i18n="nav.gantt">项目甘特图</span></div>
     <div class="nav-item" data-page="tools" data-label="工具面板" data-label-key="nav.tools"><span class="nav-icon">⚡</span><span class="nav-label" data-i18n="nav.tools">工具面板</span></div>
     <div class="nav-item" data-page="reflection" data-label="反思日记" data-label-key="nav.reflection"><span class="nav-icon">🌙</span><span class="nav-label" data-i18n="nav.reflection">反思日记</span></div>
@@ -1602,6 +1603,76 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
   </div>
   <div id="gantt-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
   <div id="gantt-area"></div>
+</div>
+
+<!-- ── Lab (OLIVE49 gated) ── -->
+<div class="page" id="page-lab">
+  <div id="lab-lock" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px">
+    <div style="font-size:48px">🔬</div>
+    <div style="font-size:18px;font-weight:700">实验进展 · 个人空间</div>
+    <div style="font-size:13px;color:var(--text2)">输入个人同步码解锁</div>
+    <div style="display:flex;gap:8px;width:280px">
+      <input type="password" id="lab-code-input" placeholder="OLIVE···" style="flex:1" onkeydown="if(event.key==='Enter')unlockLab()">
+      <button class="btn btn-primary" onclick="unlockLab()">解锁</button>
+    </div>
+    <div id="lab-lock-err" style="font-size:12px;color:var(--red);display:none">同步码错误</div>
+  </div>
+  <div id="lab-dash" style="display:none">
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px">🔬 实验进展</div>
+    <div style="color:var(--text2);font-size:13px;margin-bottom:20px" id="lab-updated">四项目 · GitHub · GPU 实时状态</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:var(--primary)" id="lab-papers">4</div><div style="font-size:12px;color:var(--text2)">进行中论文</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#059669" id="lab-gpus">2</div><div style="font-size:12px;color:var(--text2)">GPU 在线</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#f59e0b" id="lab-commits-count">—</div><div style="font-size:12px;color:var(--text2)">今日 commits</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px"><div style="font-size:28px;font-weight:700;color:#3b82f6" id="lab-deadline">—</div><div style="font-size:12px;color:var(--text2)">最近截稿(天)</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" id="lab-projects"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">⚡ GPU 状态</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:600">A100 · 10.20.104.115:16035</div><div style="font-size:11px;color:var(--text2);margin-top:2px">PEARL baselines · DGBaryIR fm_baryaug</div></div>
+            <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(59,130,246,.15);color:#3b82f6">在线</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westc:55434</div><div style="font-size:11px;color:var(--text2);margin-top:2px">PIRM cmnist_10s 进行中</div></div>
+            <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(59,130,246,.15);color:#3b82f6">在线</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:600">L20 · 172.18.18.189:32241</div><div style="font-size:11px;color:var(--text2);margin-top:2px">空闲</div></div>
+            <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(139,148,158,.15);color:var(--text2)">离线</span>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🎼 写作流水线 (vs PaperOrchestra)</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface2);border-radius:6px"><div><div style="font-size:12px;font-weight:600">1️⃣ Outline Agent</div><div style="font-size:10px;color:var(--text2)">/autoresearch-nini + /paper-writing-nini</div></div><span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">✓ 覆盖</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface2);border-radius:6px"><div><div style="font-size:12px;font-weight:600">2️⃣ Literature Review</div><div style="font-size:10px;color:var(--text2)">/daily-papers + /paper-analyst + Zotero</div></div><span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">✓ 覆盖</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface2);border-radius:6px"><div><div style="font-size:12px;font-weight:600">3️⃣ Plotting Agent</div><div style="font-size:10px;color:var(--text2)">/figs-nini (SVG + Matplotlib)</div></div><span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">✓ 覆盖</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface2);border-radius:6px"><div><div style="font-size:12px;font-weight:600">4️⃣ Section Writing</div><div style="font-size:10px;color:var(--text2)">/paper-writing-nini (Findings.md驱动)</div></div><span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">✓ 覆盖</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface2);border-radius:6px"><div><div style="font-size:12px;font-weight:600">5️⃣ Refinement</div><div style="font-size:10px;color:var(--text2)">/causal-ml-review-committee + /rebuttal-nini</div></div><span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">✓ 覆盖</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(124,58,237,.08);border-radius:6px"><div><div style="font-size:12px;font-weight:600">➕ 实验管理 (独有)</div><div style="font-size:10px;color:var(--primary)">/experiment-bridge-nini + /latex-git-nini</div></div><span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(124,58,237,.15);color:var(--primary)">独有</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">📝 最近 GitHub 提交</div>
+        <button class="btn btn-sm" onclick="fetchLabCommits()">刷新</button>
+      </div>
+      <div id="lab-commits-list"><div style="color:var(--text2);font-size:12px">设置 GitHub Token 后自动获取 → 在下方输入</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🔑 GitHub Token (仅存浏览器本地)</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="lab-token-input" placeholder="ghp_xxxxxx" style="flex:1">
+        <button class="btn btn-primary" onclick="saveLabToken()">保存并刷新</button>
+        <button class="btn" onclick="localStorage.removeItem('phd_gh_token');document.getElementById('lab-token-input').value='';toast('Token 已清除')">清除</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ── Tools ── -->
@@ -2998,6 +3069,7 @@ function switchPage(name) {
   if (name==='reflection') renderRefHistory();
   if (name==='settings') populateSettingsForm();
   if (name==='tools') renderTools();
+  if (name==='lab') renderLab();
   if (name==='intel') initIntelPage();
   if (name==='gantt') renderGantt();
   if (name==='procure') initProcurePage();
@@ -3008,6 +3080,83 @@ function switchPage(name) {
 // showPage 别名（兼容内部调用）
 const showPage=switchPage
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>switchPage(n.dataset.page)));
+
+// ══════════════════════════════════════
+//  LAB PAGE (OLIVE49 gated)
+// ══════════════════════════════════════
+const LAB_PROJECTS=[
+  {id:'pearl',name:'PEARL',venue:'Neurocomputing',color:'#7c3aed',github:'nikewq/pearl',gpu:'A100',results:'WB 91.8%±1.0% · CC 78.7%±0.4%',running:'CelebA 重跑 / 写作中',deadline:'2026-07-01',sections:{Abstract:true,Introduction:true,'Related Work':true,Method:true,Experiments:true,Conclusion:false,Appendix:false}},
+  {id:'dgbaryir',name:'DGBaryIR',venue:'NeurIPS 2026',color:'#3b82f6',github:'nikewq/dgbaryir',gpu:'A100',results:'fm_baryaug ep13/50 运行中',running:'fm_wgeo2 · fm_green VelocityField',deadline:'2026-05-16',sections:{Abstract:false,Introduction:true,'Related Work':false,Method:true,Experiments:false,Conclusion:false,Appendix:false}},
+  {id:'pirm',name:'PIRM',venue:'NeurIPS 2026',color:'#059669',github:'nikewq/pirm',gpu:'RTX5090',results:'CMNIST 70.4%±1.8% (3-seed)',running:'cmnist_10s 进行中',deadline:'2026-05-16',sections:{Abstract:false,Introduction:false,'Related Work':false,Method:false,Experiments:false,Conclusion:false,Appendix:false}},
+  {id:'dgcar',name:'DGCAR',venue:'TBD',color:'#f59e0b',github:'nikewq/dgcar-OOD-Recommendation-',gpu:'—',results:'λ_e adapter 已验证',running:'MultiVAE baseline / yelp 重跑',deadline:'',sections:{Abstract:false,Introduction:false,'Related Work':false,Method:false,Experiments:false,Conclusion:false,Appendix:false}}
+];
+function unlockLab(){
+  const v=document.getElementById('lab-code-input').value.trim().toUpperCase();
+  if(v==='OLIVE49'){localStorage.setItem('phd_olive49','1');document.getElementById('nav-lab').style.display='flex';document.getElementById('lab-lock').style.display='none';document.getElementById('lab-dash').style.display='block';renderLabDash();}
+  else{document.getElementById('lab-lock-err').style.display='block';}
+}
+function renderLab(){
+  if(localStorage.getItem('phd_olive49')==='1'){document.getElementById('lab-lock').style.display='none';document.getElementById('lab-dash').style.display='block';renderLabDash();}
+  else{document.getElementById('lab-lock').style.display='flex';document.getElementById('lab-dash').style.display='none';}
+}
+function renderLabDash(){
+  document.getElementById('lab-updated').textContent='四项目 · GitHub · GPU 实时状态 · '+new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const dls=LAB_PROJECTS.map(p=>p.deadline).filter(d=>d).map(d=>new Date(d));
+  const nearest=dls.reduce((a,b)=>a<b?a:b,new Date('2099-01-01'));
+  const days=Math.ceil((nearest-new Date())/86400000);
+  document.getElementById('lab-deadline').textContent=days>0?days:'已过';
+  renderLabProjects();
+  const tok=localStorage.getItem('phd_gh_token');
+  if(tok){document.getElementById('lab-token-input').value=tok;fetchLabCommits();}
+}
+function renderLabProjects(){
+  const c=document.getElementById('lab-projects');
+  c.innerHTML=LAB_PROJECTS.map(p=>{
+    const secs=Object.entries(p.sections);
+    const done=secs.filter(([,v])=>v).length;
+    const pct=Math.round(done/secs.length*100);
+    const secsHtml=secs.map(([k,v])=>`<span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:${v?'rgba(5,150,105,.15)':'var(--border)'};color:${v?'#059669':'var(--text2)'}">${k}</span>`).join('');
+    const dl=p.deadline?Math.ceil((new Date(p.deadline)-new Date())/86400000):null;
+    const dlHtml=dl!==null?`<span style="font-size:11px;color:${dl<14?'var(--red)':'var(--text2)'}">${dl>0?dl+'d 截稿':'已截稿'}</span>`:'';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${p.color}"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div><div style="font-size:15px;font-weight:700">${p.name}</div><div style="font-size:11px;color:var(--text2)">${p.venue}</div></div>
+        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">${dlHtml}<a href="https://github.com/${p.github}" target="_blank" style="font-size:10px;color:var(--primary);text-decoration:none">⎇ ${p.github.split('/')[1]}</a></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:3px">📊 ${p.results}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">⚙️ GPU: <b style="color:var(--text)">${p.gpu}</b> · ${p.running}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px"><span>写作进度</span><span style="color:${p.color};font-weight:700">${pct}%</span></div>
+      <div style="height:6px;background:var(--border);border-radius:3px;margin-bottom:8px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${p.color};width:${pct}%"></div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${secsHtml}</div>
+    </div>`;
+  }).join('');
+}
+function saveLabToken(){const tok=document.getElementById('lab-token-input').value.trim();if(tok){localStorage.setItem('phd_gh_token',tok);fetchLabCommits();toast('Token 已保存');}}
+async function fetchLabCommits(){
+  const tok=localStorage.getItem('phd_gh_token');
+  const el=document.getElementById('lab-commits-list');
+  const hdr=tok?{Authorization:'token '+tok}:{};
+  el.innerHTML='<div style="color:var(--text2);font-size:12px">获取中...</div>';
+  const rows=[];let todayCount=0;const today=new Date().toDateString();
+  for(const p of LAB_PROJECTS){
+    try{
+      const r=await fetch(`https://api.github.com/repos/${p.github}/commits?per_page=2`,{headers:hdr});
+      if(!r.ok){rows.push({proj:p.name,color:p.color,sha:'—',msg:r.status===404?'私有/无权限':'请求失败 '+r.status,time:''});continue;}
+      const data=await r.json();
+      data.forEach(c=>{const t=new Date(c.commit.author.date);if(t.toDateString()===today)todayCount++;rows.push({proj:p.name,color:p.color,sha:c.sha.slice(0,7),msg:c.commit.message.split('\n')[0].slice(0,60),time:t.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});});
+    }catch(e){rows.push({proj:p.name,color:p.color,sha:'err',msg:'网络错误',time:''});}
+  }
+  document.getElementById('lab-commits-count').textContent=todayCount;
+  rows.sort((a,b)=>b.time.localeCompare(a.time));
+  el.innerHTML=rows.slice(0,8).map(r=>`<div style="display:flex;gap:10px;padding:7px 10px;background:var(--surface2);border-radius:6px;font-size:12px;margin-bottom:6px">
+    <span style="width:52px;font-size:11px;font-weight:700;color:${r.color};flex-shrink:0">${r.proj}</span>
+    <span style="font-family:monospace;color:var(--primary);flex-shrink:0">${r.sha}</span>
+    <span style="flex:1;color:var(--text)">${r.msg}</span>
+    <span style="color:var(--text2);flex-shrink:0">${r.time}</span>
+  </div>`).join('')||'<div style="color:var(--text2);font-size:12px">暂无记录</div>';
+}
+if(localStorage.getItem('phd_olive49')==='1')document.getElementById('nav-lab').style.display='flex';
 
 // ── 侧边栏折叠/展开 ──
 function toggleSidebar(){
