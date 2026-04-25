@@ -3096,9 +3096,34 @@ const LAB_KEY='phd_lab_projects';
 const LAB_SECS=['Abstract','Introduction','Related Work','Method','Experiments','Conclusion','Appendix'];
 const LAB_COLORS=['#7c3aed','#3b82f6','#059669','#f59e0b','#ef4444','#ec4899'];
 const LAB_EMPTY_PROJECT=()=>({id:'p'+Date.now(),name:'新项目',venue:'',color:'#7c3aed',github:'',gpu:'',results:'',running:'',deadline:'',sections:Object.fromEntries(LAB_SECS.map(s=>[s,false]))});
+const LAB_DEFAULTS=[
+  {id:'p_pearl',name:'PEARL',venue:'Neurocomputing 2026',color:'#7c3aed',
+   github:'nikewq/pearl',gpu:'A100',deadline:'',
+   results:'WB 91.8%±1.0% | CC 78.7% | CMNIST 73.3%±0.1%',
+   running:'LISA+DFR baseline 运行中',
+   sections:{Abstract:true,Introduction:true,'Related Work':true,Method:true,Experiments:true,Conclusion:false,Appendix:false}},
+  {id:'p_dgbaryir',name:'DGBaryIR',venue:'NeurIPS 2026',color:'#3b82f6',
+   github:'nikewq/dgbaryir',gpu:'A100',deadline:'',
+   results:'BaryIR OOD=29.32dB | fm_wgeo2 EP13/50',
+   running:'fm_wgeo2 + fm_green (A100) 训练中',
+   sections:{Abstract:false,Introduction:false,'Related Work':false,Method:false,Experiments:false,Conclusion:false,Appendix:false}},
+  {id:'p_pirm',name:'PIRM',venue:'NeurIPS / ICLR 2026',color:'#059669',
+   github:'nikewq/pirm',gpu:'RTX5090',deadline:'',
+   results:'CMNIST 70.4%±1.78% (3-seed) | 10-seed 进行中',
+   running:'cmnist_10s screen · seed 1~8 排队中',
+   sections:{Abstract:false,Introduction:false,'Related Work':false,Method:false,Experiments:false,Conclusion:false,Appendix:false}},
+  {id:'p_dgcar',name:'DGCAR',venue:'RecSys / WWW 2027',color:'#f59e0b',
+   github:'nikewq/dgcar-OOD-Recommendation-',gpu:'L20',deadline:'',
+   results:'coat S2-fix R@10=0.0820 | ml-1m S1≈MultiVAE',
+   running:'gowalla / yelp 评估待完成',
+   sections:{Abstract:false,Introduction:false,'Related Work':false,Method:false,Experiments:false,Conclusion:false,Appendix:false}},
+];
 
 function getLabProjects(){
-  try{return JSON.parse(localStorage.getItem(LAB_KEY))||[];}catch{return [];}
+  try{
+    const saved=JSON.parse(localStorage.getItem(LAB_KEY));
+    return (saved&&saved.length)?saved:JSON.parse(JSON.stringify(LAB_DEFAULTS));
+  }catch{return JSON.parse(JSON.stringify(LAB_DEFAULTS));}
 }
 function saveLabProjects(ps){localStorage.setItem(LAB_KEY,JSON.stringify(ps));}
 
