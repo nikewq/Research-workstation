@@ -750,6 +750,18 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 <!-- ══════════════════════════════════════
      数据安全提示横幅
 ══════════════════════════════════════ -->
+<!-- ── Domain Migration Notice Banner ── -->
+<div id="domain-notice-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:linear-gradient(90deg,#3b1f00,#2d1700);border-bottom:2px solid #f59e0b;padding:10px 16px;align-items:center;gap:12px;flex-wrap:wrap">
+  <span style="font-size:16px">📢</span>
+  <div style="flex:1;min-width:200px">
+    <div style="font-size:12px;font-weight:700;color:#fcd34d">域名迁移公告</div>
+    <div style="font-size:11px;color:#fde68a;margin-top:1px">网站已正式迁移至 <strong style="color:#fbbf24">scholarclub.live</strong>，原地址不再使用。如您的数据丢失，请查看公告了解找回方式。对此造成的不便，我们深表歉意。</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-shrink:0">
+    <button onclick="_dismissDomainNotice()" style="padding:5px 14px;background:#f59e0b;border:none;border-radius:6px;color:#1c0a00;font-size:12px;cursor:pointer;font-weight:700">知道了</button>
+  </div>
+</div>
+
 <div id="data-safety-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#1e3a5f,#1a2e4a);border-top:2px solid #3b82f6;padding:10px 16px;display:none;align-items:center;gap:12px;flex-wrap:wrap">
   <span style="font-size:16px">🔒</span>
   <div style="flex:1;min-width:200px">
@@ -1020,6 +1032,21 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="wall-tab" data-tag="share" onclick="switchWallTab(this)">🎉 分享</button>
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
+    </div>
+    <!-- 开发者置顶公告 -->
+    <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="font-size:13px">📢</span>
+        <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
+        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
+        <span style="font-size:10px;color:#a16207;margin-left:auto">2025年4月</span>
+      </div>
+      <div style="font-size:12px;color:#78350f;line-height:1.7">
+        首先，<strong>向所有用户诚挚道歉</strong>。我们近期将网站迁移至新域名 <strong style="color:#b45309">scholarclub.live</strong>，此举导致部分同学的本地数据（个人资料、项目记录等）暂时无法显示，深感抱歉。<br>
+        <span style="color:#92400e">📌 域名迁移原因：</span>原 GitHub Pages 地址稳定性有限，购买独立域名是为了给大家提供更稳定的长期访问环境。<br>
+        <span style="color:#92400e">🔍 数据找回方式：</span>在本页按 F12 → Application → Local Storage → 查找 <code style="background:#fef3c7;padding:0 3px;border-radius:3px">https://nikewq.github.io</code> 条目，若有数据请联系我们协助迁移。<br>
+        <span style="color:#92400e">✅ 郑重承诺：</span><strong>scholarclub.live 是本站唯一、长期域名，不会再次更换。</strong>近期将上线云端同步，从根本上解决数据丢失问题，敬请期待。
+      </div>
     </div>
     <div id="wall-list" style="min-height:40px"></div>
   </div>
@@ -7626,7 +7653,17 @@ function _quickPick(name){
 }
 
 // 初次加载（在所有 <script> 块执行完毕后调用，确保跨块函数已定义）
-document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWall,800);initSetupWizard();})
+function _initDomainNotice(){
+  if(localStorage.getItem('_domain_notice_v1_dismissed')) return
+  const b=document.getElementById('domain-notice-banner')
+  if(b) b.style.display='flex'
+}
+function _dismissDomainNotice(){
+  localStorage.setItem('_domain_notice_v1_dismissed','1')
+  const b=document.getElementById('domain-notice-banner')
+  if(b) b.style.display='none'
+}
+document.addEventListener('DOMContentLoaded',()=>{loadTheme();setTimeout(loadWall,800);initSetupWizard();_initDomainNotice();})
 </script>
 
 <!-- ── Reflection Entry Modal ── -->
