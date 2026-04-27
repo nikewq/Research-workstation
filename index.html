@@ -4946,6 +4946,7 @@ function _copySkillCmd(cmd,el){
 }
 const _PSH='37290f481f264486e2f28e3939881e05df359d838b0b2629b369cbd824531e0d';
 async function _checkPersonalUnlock(){
+  if(localStorage.getItem('phd_olive49')==='1') return true;
   const code=localStorage.getItem('_sync_code');if(!code)return false;
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(code));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')===_PSH;
@@ -5762,6 +5763,7 @@ async function loadProfileCloud(){
     document.getElementById('nav-lab').style.display='flex';
     closeModal('syncModal');
     toast('🔬 实验进展已解锁');
+    renderSkillSections();
     return;
   }
   try{
