@@ -1670,11 +1670,11 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">⚡ GPU 状态</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">A100×2 · 10.20.104.115:16035</div><div style="font-size:11px;color:var(--text2);margin-top:2px">DGBaryIR fm_v4 ep2 (GPU1 100%) + PEARL CelebA s6 step4500 (GPU0 46%)</div></div>
+            <div><div style="font-size:13px;font-weight:600">A100×2 · 10.20.104.115:16035</div><div style="font-size:11px;color:var(--text2);margin-top:2px">任务: DGBaryIR fm_v4 + PEARL CelebA s6 ｜ 目的: OOD修复变体 / WGA主实验 ｜ 结果: Ep2 loss≈0.003 ｜ best 0.72→DFR拟合</div></div>
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">L20×2 · gencar-l20 (172.18.18.189:31512)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">GenCAR Phase1 ipscn/beauty/seed2025 (GPU1) · GPU0 空闲（Phase2 未启）</div></div>
+            <div><div style="font-size:13px;font-weight:600">L20×2 · gencar-l20 (172.18.18.189:31512)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">任务: GenCAR baseline 批跑 + ml100k VAE ｜ 目的: 5ds×5base 对照 / 主模型消融 ｜ 结果: ipscn/amazonbook 已 2:48 + ml100k VAE 刚启</div></div>
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
@@ -1682,15 +1682,15 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(239,68,68,.15);color:#ef4444">离线</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westd:20597 (B78)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">DGCAR gowalla S2 seed2026 ep58 · S2✓2024=0.0469 2025=0.0480</div></div>
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westd:20597 (B78)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">任务: DGCAR gowalla S2 seed2026 ｜ 目的: Stage2 retrain on R@10 ｜ 结果: ep58 · seed2024=0.0469 / 2025=0.0480（待 SSH 复核）</div></div>
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westd:43253 (A75)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">DGCAR yelp2018 Stage1 seed2026 · ~18h</div></div>
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westd:43253 (A75)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">任务: DGCAR yelp2018 S1 seed2026 ｜ 目的: Stage1 baseline ｜ 结果: ~18h 训练中（待 SSH 复核）</div></div>
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px">
-            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westb:51795 (A73)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">DGCAR yelp MultiVAE run2/5 · run1✓R@10=0.0163</div></div>
+            <div><div style="font-size:13px;font-weight:600">RTX5090 · connect.westb:51795 (A73)</div><div style="font-size:11px;color:var(--text2);margin-top:2px">任务: DGCAR yelp MultiVAE run2/5 ｜ 目的: MultiVAE 基线对照 ｜ 结果: run1 R@10=0.0163（待 SSH 复核）</div></div>
             <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(5,150,105,.15);color:#059669">运行中</span>
           </div>
         </div>
