@@ -3335,11 +3335,13 @@ async function fetchLabStatus(){
       {headers:{Authorization:'token '+tok,Accept:'application/vnd.github.v3+json'}});
     if(!r.ok){body.innerHTML='<div style="color:var(--red);font-size:12px;grid-column:1/-1">简报获取失败 ('+r.status+') · 请确认 Token 有私有仓库读取权限</div>';return;}
     const meta=await r.json();
-    const status=JSON.parse(atob(meta.content));
+    const bin=atob(meta.content.replace(/\s/g,''));
+    const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+    const status=JSON.parse(new TextDecoder('utf-8').decode(bytes));
     const genTime=new Date(status.generated_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     document.getElementById('lab-updated').textContent='简报生成: '+genTime+' · 每日 09:00 自动更新';
 
-    const PROJ_MAP={pearl:'#7c3aed',dgbaryir:'#3b82f6',pirm:'#059669',dgcar:'#f59e0b'};
+    const PROJ_MAP={pearl:'#7c3aed',dgbaryir:'#3b82f6',pirm:'#059669',dgcar:'#f59e0b',gencar:'#ef4444'};
     body.innerHTML=Object.entries(status.projects||{}).map(([key,p])=>{
       const pending=(p.pending||[]).map(t=>`<div style="font-size:11px;color:var(--text2);padding:2px 0">• ${t}</div>`).join('');
       const results=(p.results||[]).map(r=>`<div style="font-size:11px;font-family:monospace;color:var(--text)">${r}</div>`).join('');
