@@ -611,6 +611,17 @@ mark.hl-pink{background:#fecdd3;color:#881337}
 .research-tab-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.10)}
 .research-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;color:var(--text2);font-size:13px;gap:10px;background:var(--surface2);border-radius:12px;border:1.5px dashed var(--border)}
 @media(max-width:860px){.research-layout{flex-direction:column}.research-resize-handle{display:none}.research-detail-col{margin-left:0;width:100%}}
+/* ── Research Context Bridge ── */
+#wr-ctx-banner{margin-bottom:8px;background:var(--surface);border:1.5px solid var(--primary-soft);border-radius:10px;overflow:hidden}
+#wr-ctx-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--primary-bg)}
+#wr-ctx-body{padding:12px 14px;border-top:1px solid var(--primary-soft)}
+#wr-ctx-body textarea,#wr-ctx-body input{width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface2);color:var(--text);font-family:inherit}
+#wr-ctx-body textarea{resize:vertical}
+#wr-ctx-body label{font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px}
+.ctx-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+@media(max-width:860px){.ctx-grid{grid-template-columns:1fr}}
+#wr-ai-wc{color:var(--primary)}
+#wr-human-wc{color:var(--green)}
 /* ── Writing Panel ── */
 .wr-layout{display:flex;gap:0;align-items:stretch;height:calc(100vh - 180px);overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--card)}
 .wr-projects-col{width:260px;min-width:140px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;background:var(--surface2)}
@@ -1352,6 +1363,49 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 
   <!-- ── 写作面板 ── -->
   <div id="rs-writing" style="display:none">
+    <!-- ── 研究元数据·阅读-写作上下文桥接 ── -->
+    <div id="wr-ctx-banner">
+      <div id="wr-ctx-header" onclick="wrCtxToggle()">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:14px">🧭</span>
+          <span style="font-size:12px;font-weight:700;color:var(--primary)">研究元数据</span>
+          <span id="wr-ctx-badge" style="font-size:10px;padding:1px 8px;border-radius:99px;background:rgba(245,158,11,.2);color:#f59e0b">未定义</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--text2)">填写后 AI 每次自动携带 Q/O/H/P 背景</span>
+          <span id="wr-ctx-icon" style="font-size:11px;color:var(--text2)">▶</span>
+        </div>
+      </div>
+      <div id="wr-ctx-body" style="display:none">
+        <div class="ctx-grid">
+          <div>
+            <label>Q · 科学问题 <span style="color:var(--primary)">*</span></label>
+            <textarea id="wr-ctx-q" rows="2" placeholder="e.g., How does OOD shift affect model generalization?"></textarea>
+          </div>
+          <div>
+            <label>O · 观察现象</label>
+            <textarea id="wr-ctx-o" rows="2" placeholder="e.g., Models fail when train/test distributions diverge..."></textarea>
+          </div>
+          <div>
+            <label>H · 研究假设</label>
+            <textarea id="wr-ctx-h" rows="2" placeholder="e.g., Causal invariant features generalize under OOD..."></textarea>
+          </div>
+          <div>
+            <label>P · 研究方案</label>
+            <textarea id="wr-ctx-p" rows="2" placeholder="e.g., 1) Build causal graph; 2) Invariant learning; 3) OOD eval..."></textarea>
+          </div>
+        </div>
+        <div style="margin-bottom:8px">
+          <label>关键词 Keywords</label>
+          <input id="wr-ctx-keywords" type="text" placeholder="causal learning, OOD generalization, distribution shift...">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="wrCtxSave()" style="font-size:11px">💾 保存</button>
+          <button class="btn btn-ghost btn-sm" onclick="wrCtxClear()" style="font-size:11px;color:var(--text2)">清空</button>
+          <span style="font-size:10px;color:var(--text2);margin-left:auto">保存后每次 AI 调用自动注入，无需重复描述研究背景</span>
+        </div>
+      </div>
+    </div>
     <div class="wr-layout">
       <!-- 左列：Overleaf 项目 + 本地草稿 -->
       <div class="wr-projects-col">
@@ -1434,6 +1488,13 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
               <div style="border-top:1px solid var(--border);margin:4px 0"></div>
               <div class="wr-ai-menu-item" onclick="wrAiIntent()">🎯 AI 问答 / 改写...</div>
               <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+              <div style="font-size:10px;color:var(--text2);padding:2px 10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">章节写作规范</div>
+              <div class="wr-ai-menu-item" onclick="wrAiChapter('abstract')">📄 摘要 Abstract</div>
+              <div class="wr-ai-menu-item" onclick="wrAiChapter('introduction')">📖 引言 Introduction</div>
+              <div class="wr-ai-menu-item" onclick="wrAiChapter('methods')">🔬 方法 Methods</div>
+              <div class="wr-ai-menu-item" onclick="wrAiChapter('results')">📊 结果 Results</div>
+              <div class="wr-ai-menu-item" onclick="wrAiChapter('discussion')">💬 讨论 Discussion</div>
+              <div style="border-top:1px solid var(--border);margin:4px 0"></div>
               <div class="wr-ai-menu-item" style="color:var(--text2);font-size:11px" onclick="wrOpenAiCfg()">⚙️ AI 模型配置</div>
             </div>
           </div>
@@ -1491,6 +1552,8 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <div style="padding:4px 12px;font-size:10px;color:var(--text2);display:flex;gap:12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
           <span id="wr-char-count">0 字符</span>
           <span id="wr-line-count">0 行</span>
+          <span id="wr-ai-wc" title="AI 生成字数"></span>
+          <span id="wr-human-wc" title="独立写作字数"></span>
           <span id="wr-save-status" style="color:var(--green)"></span>
         </div>
       </div>
@@ -8190,6 +8253,10 @@ function initWritingPanel(){
   _wrUpdateAiBtnLabel()
   _wrInitSyncClick()
   wrUpdateLineNums()
+  // 初始化研究元数据 badge
+  _wrCtxUpdateBadge(_getCtx())
+  // 重置字数追踪基线
+  _wrAiWcAdded=0;_wrHumanWcAdded=0;_wrWcBaseline=0
   // 点击编辑器以外区域关闭补全
   document.addEventListener('click',e=>{
     if(!document.getElementById('wr-editor')?.contains(e.target)&&!document.getElementById('wr-autocomplete')?.contains(e.target))wrAcClose()
@@ -8585,17 +8652,19 @@ function wrOnEdit(ta){
 }
 let _wrErrTimer=null
 
-function _wrUpdateCounts(ta){
+function _wrUpdateCounts(ta,wasAI){
   const charEl=document.getElementById('wr-char-count')
   const lineEl=document.getElementById('wr-line-count')
   if(!ta){
     if(charEl)charEl.textContent='0 字符'
     if(lineEl)lineEl.textContent='0 行'
+    _wrWcBaseline=0
     return
   }
   const v=ta.value||''
   if(charEl)charEl.textContent=v.length+' 字符'
   if(lineEl)lineEl.textContent=v.split('\n').length+' 行'
+  _wrTrackWordChange(v,!!wasAI)
 }
 
 // ── Key handler ──
@@ -8802,6 +8871,192 @@ function _wrUpdateAiBtnLabel(){
   const wcfg=ld(WR_AI_CFG_KEY)
   const custom=wcfg?.mode==='custom'
   btn.title=custom?`写作 AI：${wcfg.provider||''} / ${wcfg.model||''}`:'写作 AI：使用全局设置'
+}
+
+// ══════════════════════════════════════════════
+// 🧭 Research Context Bridge（阅读-写作桥接）
+// ══════════════════════════════════════════════
+const WR_CTX_KEY='phd_wr_ctx_v1'
+const WR_WC_KEY='phd_wr_wc_v1'
+
+function _getCtx(){return ld(WR_CTX_KEY)||{}}
+
+function _buildCtxBlock(){
+  const c=_getCtx()
+  if(!c.q&&!c.o&&!c.h&&!c.p)return''
+  const lines=['## Research Context (Auto-Injected · Do NOT ask the user to repeat this)']
+  if(c.q)lines.push('- Scientific Question: '+c.q)
+  if(c.o)lines.push('- Observation: '+c.o)
+  if(c.h)lines.push('- Hypothesis: '+c.h)
+  if(c.p)lines.push('- Research Plan: '+c.p)
+  if(c.keywords)lines.push('- Keywords: '+c.keywords)
+  return lines.join('\n')
+}
+
+function wrCtxToggle(){
+  const body=document.getElementById('wr-ctx-body')
+  const icon=document.getElementById('wr-ctx-icon')
+  if(!body)return
+  const open=body.style.display==='none'
+  body.style.display=open?'block':'none'
+  if(icon)icon.textContent=open?'▼':'▶'
+  if(open)wrCtxLoad()
+}
+
+function wrCtxLoad(){
+  const c=_getCtx()
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||''}
+  set('wr-ctx-q',c.q);set('wr-ctx-o',c.o);set('wr-ctx-h',c.h);set('wr-ctx-p',c.p);set('wr-ctx-keywords',c.keywords)
+  _wrCtxUpdateBadge(c)
+}
+
+function wrCtxSave(){
+  const get=(id)=>document.getElementById(id)?.value?.trim()||''
+  const c={q:get('wr-ctx-q'),o:get('wr-ctx-o'),h:get('wr-ctx-h'),p:get('wr-ctx-p'),keywords:get('wr-ctx-keywords')}
+  sv(WR_CTX_KEY,c)
+  _wrCtxUpdateBadge(c)
+  toast('✅ 研究元数据已保存，AI 将自动携带背景','success')
+}
+
+function wrCtxClear(){
+  if(!confirm('确认清空研究元数据？'))return
+  sv(WR_CTX_KEY,{})
+  ;['wr-ctx-q','wr-ctx-o','wr-ctx-h','wr-ctx-p','wr-ctx-keywords'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value=''
+  })
+  _wrCtxUpdateBadge({})
+}
+
+function _wrCtxUpdateBadge(c){
+  const badge=document.getElementById('wr-ctx-badge')
+  if(!badge)return
+  const hasMeta=c&&(c.q||c.h)
+  badge.textContent=hasMeta?'✓ 已定义':'未定义'
+  badge.style.background=hasMeta?'rgba(5,150,105,.2)':'rgba(245,158,11,.2)'
+  badge.style.color=hasMeta?'#059669':'#f59e0b'
+}
+
+// 字数追踪（AI vs 人工）
+let _wrWcBaseline=0
+let _wrAiWcAdded=0
+let _wrHumanWcAdded=0
+
+function _wrCountWords(text){
+  const cn=(text.match(/[一-龥]/g)||[]).length
+  const en=(text.match(/\b[a-zA-Z]+\b/g)||[]).length
+  return cn+en
+}
+
+function _wrTrackWordChange(newText,wasAI){
+  const newWc=_wrCountWords(newText)
+  const delta=newWc-_wrWcBaseline
+  if(delta>0){
+    if(wasAI)_wrAiWcAdded+=delta
+    else _wrHumanWcAdded+=delta
+  }
+  _wrWcBaseline=newWc
+  const aiEl=document.getElementById('wr-ai-wc')
+  const humEl=document.getElementById('wr-human-wc')
+  const total=_wrAiWcAdded+_wrHumanWcAdded
+  if(aiEl)aiEl.textContent=total>0?`✦AI ${_wrAiWcAdded}字`:''
+  if(humEl)humEl.textContent=total>0?`✎独立 ${_wrHumanWcAdded}字`:''
+}
+
+// 章节写作规范 prompt（native-speaker guidelines）
+const _WR_CHAPTER_GUIDES={
+  abstract:{
+    label:'摘要 Abstract',
+    guide:`Write a structured abstract: Background → Objective → Methods → Results → Conclusion (150-250 words).
+- No citations; no undefined abbreviations
+- State the main finding with exact numbers
+- Avoid: "This paper presents...", "We investigated..."
+- Prefer result-first framing: "X caused Y under Z conditions"`,
+    structure:'Background (1-2 sentences) → Gap/Objective (1 sentence) → Methods (2-3 sentences) → Key Results (2-3 sentences) → Conclusion (1-2 sentences)'
+  },
+  introduction:{
+    label:'引言 Introduction',
+    guide:`Follow the CARS model:
+  Move 1 – Establish territory (importance of the field, cite key prior work)
+  Move 2 – Establish niche (gap, problem, or counter-claim)
+  Move 3 – Occupy niche (objectives, optional: paper structure)
+- Tense: present for established facts; past for specific prior studies
+- Last paragraph: state objectives explicitly`,
+    structure:'Field overview (1-3 ¶) → Research gap (1 ¶) → This study objective (1 ¶)'
+  },
+  methods:{
+    label:'方法 Methods',
+    guide:`- Past tense throughout
+- Subheadings for each major procedure
+- Quantify everything: concentrations, temperatures, n, duration, instrument models
+- Statistical subsection: software, version, tests, α level
+- Reproducibility target: another lab can replicate without contacting you`,
+    structure:'Materials → Experimental Design → Procedures → Data Analysis → Statistics'
+  },
+  results:{
+    label:'结果 Results',
+    guide:`- Report only; do NOT interpret (save for Discussion)
+- Lead each paragraph with the finding, then support with data
+- Give exact values + uncertainty: mean ± SD, 95% CI, p-value
+- Reference every figure/table: (Fig. 1A), not "(see figure)"
+- Format: "X increased by 2.3-fold (p < 0.01; Fig. 2B)"`,
+    structure:'Primary outcome → Secondary outcomes → Subgroup comparisons → Unexpected findings'
+  },
+  discussion:{
+    label:'讨论 Discussion',
+    guide:`Structure:
+  1. Restate main finding (1 sentence, no new data)
+  2. Interpret vs. existing literature
+  3. Alternative explanations / limitations
+  4. Broader implications / future directions
+- Hedging: "may", "suggests", "is consistent with"
+- Do NOT repeat Results verbatim; do NOT overclaim`,
+    structure:'Main finding → Interpretation vs. prior work → Limitations → Future directions → Broader impact'
+  }
+}
+
+async function wrAiChapter(section){
+  const menu=document.getElementById('wr-ai-menu')
+  if(menu)menu.classList.remove('open')
+  const ta=document.getElementById('wr-editor')
+  if(!ta)return
+  const sel=ta.value.slice(ta.selectionStart,ta.selectionEnd).trim()
+  const para=(()=>{
+    if(sel)return sel
+    const val=ta.value,pos=ta.selectionStart
+    let s=val.lastIndexOf('\n\n',pos);s=s<0?0:s+2
+    let e=val.indexOf('\n\n',pos);e=e<0?val.length:e
+    return val.slice(s,e).trim()
+  })()
+  const guide=_WR_CHAPTER_GUIDES[section]
+  if(!guide)return
+  const ctxBlock=_buildCtxBlock()
+  const prompt=`${ctxBlock?ctxBlock+'\n\n':''}## Section: ${guide.label}
+
+### Native-Speaker Writing Guidelines
+${guide.guide}
+
+### Recommended Structure
+${guide.structure}
+
+### Current Text
+${para||'(empty — please write or select text first)'}
+
+Please revise or complete the text following the guidelines above. Return ONLY the improved text, no explanations.`
+  // reuse AI panel
+  const panel=document.getElementById('wr-ai-panel')
+  const resultEl=document.getElementById('wr-ai-result')
+  const labelEl=document.getElementById('wr-ai-action-label')
+  if(!panel||!resultEl)return
+  panel.classList.add('visible')
+  if(labelEl)labelEl.textContent=`📐 ${guide.label} 规范写作`
+  resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 处理中…</span></div>`
+  _wrAiSelStart=ta.selectionStart;_wrAiSelEnd=ta.selectionEnd||ta.selectionStart
+  if(sel){_wrAiSelStart=ta.selectionStart;_wrAiSelEnd=ta.selectionEnd}
+  const result=await _wrCallAI(prompt,2500)
+  if(!result){resultEl.innerHTML='<div style="padding:12px;color:#dc2626;font-size:13px">⚠️ AI 暂时不可用</div>';return}
+  _wrAiResult=result
+  resultEl.textContent=result
+  ta.focus()
 }
 
 const _WR_AI_PROMPTS={
@@ -9036,7 +9291,8 @@ async function wrAiAction(type){
   resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 处理中…</span></div>`
   panel.scrollIntoView({behavior:'smooth',block:'nearest'})
 
-  const prompt=`${cfg.sys}\n\n${cfg.user(text)}`
+  const _ctxBlock=_buildCtxBlock()
+  const prompt=(_ctxBlock?_ctxBlock+'\n\n':'')+`${cfg.sys}\n\n${cfg.user(text)}`
   const result=await _wrCallAI(prompt,2000)
 
   if(!result){
@@ -9076,7 +9332,7 @@ function wrAiAccept(){
   ta.selectionStart=_wrAiSelStart
   ta.selectionEnd=_wrAiSelStart+_wrAiResult.length
   ta.focus()
-  _wrUpdateCounts(ta)
+  _wrUpdateCounts(ta,true)
   wrOnEdit(ta)
   wrAiClose()
   document.getElementById('wr-editor')?.classList.remove('wr-ai-pending')
@@ -9621,7 +9877,8 @@ async function wrAiIntentSubmit(){
   ta.classList.add('wr-ai-pending')
   resultEl.innerHTML=`<div class="wr-ai-loading"><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><div class="wr-ai-dot"></div><span>AI 处理中…</span></div>`
 
-  const prompt=`You are an expert LaTeX academic writing assistant. The user has a request about their LaTeX document.
+  const _intentCtx=_buildCtxBlock()
+  const prompt=(_intentCtx?_intentCtx+'\n\n':'')+`You are an expert LaTeX academic writing assistant. The user has a request about their LaTeX document.
 
 Decide based on the request type:
 - If the request is a QUESTION or asks for explanation/analysis (e.g. "what does this mean?", "explain X", "is this correct?", "how do I..."), answer concisely. Start your reply with exactly "ANSWER:" followed by your answer.
