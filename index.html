@@ -1847,6 +1847,18 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         </div>
       </div>
     </div>
+    <div style="background:linear-gradient(135deg,var(--card) 0%,rgba(5,150,105,0.08) 100%);border:1px solid #05966944;border-radius:12px;padding:16px;cursor:pointer;transition:all .15s" onclick="openPptSkill()" onmouseenter="this.style.borderColor='#059669'" onmouseleave="this.style.borderColor='#05966944'">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:28px;line-height:1;flex-shrink:0">🎓</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+            <span style="font-weight:700;font-size:14px;color:#059669">学术汇报 PPT</span>
+            <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(5,150,105,0.12);color:#059669">▶ 点击运行</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">粘贴论文 + 模版说明，AI 生成逐页组会 PPT 结构（20–25 页），严格学术逻辑，支持参考反思日记</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div style="font-weight:700;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">🛠 自定义工具</div>
@@ -2277,6 +2289,49 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       </div>
     </div>
     <input type="hidden" id="mr-year-month">
+  </div>
+</div>
+
+<div class="modal-overlay" id="pptSkillModal" onclick="if(event.target===this)closeModal('pptSkillModal')">
+  <div class="modal-box" style="max-width:720px;width:95%;max-height:94vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin-bottom:0">🎓 学术汇报 PPT 生成</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('pptSkillModal')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;padding:8px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid #059669">
+      粘贴论文全文或摘要+核心章节，AI 按学术逻辑生成逐页 PPT 结构。图表请标注原图位置（如"Fig.2"），AI 会注明优先使用原图。
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">📄 论文内容 <span style="font-weight:400;color:#9ca3af">（粘贴全文或摘要+方法+结果）</span></div>
+      <textarea id="ppt-paper" placeholder="粘贴论文内容…（支持摘要、引言、方法、结果、讨论等章节）" style="width:100%;height:200px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">🖼 PPT 模版说明 <span style="font-weight:400;color:#9ca3af">（可选）</span></div>
+      <textarea id="ppt-template" placeholder="描述模版风格或结构要求，如：每页标题+3个要点+图示；深色背景；首页含作者信息…" style="width:100%;height:80px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+    </div>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap">📑 总页数</label>
+        <input id="ppt-slides" type="number" min="15" max="35" value="22" style="width:64px;font-size:13px;text-align:center;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+        <span style="font-size:11px;color:var(--text2)">页（建议 20–25）</span>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)">
+        <input type="checkbox" id="ppt-use-diary" style="width:14px;height:14px;accent-color:#059669">
+        <span>参考近期反思日记中的研究内容</span>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <button class="btn btn-primary" id="ppt-gen-btn" onclick="_genAcademicPpt()" style="background:#059669;border-color:#059669">🤖 生成学术汇报 PPT 结构</button>
+      <span id="ppt-gen-tip" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div id="ppt-result-wrap" style="display:none">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">🗂 逐页结构（可直接编辑）</div>
+      <textarea id="ppt-result" style="width:100%;height:420px;font-size:12.5px;line-height:1.7;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="_pptCopyMd()" style="background:#059669;border-color:#059669">📋 复制 Markdown</button>
+        <button class="btn btn-ghost btn-sm" onclick="_pptDownload()">💾 下载 .md</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -6443,6 +6498,96 @@ function _collectTodayData(){
   const checkin=ld(K.checkins).find(c=>c.date===td)||null
   const ref=ld(K.refs).find(r=>r.date===td)||null
   return{td,doneTasks,activeTasks,pomos,defs,doneHabits,checkin,ref}
+}
+
+// ══════════════════════════════════════
+//  ACADEMIC PPT SKILL
+// ══════════════════════════════════════
+function openPptSkill(){
+  openModal('pptSkillModal')
+  document.getElementById('ppt-result-wrap').style.display='none'
+  document.getElementById('ppt-gen-btn').disabled=false
+  document.getElementById('ppt-gen-tip').textContent=''
+}
+
+async function _genAcademicPpt(){
+  const paper=document.getElementById('ppt-paper').value.trim()
+  const template=document.getElementById('ppt-template').value.trim()
+  const slides=parseInt(document.getElementById('ppt-slides').value)||22
+  const useDiary=document.getElementById('ppt-use-diary').checked
+  const btn=document.getElementById('ppt-gen-btn')
+  const tip=document.getElementById('ppt-gen-tip')
+
+  if(!paper){tip.textContent='⚠️ 请先粘贴论文内容';return}
+
+  btn.disabled=true
+  tip.textContent='AI 生成中，请稍候…'
+
+  let diaryCtx=''
+  if(useDiary){
+    const refs=ld(K.refs).slice(0,20).filter(r=>r.wins||r.struggles)
+    if(refs.length){
+      diaryCtx='\n\n---\n【研究者反思日记（近期摘录）】\n'+
+        refs.map(r=>`[${r.date}] 收获：${(r.wins||'').slice(0,200)}　困难：${(r.struggles||'').slice(0,100)}`).join('\n')
+    }
+  }
+
+  const templateHint=template?`\n\n【PPT 模版要求】\n${template}`:'每页含：标题、3-5个要点（可视化优先）、备注（演讲词提示）。'
+
+  const prompt=`你是一名有丰富经验的学术研究者，同时擅长制作清晰、有逻辑的学术汇报PPT。你正在帮助我准备一场45分钟的组会演示。
+
+请基于以下论文，生成一份 ${slides} 页的组会 PPT 逐页结构设计。
+
+要求：
+1. 严格按学术逻辑结构：背景（关键概念解释 → 已有研究总结 → 指出 challenge）→ 研究问题 → 方法 → 结果 → 讨论（总结发现 → 与已有研究对比 → 解释可能机制）→ 局限性 → 结论（含一句清晰的 take-home message）
+2. 总页数控制在 ${slides} 页，合理分配各章节
+3. 避免大段文字，每页用简短要点（每点不超过15字）
+4. 方法部分用直观语言解释，避免堆砌公式
+5. 结果部分强调趋势和结论，不罗列大量数字
+6. 图表优先使用论文原图/原表（用"→ 原图 Fig.X"或"→ 原表 Table.X"标注）
+7. 每页末尾用【演讲提示】给出1-2句演讲引导词${templateHint}
+
+输出格式（每页严格使用此格式）：
+---
+## 第N页：[页面标题]
+**类型：** [标题页/内容页/图表页/过渡页]
+**要点：**
+- 要点1
+- 要点2
+**图表：** [原图标注或"无"]
+**演讲提示：** [简短演讲词]
+
+---
+【论文内容】
+${paper}${diaryCtx}`
+
+  const result=await _callAI(prompt,4000)
+  if(!result){
+    tip.textContent='⚠️ AI 调用失败，请检查 AI 配置'
+    btn.disabled=false
+    return
+  }
+  document.getElementById('ppt-result').value=result
+  document.getElementById('ppt-result-wrap').style.display=''
+  tip.textContent=`✅ 已生成 ${(result.match(/^## 第/gm)||[]).length} 页结构`
+  btn.disabled=false
+}
+
+function _pptCopyMd(){
+  const v=document.getElementById('ppt-result')?.value.trim()
+  if(!v){toast('请先生成PPT结构');return}
+  navigator.clipboard?.writeText(v).then(()=>toast('📋 已复制 Markdown')).catch(()=>toast('❌ 复制失败'))
+}
+
+function _pptDownload(){
+  const v=document.getElementById('ppt-result')?.value.trim()
+  if(!v){toast('请先生成PPT结构');return}
+  const paper=document.getElementById('ppt-paper').value.slice(0,30).replace(/\s+/g,'_')||'ppt'
+  const blob=new Blob([v],{type:'text/markdown;charset=utf-8'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob)
+  a.download=`组会PPT结构_${new Date().toISOString().slice(0,10)}.md`
+  a.click();URL.revokeObjectURL(a.href)
+  toast('💾 已下载 PPT 结构文件')
 }
 
 function openDailyBrief(){
