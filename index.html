@@ -2305,9 +2305,54 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">📄 论文内容 <span style="font-weight:400;color:#9ca3af">（粘贴全文或摘要+方法+结果）</span></div>
       <textarea id="ppt-paper" placeholder="粘贴论文内容…（支持摘要、引言、方法、结果、讨论等章节）" style="width:100%;height:200px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
     </div>
-    <div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">🖼 PPT 模版说明 <span style="font-weight:400;color:#9ca3af">（可选）</span></div>
-      <textarea id="ppt-template" placeholder="描述模版风格或结构要求，如：每页标题+3个要点+图示；深色背景；首页含作者信息…" style="width:100%;height:80px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">🖼 PPT 模版 <span style="font-weight:400;color:#9ca3af">（选择预设或自定义）</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:8px" id="ppt-tpl-grid">
+        <!-- 简约白 -->
+        <div class="ppt-tpl-card" data-tpl="0" onclick="_pptPickTpl(0)" style="border:2px solid var(--primary);border-radius:10px;cursor:pointer;overflow:hidden;transition:.15s">
+          <div style="height:56px;background:#fff;border-bottom:3px solid #374151;display:flex;flex-direction:column;justify-content:center;padding:6px 8px;gap:3px">
+            <div style="height:6px;width:70%;background:#374151;border-radius:2px"></div>
+            <div style="height:3px;width:45%;background:#9ca3af;border-radius:2px"></div>
+            <div style="height:3px;width:55%;background:#d1d5db;border-radius:2px"></div>
+          </div>
+          <div style="padding:5px 8px;font-size:10px;font-weight:600;color:var(--text);background:var(--card)">简约白 ✓</div>
+        </div>
+        <!-- 深蓝学术 -->
+        <div class="ppt-tpl-card" data-tpl="1" onclick="_pptPickTpl(1)" style="border:2px solid var(--border);border-radius:10px;cursor:pointer;overflow:hidden;transition:.15s">
+          <div style="height:56px;background:#1e3a5f;display:flex;flex-direction:column;justify-content:center;padding:6px 8px;gap:3px">
+            <div style="height:3px;width:30%;background:#4fc3f7;border-radius:2px"></div>
+            <div style="height:6px;width:75%;background:#fff;border-radius:2px;opacity:.9"></div>
+            <div style="height:3px;width:50%;background:#93c5fd;border-radius:2px;opacity:.7"></div>
+          </div>
+          <div style="padding:5px 8px;font-size:10px;font-weight:600;color:var(--text);background:var(--card)">深蓝学术</div>
+        </div>
+        <!-- Nature/Science -->
+        <div class="ppt-tpl-card" data-tpl="2" onclick="_pptPickTpl(2)" style="border:2px solid var(--border);border-radius:10px;cursor:pointer;overflow:hidden;transition:.15s">
+          <div style="height:56px;background:#fafafa;border-bottom:2px solid #c0392b;display:flex;flex-direction:column;justify-content:center;padding:6px 8px;gap:3px">
+            <div style="height:6px;width:65%;background:#333;border-radius:2px;font-family:serif"></div>
+            <div style="height:3px;width:40%;background:#c0392b;border-radius:2px"></div>
+            <div style="height:3px;width:55%;background:#999;border-radius:2px"></div>
+          </div>
+          <div style="padding:5px 8px;font-size:10px;font-weight:600;color:var(--text);background:var(--card)">Nature 风</div>
+        </div>
+        <!-- 暖色现代 -->
+        <div class="ppt-tpl-card" data-tpl="3" onclick="_pptPickTpl(3)" style="border:2px solid var(--border);border-radius:10px;cursor:pointer;overflow:hidden;transition:.15s">
+          <div style="height:56px;background:#fefdf9;display:flex;flex-direction:column;justify-content:center;padding:6px 8px;gap:3px">
+            <div style="display:flex;gap:4px;align-items:center"><div style="width:3px;height:16px;background:#e67e22;border-radius:1px"></div><div style="height:6px;width:60%;background:#333;border-radius:2px"></div></div>
+            <div style="height:3px;width:45%;background:#f0a060;border-radius:2px;margin-left:7px"></div>
+            <div style="height:3px;width:55%;background:#d1c5b0;border-radius:2px;margin-left:7px"></div>
+          </div>
+          <div style="padding:5px 8px;font-size:10px;font-weight:600;color:var(--text);background:var(--card)">暖色现代</div>
+        </div>
+        <!-- 自定义 -->
+        <div class="ppt-tpl-card" data-tpl="4" onclick="_pptPickTpl(4)" style="border:2px solid var(--border);border-radius:10px;cursor:pointer;overflow:hidden;transition:.15s">
+          <div style="height:56px;background:var(--surface2);display:flex;align-items:center;justify-content:center">
+            <span style="font-size:22px">✏️</span>
+          </div>
+          <div style="padding:5px 8px;font-size:10px;font-weight:600;color:var(--text);background:var(--card)">自定义</div>
+        </div>
+      </div>
+      <textarea id="ppt-template" placeholder="描述模版风格或结构要求，如：每页标题+3个要点+图示；深色背景；首页含作者信息…" style="width:100%;height:72px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit;display:none"></textarea>
     </div>
     <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:8px">
@@ -6503,16 +6548,40 @@ function _collectTodayData(){
 // ══════════════════════════════════════
 //  ACADEMIC PPT SKILL
 // ══════════════════════════════════════
+const _PPT_TPLS=[
+  {name:'简约白',spec:'白色背景，顶部深灰标题栏，每页3-5个简洁要点（•符号），右下角页码，字体清晰。图表居中，下方图注。首页：标题+作者+机构+日期居中排列。过渡页：仅章节标题居中大字。'},
+  {name:'深蓝学术',spec:'深蓝背景(#1e3a5f)，白色正文，顶部亮蓝(#4fc3f7)章节标签，每页3-4个要点带圆点图标，图表置于白色卡片内。首页：蓝金配色，标题居中白色，副标题金色。过渡页：渐变蓝+大型白色章节标题。'},
+  {name:'Nature/Science风',spec:'白色背景，无过多装饰，标题衬线字体，正文无衬线。颜色仅用深灰(#333)和深红(#c0392b)强调色。每页最多4个极简要点，图表占页面60%以上附小字图注。首页含期刊投稿信息风格的作者区块。'},
+  {name:'暖色现代',spec:'米白背景(#fefdf9)，暖橙(#e67e22)强调色，标题带左侧橙色竖线装饰，每页3个要点可配小图标，支持左文右图双栏布局。首页：大标题+一句话摘要+日期，简洁现代。过渡页：全橙背景+白色标题。'},
+  {name:'自定义',spec:''}
+]
+let _pptTplIdx=0
+
+function _pptPickTpl(idx){
+  _pptTplIdx=idx
+  document.querySelectorAll('.ppt-tpl-card').forEach((el,i)=>{
+    el.style.borderColor=i===idx?'var(--primary)':'var(--border)'
+    const label=el.querySelector('div:last-child')
+    label.textContent=_PPT_TPLS[i].name+(i===idx?' ✓':'')
+  })
+  const ta=document.getElementById('ppt-template')
+  if(idx===4){ta.style.display='';ta.focus()}
+  else{ta.style.display='none';ta.value=''}
+}
+
 function openPptSkill(){
   openModal('pptSkillModal')
   document.getElementById('ppt-result-wrap').style.display='none'
   document.getElementById('ppt-gen-btn').disabled=false
   document.getElementById('ppt-gen-tip').textContent=''
+  _pptPickTpl(0)
 }
 
 async function _genAcademicPpt(){
   const paper=document.getElementById('ppt-paper').value.trim()
-  const template=document.getElementById('ppt-template').value.trim()
+  const template=_pptTplIdx===4
+    ? document.getElementById('ppt-template').value.trim()
+    : _PPT_TPLS[_pptTplIdx].spec
   const slides=parseInt(document.getElementById('ppt-slides').value)||22
   const useDiary=document.getElementById('ppt-use-diary').checked
   const btn=document.getElementById('ppt-gen-btn')
@@ -6532,7 +6601,10 @@ async function _genAcademicPpt(){
     }
   }
 
-  const templateHint=template?`\n\n【PPT 模版要求】\n${template}`:'每页含：标题、3-5个要点（可视化优先）、备注（演讲词提示）。'
+  const tplName=_PPT_TPLS[_pptTplIdx].name
+  const templateHint=template
+    ? `\n\n【PPT 模版：${tplName}】\n${template}`
+    : '\n\n每页含：标题、3-5个要点（可视化优先）、备注（演讲词提示）。'
 
   const prompt=`你是一名有丰富经验的学术研究者，同时擅长制作清晰、有逻辑的学术汇报PPT。你正在帮助我准备一场45分钟的组会演示。
 
