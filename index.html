@@ -2299,11 +2299,34 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="btn btn-ghost btn-sm" onclick="closeModal('pptSkillModal')">✕</button>
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;padding:8px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid #059669">
-      粘贴论文全文或摘要+核心章节，AI 按学术逻辑生成逐页 PPT 结构。图表请标注原图位置（如"Fig.2"），AI 会注明优先使用原图。
+      上传论文 PDF，自动提取全文文本，AI 按学术逻辑生成逐页 PPT 结构。图表优先使用原图（AI 会标注 Fig./Table 编号）。
     </div>
     <div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">📄 论文内容 <span style="font-weight:400;color:#9ca3af">（粘贴全文或摘要+方法+结果）</span></div>
-      <textarea id="ppt-paper" placeholder="粘贴论文内容…（支持摘要、引言、方法、结果、讨论等章节）" style="width:100%;height:200px;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">📄 上传论文 PDF</div>
+      <div id="ppt-drop" onclick="document.getElementById('ppt-file-inp').click()"
+        ondragover="event.preventDefault();this.style.borderColor='#059669'"
+        ondragleave="this.style.borderColor='var(--border)'"
+        ondrop="_pptOnDrop(event)"
+        style="border:2px dashed var(--border);border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:.15s;background:var(--surface2)">
+        <div style="font-size:28px;margin-bottom:6px">📑</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">点击或拖拽 PDF 到此处</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">支持全文 PDF，自动提取所有页面文本</div>
+      </div>
+      <input type="file" id="ppt-file-inp" accept=".pdf" style="display:none" onchange="_pptOnFileSelect(this.files[0])">
+      <div id="ppt-pdf-status" style="display:none;margin-top:8px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span id="ppt-pdf-label" style="color:var(--text);font-weight:600"></span>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px" onclick="_pptClearPdf()">✕ 重新上传</button>
+        </div>
+        <div id="ppt-pdf-tip" style="color:var(--text2);margin-top:3px"></div>
+      </div>
+      <div id="ppt-text-wrap" style="display:none;margin-top:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:600;color:var(--text2)">已提取内容（可删减附录/参考文献）</span>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px" onclick="_pptToggleText(this)">收起 ▲</button>
+        </div>
+        <textarea id="ppt-paper" style="width:100%;height:180px;font-size:11.5px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      </div>
     </div>
     <div style="margin-bottom:14px">
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">🖼 PPT 模版 <span style="font-weight:400;color:#9ca3af">（选择预设或自定义）</span></div>
@@ -6548,6 +6571,59 @@ function _collectTodayData(){
 // ══════════════════════════════════════
 //  ACADEMIC PPT SKILL
 // ══════════════════════════════════════
+// ── PPT PDF upload helpers ──
+function _pptOnDrop(e){
+  e.preventDefault()
+  document.getElementById('ppt-drop').style.borderColor='var(--border)'
+  const f=e.dataTransfer.files[0]
+  if(f&&f.type==='application/pdf') _pptOnFileSelect(f)
+  else toast('请上传 PDF 文件','warn')
+}
+function _pptClearPdf(){
+  document.getElementById('ppt-pdf-status').style.display='none'
+  document.getElementById('ppt-text-wrap').style.display='none'
+  document.getElementById('ppt-drop').style.display=''
+  document.getElementById('ppt-paper').value=''
+  document.getElementById('ppt-file-inp').value=''
+}
+function _pptToggleText(btn){
+  const ta=document.getElementById('ppt-paper')
+  const collapsed=ta.style.display==='none'
+  ta.style.display=collapsed?'':'none'
+  btn.textContent=collapsed?'收起 ▲':'展开 ▼'
+}
+async function _pptOnFileSelect(file){
+  if(!file)return
+  const status=document.getElementById('ppt-pdf-status')
+  const label=document.getElementById('ppt-pdf-label')
+  const tip=document.getElementById('ppt-pdf-tip')
+  document.getElementById('ppt-drop').style.display='none'
+  status.style.display=''
+  label.textContent=`📄 ${file.name}`
+  tip.textContent='提取中…'
+  try{
+    const pdfjs=await _ensurePdfJs()
+    const ab=await file.arrayBuffer()
+    const doc=await pdfjs.getDocument({data:ab,cMapUrl:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',cMapPacked:true}).promise
+    const n=doc.numPages
+    let text=''
+    for(let p=1;p<=n;p++){
+      tip.textContent=`提取中… ${p}/${n} 页`
+      const page=await doc.getPage(p)
+      const tc=await page.getTextContent()
+      text+=tc.items.map(it=>it.str).join(' ')+'\n'
+    }
+    text=text.replace(/\s{3,}/g,' ').trim()
+    document.getElementById('ppt-paper').value=text
+    document.getElementById('ppt-text-wrap').style.display=''
+    tip.textContent=`✅ ${n} 页 · 共 ${text.length.toLocaleString()} 字符`
+  }catch(e){
+    tip.textContent='❌ 提取失败：'+e.message
+    document.getElementById('ppt-drop').style.display=''
+    status.style.display='none'
+  }
+}
+
 const _PPT_TPLS=[
   {name:'简约白',spec:'白色背景，顶部深灰标题栏，每页3-5个简洁要点（•符号），右下角页码，字体清晰。图表居中，下方图注。首页：标题+作者+机构+日期居中排列。过渡页：仅章节标题居中大字。'},
   {name:'深蓝学术',spec:'深蓝背景(#1e3a5f)，白色正文，顶部亮蓝(#4fc3f7)章节标签，每页3-4个要点带圆点图标，图表置于白色卡片内。首页：蓝金配色，标题居中白色，副标题金色。过渡页：渐变蓝+大型白色章节标题。'},
@@ -6574,6 +6650,7 @@ function openPptSkill(){
   document.getElementById('ppt-result-wrap').style.display='none'
   document.getElementById('ppt-gen-btn').disabled=false
   document.getElementById('ppt-gen-tip').textContent=''
+  _pptClearPdf()
   _pptPickTpl(0)
 }
 
@@ -6587,7 +6664,7 @@ async function _genAcademicPpt(){
   const btn=document.getElementById('ppt-gen-btn')
   const tip=document.getElementById('ppt-gen-tip')
 
-  if(!paper){tip.textContent='⚠️ 请先粘贴论文内容';return}
+  if(!paper){tip.textContent='⚠️ 请先上传论文 PDF';return}
 
   btn.disabled=true
   tip.textContent='AI 生成中，请稍候…'
