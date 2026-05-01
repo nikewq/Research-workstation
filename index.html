@@ -8702,8 +8702,8 @@ function initWritingPanel(){
   _wrUpdateAiBtnLabel()
   _wrInitSyncClick()
   wrUpdateLineNums()
-  // 初始化研究元数据 badge
-  _wrCtxUpdateBadge(_getCtx())
+  // 初始化研究元数据 badge + 预填字段
+  wrCtxLoad()
   // 重置字数追踪基线
   _wrAiWcAdded=0;_wrHumanWcAdded=0;_wrWcBaseline=0
   // 点击编辑器以外区域关闭补全
@@ -9328,7 +9328,9 @@ function _wrUpdateAiBtnLabel(){
 const WR_CTX_KEY='phd_wr_ctx_v1'
 const WR_WC_KEY='phd_wr_wc_v1'
 
-function _getCtx(){return ld(WR_CTX_KEY)||{}}
+function _getCtx(){
+  try{const v=localStorage.getItem(WR_CTX_KEY);return v?JSON.parse(v):{}}catch(_){return{}}
+}
 
 function _buildCtxBlock(){
   const c=_getCtx()
@@ -9362,7 +9364,7 @@ function wrCtxLoad(){
 function wrCtxSave(){
   const get=(id)=>document.getElementById(id)?.value?.trim()||''
   const c={q:get('wr-ctx-q'),o:get('wr-ctx-o'),h:get('wr-ctx-h'),p:get('wr-ctx-p'),keywords:get('wr-ctx-keywords')}
-  sv(WR_CTX_KEY,c)
+  try{localStorage.setItem(WR_CTX_KEY,JSON.stringify(c))}catch(e){toast('❌ 保存失败：'+e.message,'error');return}
   _wrCtxUpdateBadge(c)
   toast('✅ 研究元数据已保存，AI 将自动携带背景','success')
 }
