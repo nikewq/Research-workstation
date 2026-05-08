@@ -754,7 +754,34 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 .wr-zip-file:hover{background:var(--surface2);color:var(--text)}
 .wr-zip-file.active{background:var(--primary-bg);color:var(--primary);border-left-color:var(--primary);font-weight:600}
 .wr-zip-folder{padding:5px 12px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-top:4px}
+/* lab-detail modal */
+#lab-detail-modal{position:fixed;inset:0;z-index:900;background:var(--bg);display:none;flex-direction:column}
+#lab-detail-modal.open{display:flex}
+#ldm-header{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+#ldm-title{font-size:18px;font-weight:700}
+#ldm-meta{font-size:11px;color:var(--text2);margin-top:2px}
+#ldm-body{display:grid;grid-template-columns:240px 1fr;flex:1;overflow:hidden}
+#ldm-toc{border-right:1px solid var(--border);background:var(--surface2);overflow-y:auto;padding:14px 0}
+#ldm-toc a{display:block;padding:5px 18px;font-size:12px;color:var(--text);text-decoration:none;border-left:2px solid transparent;line-height:1.4}
+#ldm-toc a:hover{background:var(--card);border-left-color:var(--primary)}
+#ldm-toc a.h3{padding-left:32px;font-size:11px;color:var(--text2)}
+#ldm-content{padding:24px 36px;overflow-y:auto;line-height:1.7;font-size:14px}
+#ldm-content h1{font-size:22px;margin:16px 0 14px;border-bottom:2px solid var(--primary);padding-bottom:6px}
+#ldm-content h2{font-size:18px;margin:24px 0 10px;color:var(--primary);border-bottom:1px solid var(--border);padding-bottom:4px}
+#ldm-content h3{font-size:15px;margin:18px 0 8px;color:var(--text)}
+#ldm-content table{border-collapse:collapse;margin:10px 0;font-size:12px;width:auto;max-width:100%}
+#ldm-content th,#ldm-content td{border:1px solid var(--border);padding:5px 10px;text-align:left}
+#ldm-content th{background:var(--surface2);font-weight:600}
+#ldm-content code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:12px;font-family:'SF Mono','Fira Code',monospace}
+#ldm-content pre{background:var(--surface2);padding:10px 14px;border-radius:6px;overflow-x:auto;font-size:12px}
+#ldm-content pre code{background:none;padding:0}
+#ldm-content blockquote{border-left:3px solid var(--primary);padding:4px 12px;margin:10px 0;color:var(--text2);background:var(--surface2)}
+#ldm-content ul,#ldm-content ol{padding-left:24px;margin:8px 0}
+#ldm-content li{margin:3px 0}
+#ldm-content a{color:var(--primary);text-decoration:none}
+#ldm-content a:hover{text-decoration:underline}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 </head>
 <body>
 
@@ -3530,6 +3557,7 @@ async function fetchLabStatus(){
     const bin=atob(meta.content.replace(/\s/g,''));
     const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
     const status=JSON.parse(new TextDecoder('utf-8').decode(bytes));
+    window._LAB_STATUS=status;
     const genTime=new Date(status.generated_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     document.getElementById('lab-updated').textContent='简报生成: '+genTime+' · 每日 09:00 自动更新';
 
@@ -3537,8 +3565,11 @@ async function fetchLabStatus(){
     body.innerHTML=Object.entries(status.projects||{}).map(([key,p])=>{
       const pending=(p.pending||[]).map(t=>`<div style="font-size:11px;color:var(--text2);padding:2px 0">• ${t}</div>`).join('');
       const results=(p.results||[]).map(r=>`<div style="font-size:11px;font-family:monospace;color:var(--text)">${r}</div>`).join('');
-      return `<div style="background:var(--surface2);border-radius:10px;padding:12px;border-left:3px solid ${PROJ_MAP[key]||'var(--primary)'}">
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px">${p.name} <span style="font-size:10px;color:var(--text2);font-weight:400">${p.venue||''}</span></div>
+      return `<div style="background:var(--surface2);border-radius:10px;padding:12px;border-left:3px solid ${PROJ_MAP[key]||'var(--primary)'};cursor:pointer;transition:background .15s" onclick="openProjectDetail('${key}')" onmouseenter="this.style.background='var(--card)'" onmouseleave="this.style.background='var(--surface2)'" title="点击查看完整 Findings">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px">${p.name} <span style="font-size:10px;color:var(--text2);font-weight:400">${p.venue||''}</span></div>
+          <span style="font-size:10px;color:var(--text2)">→</span>
+        </div>
         <div style="font-size:11px;color:var(--text2);margin-bottom:4px">${p.state||''}</div>
         ${results?`<div style="margin-bottom:4px">${results}</div>`:''}
         ${p.running?`<div style="font-size:11px;color:#059669;margin-bottom:4px">⚙ ${p.running}</div>`:''}
@@ -14180,6 +14211,50 @@ if('serviceWorker' in navigator){
       .catch(()=>{}) // 非 HTTPS 环境静默失败
   })
 }
+
+// ── Lab project detail modal ──
+function openProjectDetail(key){
+  const status=window._LAB_STATUS
+  if(!status||!status.projects||!status.projects[key]){toast('数据未加载，先刷新简报');return}
+  const p=status.projects[key]
+  const md=p.findings_full||'(本项目尚未提供完整 Findings 内容，请重跑生成器)'
+  document.getElementById('ldm-title').textContent=`${p.name} · ${p.venue||''}`
+  document.getElementById('ldm-meta').textContent=`last_updated: ${p.last_updated||'—'}  ·  来源: Findings_${key.toUpperCase()}.md`
+  let html
+  try{html=window.marked?marked.parse(md,{gfm:true,breaks:false}):('<pre style="white-space:pre-wrap">'+md.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</pre>')}
+  catch(e){html='<pre style="white-space:pre-wrap;color:#ef4444">渲染失败: '+e.message+'\n\n'+md+'</pre>'}
+  const content=document.getElementById('ldm-content')
+  content.innerHTML=html
+  // 给所有 h2/h3 加 id 用于 TOC 跳转
+  const toc=[]
+  content.querySelectorAll('h2,h3').forEach((h,i)=>{
+    const id='ldm-h-'+i
+    h.id=id
+    toc.push({tag:h.tagName.toLowerCase(),text:h.textContent,id})
+  })
+  document.getElementById('ldm-toc').innerHTML=toc.map(t=>`<a class="${t.tag==='h3'?'h3':''}" href="#${t.id}" onclick="event.preventDefault();document.getElementById('${t.id}').scrollIntoView({behavior:'smooth',block:'start'})">${t.text.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</a>`).join('')||'<div style="padding:14px 18px;color:var(--text2);font-size:11px">无章节</div>'
+  document.getElementById('lab-detail-modal').classList.add('open')
+  content.scrollTop=0
+}
+function closeProjectDetail(){document.getElementById('lab-detail-modal').classList.remove('open')}
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.getElementById('lab-detail-modal').classList.contains('open'))closeProjectDetail()
+})
 </script>
+
+<!-- Lab project detail modal -->
+<div id="lab-detail-modal">
+  <div id="ldm-header">
+    <div>
+      <div id="ldm-title">项目详情</div>
+      <div id="ldm-meta"></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeProjectDetail()" style="font-size:15px;padding:2px 10px">×</button>
+  </div>
+  <div id="ldm-body">
+    <div id="ldm-toc"></div>
+    <div id="ldm-content"></div>
+  </div>
+</div>
 </body>
 </html>
