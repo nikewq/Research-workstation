@@ -7098,27 +7098,41 @@ async function fetchIntel(force=false){
     btn.style.display=''; return
   }
 
-  // 尝试通过 Jina reader 抓取 tophub XHS 热榜
+  // 尝试通过 Jina reader 抓取 tophub XHS 热榜（不稳定，仅作为可选参考）
   let rawContent=''
   try{
     const jinaR=await Promise.race([
       fetch('https://r.jina.ai/https://tophub.today/n/Q1Wro6XO6p',{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),
       new Promise((_,rej)=>setTimeout(()=>rej('timeout'),8000))
     ])
-    if(jinaR.ok) rawContent=(await jinaR.text()).slice(0,4000)
+    if(jinaR.ok){
+      const txt=(await jinaR.text()).slice(0,4000)
+      // 抓回来的内容做有效性校验：必须够长 && 不是 404/抓取失败页
+      const looksBroken=/404|not\s*found|页面未找到|页面被.*吸走|抓取失败|无法获取|fetch failed|access denied/i.test(txt)
+      const cnChars=(txt.match(/[一-龥]/g)||[]).length
+      if(!looksBroken && txt.length>600 && cnChars>120) rawContent=txt
+    }
   }catch(_){}
 
   const today_=today()
+  const baseRule=`严格要求：
+1. 只能输出 JSON 数组本体，不要任何解释、前言或 markdown 代码块。
+2. 严禁出现"404"、"页面未找到"、"页面被黑洞吸走"、"无法获取内容"、"抓取失败"等占位/错误文案——只要任何一条出现这种内容，整个回答视为无效。
+3. 每条都要是真实可用的科研圈实践经验/工具/技巧。
+4. url 必须是合法 https 链接；不确定时填 https://www.xiaohongshu.com/search_result?keyword=关键词（关键词替换为中文短语，URL 编码后填入）。
+5. tag 只能取以下之一：AI科研、科研工具、论文写作、投稿技巧、科研自动化、PhD生活、其他。`
+  const schemaRule=`输出格式（JSON 数组，每项字段如下）：
+[{"title":"30字内的实用标题","summary":"40字内的口语化中文精华","url":"https://...","tag":"AI科研"}]`
   const prompt=(rawContent
-    ?`你是一位资深科研社区运营者。以下是今天（${today_}）小红书热榜内容：\n\n${rawContent}\n\n请从中筛选3-6条与"AI辅助科研、科研自动化、论文写作技巧、投稿技巧、科研新工具、PhD/研究生生活经验"相关的内容。`
-    :`今天是${today_}，请生成6条当下科研圈在小红书上热议的实用内容，涵盖AI辅助科研、科研自动化、论文写作、投稿技巧、科研工具、PhD生活各1条。`
-  )+`\n\n返回严格的JSON数组，不要加markdown代码块，不要任何解释：\n[{"title":"帖子标题","summary":"30字内精华摘要，口语化中文","url":"原帖链接或 https://www.xiaohongshu.com/search_result?keyword=关键词","tag":"AI科研|科研工具|论文写作|投稿技巧|科研自动化|PhD生活|其他"}]`
+    ?`你是资深科研社区运营者。以下是今天（${today_}）小红书科研热榜原始抓取内容，仅作灵感参考（如果与科研无关请忽略并自行生成）：\n\n${rawContent}\n\n从中提炼或自行生成 6 条覆盖 AI辅助科研、科研自动化、论文写作、投稿技巧、科研新工具、PhD生活 各 1 条的实用内容。`
+    :`今天是${today_}，你是资深科研社区运营者。请生成 6 条当下科研圈正在热议的实用内容，覆盖 AI辅助科研、科研自动化、论文写作、投稿技巧、科研新工具、PhD生活 各 1 条。`
+  )+`\n\n${baseRule}\n\n${schemaRule}`
 
   try{
-    const raw=await _callAI(prompt,1200)
+    const raw=await _callAI(prompt,1600)
     if(!raw) throw new Error('AI 无响应')
     let items=_extractJSONArray(raw)
-    if(!Array.isArray(items)||items.length===0) throw new Error('AI 返回内容无法解析')
+    if(!Array.isArray(items)||items.length===0) throw new Error('AI 返回内容无法解析为 JSON 数组')
     // 过滤明显是 Jina 抓取失败时 AI 拼凑出来的占位条目
     items=items.filter(it=>{
       const t=(it&&it.title||'')+''
