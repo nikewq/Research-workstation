@@ -7130,18 +7130,13 @@ async function fetchIntel(force=false){
 
   try{
     const raw=await _callAI(prompt,1600)
-    if(!raw) throw new Error('AI 无响应')
+    console.log('[fetchIntel] AI raw:',(raw||'').slice(0,300))
+    if(!raw) throw new Error('AI 无响应（API Key 可能失效或被限流）')
     let items=_extractJSONArray(raw)
-    if(!Array.isArray(items)||items.length===0) throw new Error('AI 返回内容无法解析为 JSON 数组')
-    // 过滤明显是 Jina 抓取失败时 AI 拼凑出来的占位条目
-    items=items.filter(it=>{
-      const t=(it&&it.title||'')+''
-      const s=(it&&it.summary||'')+''
-      if(!t.trim()) return false
-      if(/^404\b|页面未找到|页面被.*吸走|无法获取内容|抓取失败|fetch failed/i.test(t+' '+s)) return false
-      return true
-    })
-    if(items.length===0) throw new Error('AI 未返回有效情报，请稍后重试')
+    if(!Array.isArray(items)||items.length===0) throw new Error('AI 返回内容无法解析为 JSON 数组: '+raw.slice(0,80))
+    // 仅过滤完全没有 title 的脏条目，不再按关键词剔除（防止把 AI 正常回答误杀）
+    items=items.filter(it=>it && (it.title||'').toString().trim().length>0)
+    if(items.length===0) throw new Error('AI 未返回任何带标题的有效条目')
     localStorage.setItem(_INTEL_KEY(),JSON.stringify(items))
     loadEl.style.display='none'
     listEl.innerHTML=items.map(_renderIntelCard).join('')
