@@ -7083,6 +7083,9 @@ async function fetchIntel(force=false){
         return
       }catch(_){}
     }
+  }else{
+    // 强制刷新：先清掉今日缓存，避免失败时回退到旧的无效条目
+    localStorage.removeItem(_INTEL_KEY())
   }
 
   btn.style.display='none'; rfBtn.style.display='none'
@@ -7113,10 +7116,18 @@ async function fetchIntel(force=false){
 
   try{
     const raw=await _callAI(prompt,1200)
-    if(!raw) throw new Error('no reply')
-    const jsonStr=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'')
-    const items=JSON.parse(jsonStr)
-    if(!Array.isArray(items)||items.length===0) throw new Error('empty')
+    if(!raw) throw new Error('AI 无响应')
+    let items=_extractJSONArray(raw)
+    if(!Array.isArray(items)||items.length===0) throw new Error('AI 返回内容无法解析')
+    // 过滤明显是 Jina 抓取失败时 AI 拼凑出来的占位条目
+    items=items.filter(it=>{
+      const t=(it&&it.title||'')+''
+      const s=(it&&it.summary||'')+''
+      if(!t.trim()) return false
+      if(/^404\b|页面未找到|页面被.*吸走|无法获取内容|抓取失败|fetch failed/i.test(t+' '+s)) return false
+      return true
+    })
+    if(items.length===0) throw new Error('AI 未返回有效情报，请稍后重试')
     localStorage.setItem(_INTEL_KEY(),JSON.stringify(items))
     loadEl.style.display='none'
     listEl.innerHTML=items.map(_renderIntelCard).join('')
@@ -7124,8 +7135,12 @@ async function fetchIntel(force=false){
     rfBtn.style.display=''
   }catch(e){
     loadEl.style.display='none'
-    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">😵 情报获取失败，请稍后重试</div>'
-    btn.style.display=''
+    const msg=(e&&e.message)||'获取失败'
+    listEl.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:12px">😵 ${escHtml(msg)}，请稍后再试或检查 API Key</div>`
+    // 失败后仍然让用户能再次点强制刷新，不要把按钮卡成"获取"状态
+    btn.style.display=force?'none':''
+    rfBtn.style.display=force?'':'none'
+    if(typeof toast==='function') toast('😵 '+msg)
   }
 }
 
