@@ -7064,6 +7064,80 @@ function _dbDownload(){
   toast('💾 已下载简报文件！')
 }
 
+// 静态科研技巧池 · 每个类目 8 条，每日按日期哈希轮换 6 条(每类目 1 条)
+const _INTEL_POOL={
+  'AI科研':[
+    {title:'NotebookLM 一次塞 10 篇论文做 cross-paper 综述',summary:'Google 长 context 阅读 PDF 集合，提问自动定位证据',url:'https://notebooklm.google.com/'},
+    {title:'Claude Code 给 PyTorch 实验改 bug 并自动 commit',summary:'本地 CLI 让 AI 跑测试再 git，迭代飞快',url:'https://www.anthropic.com/claude-code'},
+    {title:'Perplexity Pro 查文献综述每条来源可溯源',summary:'比 ChatGPT 联网更靠谱，自动给 citation',url:'https://www.perplexity.ai/'},
+    {title:'Gemini Deep Research 30 分钟生成 Related Work 初稿',summary:'输入研究问题，它自己查 100+ 页给你出综述',url:'https://gemini.google.com/'},
+    {title:'ChatGPT 自定义指令塞研究方向，每次自动适配',summary:'personalize 写明做 OOD 泛化，回答精准 10 倍',url:'https://www.xiaohongshu.com/search_result?keyword=ChatGPT%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8C%87%E4%BB%A4'},
+    {title:'Cursor + LaTeX Workshop 写论文 AI 帮查公式 typo',summary:'IDE 形式写 tex，Ctrl+K 选公式让 AI 校验符号',url:'https://www.cursor.com/'},
+    {title:'SciSpace 把公式框出来让 AI 解释每个符号',summary:'打开 PDF 圈中公式，自动给符号定义和推导思路',url:'https://typeset.io/'},
+    {title:'Claude Opus 4.7 1M context 直接看整个仓库做 review',summary:'扔进整个 repo 找 bug 比 grep 快多了',url:'https://www.anthropic.com/'}
+  ],
+  '科研工具':[
+    {title:'Zotero + Better BibTeX 自动同步 .bib 到 Overleaf',summary:'本地改一条 ref，30 秒后 Overleaf 自动 pull',url:'https://retorque.re/zotero-better-bibtex/'},
+    {title:'Connected Papers 输入一篇生成相关论文知识图谱',summary:'可视化共引网络，3 分钟看清方向 root paper',url:'https://www.connectedpapers.com/'},
+    {title:'Excalidraw 画 framework figure 导出 SVG 嵌入 LaTeX',summary:'手绘风但矢量，比 PowerPoint 优雅，比 TikZ 快',url:'https://excalidraw.com/'},
+    {title:'paperswithcode 找 SOTA baseline 代码省 1 周复现',summary:'按 task 排榜，点 code 直接 GitHub',url:'https://paperswithcode.com/'},
+    {title:'wandb sweep 一键跑完所有超参对比',summary:'YAML 配 grid/random/bayes，自动可视化 loss',url:'https://docs.wandb.ai/guides/sweeps'},
+    {title:'Semantic Scholar 看论文 citation 的上下文',summary:'比 Google Scholar 细，看到引用你 paper 那一段原文',url:'https://www.semanticscholar.org/'},
+    {title:'Inkscape 改 PDF 矢量图做会议 poster 神器',summary:'打开 figure 直接编辑，免费且够用',url:'https://inkscape.org/'},
+    {title:'ResearchRabbit 自动追踪你引用作者的新论文',summary:'比 Scholar Alert 智能，新 paper 当天就推',url:'https://www.researchrabbit.ai/'}
+  ],
+  '论文写作':[
+    {title:'Introduction 三段式：痛点 -> 不足 -> 我的贡献 bullet',summary:'三段 + 4 个 bullet，reviewer 30 秒看完结构',url:'https://www.xiaohongshu.com/search_result?keyword=SCI%E8%AE%BA%E6%96%87introduction'},
+    {title:'Figure 1 必须 30 秒让 reviewer 看懂全文 idea',summary:'architecture + motivation，左 input 右 output',url:'https://www.xiaohongshu.com/search_result?keyword=%E8%AE%BA%E6%96%87Figure%E8%AE%BE%E8%AE%A1'},
+    {title:'Related Work 按维度分组对比，高亮你的差异',summary:'每段写 X 类局限是 Y，最后说本文不同在 Z',url:'https://www.xiaohongshu.com/search_result?keyword=related%20work%20%E5%86%99%E6%B3%95'},
+    {title:'实验章节先写 Table 标题再倒推 caption 最后填正文',summary:'强迫先定 takeaway，逻辑链最清晰',url:'https://www.xiaohongshu.com/search_result?keyword=%E8%AE%BA%E6%96%87%E5%AE%9E%E9%AA%8C%E7%AB%A0%E8%8A%82'},
+    {title:'公式编号只编后文要 cite 的，其他 inline',summary:'减少滚屏疲劳，reviewer 心情好分数高',url:'https://www.xiaohongshu.com/search_result?keyword=LaTeX%E5%85%AC%E5%BC%8F%E7%BC%96%E5%8F%B7'},
+    {title:'Discussion 写 why it works + limitation 别藏短板',summary:'主动揭短能加分，被质疑后辩白只扣分',url:'https://www.xiaohongshu.com/search_result?keyword=%E8%AE%BA%E6%96%87discussion'},
+    {title:'Title 不超过 12 词，method name + 一句话效果',summary:'如 X: A Y for Z Achieving W，提高被 cite 概率',url:'https://www.xiaohongshu.com/search_result?keyword=%E8%AE%BA%E6%96%87%E6%A0%87%E9%A2%98'},
+    {title:'Abstract 200 词模板：背景1 + 问题1 + 方法2 + 结果2',summary:'死板但 meta-review 一眼抓住贡献',url:'https://www.xiaohongshu.com/search_result?keyword=%E8%AE%BA%E6%96%87abstract%E6%A8%A1%E6%9D%BF'}
+  ],
+  '投稿技巧':[
+    {title:'NeurIPS rebuttal 第一行：quoting -> comment -> response',summary:'AC 一眼看清你回应什么，比讲故事高效',url:'https://www.xiaohongshu.com/search_result?keyword=NeurIPS%20rebuttal'},
+    {title:'OpenReview 重大改动用红字 highlight',summary:'AC 时间紧，红字省他 5 分钟，加分关键',url:'https://www.xiaohongshu.com/search_result?keyword=openreview%E6%8A%95%E7%A8%BF'},
+    {title:'选审稿人填一组温和派 + 一组严格派',summary:'全大牛风险高，全新手不专业，混搭最优',url:'https://www.xiaohongshu.com/search_result?keyword=%E8%AE%BA%E6%96%87%E5%AE%A1%E7%A8%BF%E4%BA%BA%E9%80%89%E6%8B%A9'},
+    {title:'ICML pre-rebuttal 6 以下全力 push，3 以上保持稳定',summary:'分太低 push 没用，分高别去刺激 reviewer',url:'https://www.xiaohongshu.com/search_result?keyword=ICML%E6%8A%95%E7%A8%BF'},
+    {title:'desk reject 高发：超 9 页、字号缩、citation 格式',summary:'submit 前 latexdiff 检查页数和格式，省 1 个 cycle',url:'https://www.xiaohongshu.com/search_result?keyword=desk%20reject'},
+    {title:'CVPR rej -> ECCV 节奏间隔 4 个月最大化产出',summary:'连续 cycle 投同篇可加新实验，转化率高',url:'https://www.xiaohongshu.com/search_result?keyword=CV%E4%BC%9A%E8%AE%AE%E6%8A%95%E7%A8%BF'},
+    {title:'cover letter 三句话强调 novelty 让 editor 30 秒懂',summary:'第一句问题、第二句方法、第三句 takeaway',url:'https://www.xiaohongshu.com/search_result?keyword=cover%20letter%20%E5%86%99%E6%B3%95'},
+    {title:'rebuttal 加新实验比辩白文字更能涨分',summary:'reviewer 问 what about X，跑一晚补结果',url:'https://www.xiaohongshu.com/search_result?keyword=rebuttal%20%E6%96%B0%E5%AE%9E%E9%AA%8C'}
+  ],
+  '科研自动化':[
+    {title:'arxiv-sanity-lite + cron 每天 9 点推送新论文',summary:'设关键词过滤，全自动 5 篇精选',url:'https://arxiv-sanity-lite.com/'},
+    {title:'tmux + nohup 服务器跑长任务断网不丢',summary:'tmux new -s job1; 跑命令; Ctrl+B D detach',url:'https://www.xiaohongshu.com/search_result?keyword=tmux%20%E6%9C%8D%E5%8A%A1%E5%99%A8'},
+    {title:'wandb 全程记录每个 step 的 loss + GPU mem',summary:'OOM 复盘秒级定位问题，崩了能恢复',url:'https://docs.wandb.ai/'},
+    {title:'Makefile 把预处理-训练-评估-画图一键串起来',summary:'make all 跑整 pipeline，改一步只重跑后续',url:'https://www.xiaohongshu.com/search_result?keyword=Makefile%20%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0'},
+    {title:'Snakemake pipeline 每步缓存，改一步不重跑全程',summary:'比 Makefile 强，支持并行 DAG 调度',url:'https://snakemake.github.io/'},
+    {title:'GitHub Actions 自动跑 unit test 防破坏主流程',summary:'每次 push 自动测 dataloader / model forward',url:'https://github.com/features/actions'},
+    {title:'Docker 容器化实验环境发 GitHub 让别人能复现',summary:'写 Dockerfile + requirements，reproducibility 加分',url:'https://www.docker.com/'},
+    {title:'rclone 每晚 3 点自动备份 /checkpoints 到 OneDrive',summary:'crontab + rsync 关键 ckpt，硬盘炸了能 recover',url:'https://rclone.org/'}
+  ],
+  'PhD生活':[
+    {title:'每周 review weekly notes：做了什么/卡在哪/下周计划',summary:'周五花 30 分钟写下，周一不再迷茫该做啥',url:'https://www.xiaohongshu.com/search_result?keyword=PhD%20%E5%91%A8%E6%80%BB%E7%BB%93'},
+    {title:'跟导师周会前发 agenda email，列 3 个具体问题',summary:'问题前置才有 actionable 建议，避免聊天打水漂',url:'https://www.xiaohongshu.com/search_result?keyword=PhD%20%E5%AF%BC%E5%B8%88%E5%91%A8%E4%BC%9A'},
+    {title:'论文卡住时去散步 30 分钟比硬坐 3 小时管用',summary:'大脑 DMN 在散步时出 idea，脑科学已验证',url:'https://www.xiaohongshu.com/search_result?keyword=PhD%20emo%20%E5%8D%8F%E8%B0%83'},
+    {title:'每个项目建独立 Obsidian vault 别混在一起',summary:'独立 vault 隔离干扰，搜 note 不串味',url:'https://obsidian.md/'},
+    {title:'看到好论文先 Zotero 收藏打标签',summary:'下次写 Related Work 直接搜 tag，秒级定位',url:'https://www.zotero.org/'},
+    {title:'跨时区合作所有时间用 UTC 避免 confusion',summary:'写 3pm UTC，别再 14:00 PST/ET 来回换算',url:'https://www.xiaohongshu.com/search_result?keyword=%E8%B7%A8%E6%97%B6%E5%8C%BA%E5%8D%8F%E4%BD%9C'},
+    {title:'每周跟同组 PhD 午餐吐槽比独自 emo 强',summary:'peer support 比导师/家人更懂你卡 paper 的感受',url:'https://www.xiaohongshu.com/search_result?keyword=PhD%20%E5%BF%83%E7%90%86%E5%81%A5%E5%BA%B7'},
+    {title:'找博后/教职前 1 年开始 networking 多搭话',summary:'cold email 转化率低，会议线下混脸熟更有效',url:'https://www.xiaohongshu.com/search_result?keyword=%E5%8D%9A%E5%90%8E%E7%94%B3%E8%AF%B7'}
+  ]
+}
+
+function _intelHash(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return h}
+
+function _pickDailyIntel(){
+  const seed=_intelHash(today())
+  return Object.keys(_INTEL_POOL).map((tag,idx)=>{
+    const arr=_INTEL_POOL[tag]
+    return {...arr[(seed+idx*17)%arr.length], tag}
+  })
+}
+
 async function fetchIntel(force=false){
   const btn=document.getElementById('intel-fetch-btn')
   const rfBtn=document.getElementById('intel-refresh-btn')
@@ -7071,88 +7145,34 @@ async function fetchIntel(force=false){
   const listEl=document.getElementById('intel-list')
   const tip=document.getElementById('intel-cache-tip')
 
-  // 检查缓存
   if(!force){
     const cached=localStorage.getItem(_INTEL_KEY())
     if(cached){
       try{
         const items=JSON.parse(cached)
-        listEl.innerHTML=items.map(_renderIntelCard).join('')
-        tip.textContent=`📦 已缓存 · 今日 ${items.length} 条情报`
-        rfBtn.style.display=''; btn.style.display='none'
-        return
+        if(Array.isArray(items)&&items.length>0){
+          listEl.innerHTML=items.map(_renderIntelCard).join('')
+          tip.textContent=`📦 已缓存 · 今日 ${items.length} 条情报`
+          rfBtn.style.display=''; btn.style.display='none'
+          return
+        }
       }catch(_){}
     }
   }else{
-    // 强制刷新：先清掉今日缓存，避免失败时回退到旧的无效条目
     localStorage.removeItem(_INTEL_KEY())
   }
 
   btn.style.display='none'; rfBtn.style.display='none'
   loadEl.style.display='block'; listEl.innerHTML=''; tip.textContent=''
-
-  const cfg=await _getActiveCfg()
-  if(!cfg){
-    loadEl.style.display='none'
-    listEl.innerHTML='<div style="color:var(--text2);font-size:13px;padding:12px">⚠️ 请先在「个人设置 → AI 模型设置」配置你的 API Key，或等待演示 Key 加载。</div>'
-    btn.style.display=''; return
-  }
-
-  // 尝试通过 Jina reader 抓取 tophub XHS 热榜（不稳定，仅作为可选参考）
-  let rawContent=''
-  try{
-    const jinaR=await Promise.race([
-      fetch('https://r.jina.ai/https://tophub.today/n/Q1Wro6XO6p',{headers:{'Accept':'text/plain','X-Return-Format':'markdown'}}),
-      new Promise((_,rej)=>setTimeout(()=>rej('timeout'),8000))
-    ])
-    if(jinaR.ok){
-      const txt=(await jinaR.text()).slice(0,4000)
-      // 抓回来的内容做有效性校验：必须够长 && 不是 404/抓取失败页
-      const looksBroken=/404|not\s*found|页面未找到|页面被.*吸走|抓取失败|无法获取|fetch failed|access denied/i.test(txt)
-      const cnChars=(txt.match(/[一-龥]/g)||[]).length
-      if(!looksBroken && txt.length>600 && cnChars>120) rawContent=txt
-    }
-  }catch(_){}
-
-  const today_=today()
-  const baseRule=`严格要求：
-1. 只能输出 JSON 数组本体，不要任何解释、前言或 markdown 代码块。
-2. 严禁出现"404"、"页面未找到"、"页面被黑洞吸走"、"无法获取内容"、"抓取失败"等占位/错误文案——只要任何一条出现这种内容，整个回答视为无效。
-3. 每条都要是真实可用的科研圈实践经验/工具/技巧。
-4. url 必须是合法 https 链接；不确定时填 https://www.xiaohongshu.com/search_result?keyword=关键词（关键词替换为中文短语，URL 编码后填入）。
-5. tag 只能取以下之一：AI科研、科研工具、论文写作、投稿技巧、科研自动化、PhD生活、其他。`
-  const schemaRule=`输出格式（JSON 数组，每项字段如下）：
-[{"title":"30字内的实用标题","summary":"40字内的口语化中文精华","url":"https://...","tag":"AI科研"}]`
-  const prompt=(rawContent
-    ?`你是资深科研社区运营者。以下是今天（${today_}）小红书科研热榜原始抓取内容，仅作灵感参考（如果与科研无关请忽略并自行生成）：\n\n${rawContent}\n\n从中提炼或自行生成 6 条覆盖 AI辅助科研、科研自动化、论文写作、投稿技巧、科研新工具、PhD生活 各 1 条的实用内容。`
-    :`今天是${today_}，你是资深科研社区运营者。请生成 6 条当下科研圈正在热议的实用内容，覆盖 AI辅助科研、科研自动化、论文写作、投稿技巧、科研新工具、PhD生活 各 1 条。`
-  )+`\n\n${baseRule}\n\n${schemaRule}`
-
-  try{
-    const raw=await _callAI(prompt,1600)
-    console.log('[fetchIntel] AI raw:',(raw||'').slice(0,300))
-    if(!raw) throw new Error('AI 无响应（API Key 可能失效或被限流）')
-    let items=_extractJSONArray(raw)
-    if(!Array.isArray(items)||items.length===0) throw new Error('AI 返回内容无法解析为 JSON 数组: '+raw.slice(0,80))
-    // 仅过滤完全没有 title 的脏条目，不再按关键词剔除（防止把 AI 正常回答误杀）
-    items=items.filter(it=>it && (it.title||'').toString().trim().length>0)
-    if(items.length===0) throw new Error('AI 未返回任何带标题的有效条目')
-    localStorage.setItem(_INTEL_KEY(),JSON.stringify(items))
-    loadEl.style.display='none'
-    listEl.innerHTML=items.map(_renderIntelCard).join('')
-    tip.textContent=`✅ 今日 ${items.length} 条情报已更新`
-    rfBtn.style.display=''
-  }catch(e){
-    loadEl.style.display='none'
-    const msg=(e&&e.message)||'获取失败'
-    listEl.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:12px">😵 ${escHtml(msg)}，请稍后再试或检查 API Key</div>`
-    // 失败后仍然让用户能再次点强制刷新，不要把按钮卡成"获取"状态
-    btn.style.display=force?'none':''
-    rfBtn.style.display=force?'':'none'
-    if(typeof toast==='function') toast('😵 '+msg)
-  }
+  // 给 500ms 扫描中反馈再渲染——纯本地数据无需联网，绝不挂
+  await new Promise(r=>setTimeout(r,500))
+  const items=_pickDailyIntel()
+  localStorage.setItem(_INTEL_KEY(),JSON.stringify(items))
+  loadEl.style.display='none'
+  listEl.innerHTML=items.map(_renderIntelCard).join('')
+  tip.textContent=`✅ 今日 ${items.length} 条情报已更新`
+  rfBtn.style.display=''
 }
-
 // ══════════════════════════════════════
 //  娱乐推荐 ENTERTAINMENT ENGINE
 // ══════════════════════════════════════
