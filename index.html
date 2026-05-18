@@ -2623,7 +2623,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <div>
           <div style="font-weight:700;font-size:14px;margin-bottom:6px">🎮 科研闯关 · Research Quest</div>
           <div style="font-size:12px;color:var(--text2);line-height:1.6">
-            用平台跳跃的方式逃离 confounder、收集因果方法宝箱。<br>
+            用平台跳跃的方式逃离干扰、收集方法宝箱。<br>
             <b>控制</b>：A/D 或 ←/→ 移动 · W/↑/空格 跳跃 · R 重玩
           </div>
         </div>
@@ -2638,6 +2638,14 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           </div>
           <button class="btn btn-primary btn-sm" onclick="game_start()">▶ 开始 / 重玩</button>
         </div>
+      </div>
+      <!-- AI 关卡定制 -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text2);white-space:nowrap">🤖 按研究方向定制 4 关：</span>
+        <input id="game-field-inp" placeholder="如：流体力学 / 强化学习 / 凝聚态物理…" style="flex:1;min-width:200px;max-width:340px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);font-size:13px">
+        <button class="btn btn-primary btn-sm" onclick="game_aiGenerate()" id="game-ai-gen-btn">✨ AI 生成</button>
+        <button class="btn btn-ghost btn-sm" onclick="game_resetDefault()" title="恢复因果/OOD 默认 4 关">↺ 默认</button>
+        <span id="game-ai-status" style="font-size:11px;color:var(--text2)"></span>
       </div>
     </div>
 
@@ -14732,6 +14740,95 @@ window.addEventListener('keydown',e=>{
     }
   };
 
+  // ── 保留默认关卡副本（用于 AI 覆盖时的物理布局兜底 & 恢复默认）
+  const DEFAULT_LEVELS=JSON.parse(JSON.stringify(LEVELS));
+
+  // ══════════════════════════════════════
+  //  AI 生成关卡（按用户研究方向定制）
+  // ══════════════════════════════════════
+  const AI_LV_KEY='rw_game_ai_levels';
+  const AI_FIELD_KEY='rw_game_ai_field';
+  const ORDER_KEYS=['pearl','pirm','dgcar','dgbaryir'];
+
+  function applyAILevels(arr,field){
+    ORDER_KEYS.forEach((k,i)=>{
+      const tpl=DEFAULT_LEVELS[k];const lv=arr[i]||{};
+      const grad=(Array.isArray(lv.bgGrad)&&lv.bgGrad.length===2&&lv.bgGrad.every(c=>/^#[0-9a-f]{6}$/i.test(c)))?lv.bgGrad:tpl.bgGrad;
+      let nm=(lv.name||tpl.name.split('·')[1]||'').trim();
+      nm=nm.replace(/^关\s*\d+\s*[·.\-:：]?\s*/,'').trim();
+      LEVELS[k]={
+        ...tpl,
+        name:`关 ${tpl.order} · ${nm}`,
+        bgGrad:grad,
+        enemy:(lv.enemy&&lv.enemy.emoji&&lv.enemy.name)?lv.enemy:tpl.enemy,
+        treasure:(lv.treasure&&lv.treasure.emoji&&lv.treasure.name)?lv.treasure:tpl.treasure,
+        info:lv.info||tpl.info,
+        _aiField:field||''
+      };
+    });
+  }
+
+  function restoreDefaultLevels(){
+    ORDER_KEYS.forEach(k=>{LEVELS[k]=JSON.parse(JSON.stringify(DEFAULT_LEVELS[k]));});
+  }
+
+  function tryRestoreAICache(){
+    const raw=localStorage.getItem(AI_LV_KEY);if(!raw)return false;
+    try{
+      const arr=JSON.parse(raw);if(!Array.isArray(arr)||arr.length<4)return false;
+      applyAILevels(arr,localStorage.getItem(AI_FIELD_KEY)||'');
+      return true;
+    }catch(e){return false;}
+  }
+
+  async function aiGenerate(){
+    const inp=$('game-field-inp');const status=$('game-ai-status');const btn=$('game-ai-gen-btn');
+    const field=(inp.value||'').trim();
+    if(!field){status.textContent='⚠ 请先输入研究方向';return;}
+    if(typeof window._callAI!=='function'){status.textContent='⚠ 未找到 AI 接口';return;}
+    btn.disabled=true;status.style.color='var(--text2)';status.textContent='生成中…（约 10-20s）';
+    const prompt=`你是科研主题游戏关卡设计师。用户的研究方向是：「${field}」。
+请为这个领域设计 4 关「打怪闯关」游戏的主题元素，按学术难度递增排列。每关代表该领域的一个核心难题，敌人=该难题，宝箱=破解该难题的经典方法。
+
+只输出严格 JSON（不要 markdown 代码块、不要注释、不要多余文字），格式如下：
+{
+  "levels":[
+    {"name":"中文主题名（不超过 12 字）","bgGrad":["#xxxxxx","#yyyyyy"],"enemy":{"emoji":"单个 emoji","name":"敌人含义（学术术语，10 字内）"},"treasure":{"emoji":"单个 emoji","name":"破解方法（学术术语，14 字内）"},"info":"<b>问题</b>：该领域第几个核心难题是什么。<b>方法</b>：宝箱代表的方法是什么、为什么能破解。<br>本关 敌人emoji 代表 xxx，需借助 宝箱emoji 跳过/击败。50-90 字。"},
+    ... 4 项
+  ]
+}
+
+约束：
+- bgGrad 4 关使用不同色系（例如：暖橙→冷蓝→粉紫→深绿），均为合法 6 位十六进制
+- emoji 必须能直观表达该学术概念（如流体力学的湍流可用 🌊 或 🌀）
+- name 用术语别用空话，info 用真实学术语汇
+- 严禁出现 \`\`\`json 或解释性前后缀，第一个字符必须是 {`;
+    let raw=null;
+    try{raw=await window._callAI(prompt,1800);}catch(e){raw=null;}
+    btn.disabled=false;
+    if(!raw){status.style.color='#ef4444';status.textContent='❌ AI 无响应，检查个人设置里的 AI 配置';return;}
+    // 提取 JSON
+    const m=raw.match(/\{[\s\S]*\}/);
+    if(!m){status.style.color='#ef4444';status.textContent='❌ 解析失败，未找到 JSON';console.warn('[ai-game] raw:',raw);return;}
+    let obj;try{obj=JSON.parse(m[0]);}catch(e){status.style.color='#ef4444';status.textContent='❌ JSON 解析失败：'+e.message;console.warn('[ai-game] raw:',raw);return;}
+    if(!obj.levels||!Array.isArray(obj.levels)||obj.levels.length<4){status.style.color='#ef4444';status.textContent='❌ 返回不含 4 个关卡';return;}
+    applyAILevels(obj.levels,field);
+    localStorage.setItem(AI_LV_KEY,JSON.stringify(obj.levels));
+    localStorage.setItem(AI_FIELD_KEY,field);
+    status.style.color='#10b981';status.textContent='✅ 已生成 · 主题「'+field+'」';
+    renderLevelSelect();
+    loadLevel($('game-level-sel').value||'pearl');
+  }
+
+  function resetDefault(){
+    restoreDefaultLevels();
+    localStorage.removeItem(AI_LV_KEY);localStorage.removeItem(AI_FIELD_KEY);
+    $('game-field-inp').value='';
+    const status=$('game-ai-status');status.style.color='var(--text2)';status.textContent='已恢复默认（因果/OOD）4 关';
+    renderLevelSelect();
+    loadLevel($('game-level-sel').value||'pearl');
+  }
+
   // ══════════════════════════════════════
   //  进度（解锁状态）
   // ══════════════════════════════════════
@@ -14768,6 +14865,18 @@ window.addEventListener('keydown',e=>{
   function initUI(){
     if(inited)return;inited=true;
     ctx=canvas.getContext('2d');
+    // 尝试恢复 AI 缓存的关卡定制
+    const restored=tryRestoreAICache();
+    const fieldInp=$('game-field-inp');
+    if(restored){
+      fieldInp.value=localStorage.getItem(AI_FIELD_KEY)||'';
+      $('game-ai-status').textContent='已加载缓存 · 「'+fieldInp.value+'」';
+    }else{
+      // 从用户 cfg 自动预填
+      try{const cfg=(typeof getCfg==='function')?getCfg():null;
+        if(cfg){fieldInp.placeholder=(cfg.areas&&cfg.areas[0])?(`如：${cfg.areas[0]} / ${cfg.areas[1]||'强化学习'}…`):fieldInp.placeholder;}
+      }catch(e){}
+    }
     renderHeroPicker();
     renderLevelSelect();
     loadLevel($('game-level-sel').value||'pearl');
@@ -15039,6 +15148,8 @@ window.addEventListener('keydown',e=>{
   };
   window.game_loadLevel=loadLevel;
   window.game_start=start;
+  window.game_aiGenerate=aiGenerate;
+  window.game_resetDefault=resetDefault;
 })();
 </script>
 
