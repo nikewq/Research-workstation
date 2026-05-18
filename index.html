@@ -2772,7 +2772,9 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 .farm-plot.empty{background:repeating-linear-gradient(45deg,#92400e 0,#92400e 6px,#78350f 6px,#78350f 12px);color:rgba(255,255,255,0.4);font-size:22px}
 .farm-plot.empty:hover::after{content:'+';position:absolute;font-size:38px;color:#fff;text-shadow:0 0 6px rgba(0,0,0,0.4)}
 .farm-plot.ripe{background:linear-gradient(180deg,#fef3c7,#fde68a);animation:farmRipe 1.4s ease-in-out infinite}
-.farm-plot .stage-label{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;background:rgba(0,0,0,0.55);color:#fff;padding:1px 5px;border-radius:6px;font-weight:600;line-height:1.2}
+.farm-plot .stage-bar{position:absolute;bottom:4px;left:6px;right:6px;height:5px;background:rgba(0,0,0,0.3);border-radius:3px;overflow:hidden}
+.farm-plot .stage-bar-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width .4s ease;border-radius:3px}
+.farm-plot.ripe .stage-bar-fill{background:linear-gradient(90deg,#22c55e,#16a34a);box-shadow:0 0 6px rgba(34,197,94,0.6)}
 .farm-plot .q-badge{position:absolute;top:-6px;right:-4px;font-size:22px;animation:farmQ 0.9s ease-in-out infinite;text-shadow:0 0 4px #fbbf24}
 @keyframes farmRipe{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0.4)}50%{box-shadow:0 0 0 8px rgba(251,191,36,0)}}
 @keyframes farmQ{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px) rotate(8deg)}}
@@ -15418,6 +15420,13 @@ ${kp.slice(0,3000)}
     const c=CROPS[plot.crop];if(!c)return '';
     const st=getCropStage(plot);return `${st+1}/${c.stages}`;
   }
+  function growthPct(plot){
+    if(!plot)return 0;
+    const c=CROPS[plot.crop];if(!c)return 0;
+    const elapsedMs=(Date.now()-plot.plantedAt)+(plot.boostedMs||0);
+    const totalMs=c.totalMin*60000;
+    return Math.max(0,Math.min(100,(elapsedMs/totalMs)*100));
+  }
   function timeLeft(plot){
     if(!plot)return '';
     const c=CROPS[plot.crop];if(!c)return '';
@@ -15456,8 +15465,8 @@ ${kp.slice(0,3000)}
       const emoji=ripe?c.emoji:(STAGE_EMOJI[Math.min(st,STAGE_EMOJI.length-1)]||'🌱');
       const cls=['farm-plot'];if(ripe)cls.push('ripe');
       const q=p.hasQ?`<div class="q-badge">❓</div>`:'';
-      const label=ripe?'✓':stageProgress(p);
-      html.push(`<div class="${cls.join(' ')}" data-idx="${i}" onclick="farm_clickPlot(${i})" title="${esc(c.name)} · ${timeLeft(p)}">${emoji}<div class="stage-label">${label}</div>${q}</div>`);
+      const pct=growthPct(p);
+      html.push(`<div class="${cls.join(' ')}" data-idx="${i}" onclick="farm_clickPlot(${i})" title="${esc(c.name)} · ${stageProgress(p)} 阶段 · ${timeLeft(p)}">${emoji}<div class="stage-bar"><div class="stage-bar-fill" style="width:${pct}%"></div></div>${q}</div>`);
     }
     grid.innerHTML=html.join('');
   }
