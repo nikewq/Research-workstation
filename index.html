@@ -14517,6 +14517,29 @@ window.addEventListener('keydown',e=>{
 @keyframes fx-pop{0%{transform:translate(-50%,-50%) scale(0.3);opacity:0}40%{transform:translate(-50%,-50%) scale(1.2);opacity:1}100%{transform:translate(-50%,-50%) scale(0.6);opacity:0}}
 @keyframes fx-rise{to{transform:translate(var(--dx),var(--dy)) scale(0.4);opacity:0}}
 @keyframes fx-spin-fall{to{transform:translate(var(--dx),var(--dy)) rotate(720deg);opacity:0}}
+/* 摆动型下落（S 型轨迹，樱花/雪花/落叶） */
+@keyframes fx-sway-fall{
+  0%  {transform:translate(0,0) rotate(0deg);opacity:0}
+  10% {opacity:1}
+  25% {transform:translate(calc(var(--dx) * 0.3 + 18px),calc(var(--dy) * 0.25)) rotate(120deg)}
+  50% {transform:translate(calc(var(--dx) * 0.55 - 18px),calc(var(--dy) * 0.5)) rotate(240deg);opacity:1}
+  75% {transform:translate(calc(var(--dx) * 0.8 + 12px),calc(var(--dy) * 0.75)) rotate(360deg);opacity:0.7}
+  100%{transform:translate(var(--dx),var(--dy)) rotate(var(--r,540deg));opacity:0}
+}
+/* 上升摆动（泡泡/心形） */
+@keyframes fx-sway-rise{
+  0%  {transform:translate(0,0) scale(.5);opacity:0}
+  15% {opacity:1;transform:translate(8px,calc(var(--dy) * 0.15)) scale(1)}
+  50% {transform:translate(calc(var(--dx) * 0.5 - 10px),calc(var(--dy) * 0.5)) scale(1.05);opacity:1}
+  75% {transform:translate(calc(var(--dx) * 0.8 + 6px),calc(var(--dy) * 0.75)) scale(0.95);opacity:0.7}
+  100%{transform:translate(var(--dx),var(--dy)) scale(0.4);opacity:0}
+}
+/* 烟花拖尾 */
+@keyframes fx-trail{
+  0%  {transform:translate(-50%,-50%) scale(1);opacity:1}
+  70% {opacity:0.9}
+  100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0.2);opacity:0}
+}
 </style>
 <script>
 (function(){
@@ -14531,50 +14554,223 @@ window.addEventListener('keydown',e=>{
     el.style.animation=`${anim} ${dur}ms cubic-bezier(.22,.61,.36,1) forwards`;
     fxLayer.appendChild(el);setTimeout(()=>el.remove(),dur+50);
   }
-  // ── 10 种特效 ─────────────────────────
+  // ── 10 种特效（增强版：粒子翻倍 / 多层次 / 摆动轨迹）────────
   const FX={
-    snow(x,y){for(let i=0;i<8;i++){const dx=rand(-60,60),dy=rand(40,140);
-      spawn(pick(['❄','❅','❆','✻','✺']),x,y,{fontSize:rand(12,22)+'px',color:'#bfe4ff',textShadow:'0 0 6px #cfe8ff','--dx':dx+'px','--dy':dy+'px','--r':rand(180,540)+'deg',opacity:0.9},'fx-spin-fall',rand(1100,1800));}},
-    sakura(x,y){const petals=['🌸','🌺','💮'];for(let i=0;i<7;i++){const dx=rand(-80,80),dy=rand(60,160);
-      spawn(pick(petals),x,y,{fontSize:rand(14,22)+'px','--dx':dx+'px','--dy':dy+'px','--r':rand(360,720)+'deg'},'fx-spin-fall',rand(1300,2000));}},
-    ripple(x,y){const colors=['#60a5fa','#3b82f6','#0ea5e9'];for(let i=0;i<3;i++){
+    snow(x,y){
+      // 主层 18 个雪花，摆动下落
+      for(let i=0;i<18;i++){
+        const dx=rand(-130,130),dy=rand(80,200);
+        spawn(pick(['❄','❅','❆','✻','✺','❉']),x,y,{
+          fontSize:rand(14,26)+'px',color:'#e0f2fe',textShadow:'0 0 8px #cfe8ff,0 0 16px rgba(186,230,253,.5)',
+          '--dx':dx+'px','--dy':dy+'px','--r':rand(360,900)+'deg',
+          animationDelay:(i*25)+'ms'
+        },'fx-sway-fall',rand(1600,2600));
+      }
+      // 背景层 10 个小亮点
+      for(let i=0;i<10;i++){
+        const dx=rand(-80,80),dy=rand(40,140);
+        const el=document.createElement('span');el.className='fx-p';
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:'3px',height:'3px',borderRadius:'50%',background:'#fff',boxShadow:'0 0 6px #cfe8ff',transform:'translate(-50%,-50%)','--dx':dx+'px','--dy':dy+'px',animation:`fx-rise ${rand(900,1400)}ms ease-out forwards`,animationDelay:(i*40)+'ms'});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),1500);
+      }
+    },
+    sakura(x,y){
+      // 主层 22 朵樱花，多种花型 + S 型摆动
+      const petals=['🌸','🌺','💮','🌷','🏵'];
+      for(let i=0;i<22;i++){
+        const dx=rand(-180,180),dy=rand(80,240);
+        spawn(pick(petals),x,y,{
+          fontSize:rand(14,28)+'px',
+          '--dx':dx+'px','--dy':dy+'px','--r':rand(360,1080)+'deg',
+          animationDelay:(i*30)+'ms',
+          filter:'drop-shadow(0 2px 4px rgba(244,114,182,.3))'
+        },'fx-sway-fall',rand(1800,3000));
+      }
+      // 散花层 14 个小花瓣（CSS 形状，半透明）
+      for(let i=0;i<14;i++){
+        const dx=rand(-150,150),dy=rand(60,180);
+        const el=document.createElement('span');el.className='fx-p';
+        const sz=rand(6,10);
+        Object.assign(el.style,{
+          left:x+'px',top:y+'px',width:sz+'px',height:sz*1.4+'px',
+          background:'linear-gradient(180deg,#fda4af,#f9a8d4)',
+          borderRadius:'50% 50% 50% 50% / 60% 60% 40% 40%',
+          transform:'translate(-50%,-50%)',
+          '--dx':dx+'px','--dy':dy+'px','--r':rand(360,900)+'deg',
+          animation:`fx-sway-fall ${rand(2000,3200)}ms ease-out forwards`,
+          animationDelay:(i*40+200)+'ms',opacity:'0.75'
+        });
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),3500);
+      }
+      // 起飞层 8 个小亮点（上升）
+      for(let i=0;i<8;i++){
+        const dx=rand(-60,60),dy=rand(-50,-15);
+        const el=document.createElement('span');el.className='fx-p';
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:'3px',height:'3px',borderRadius:'50%',background:'#fda4af',boxShadow:'0 0 5px #fda4af',transform:'translate(-50%,-50%)','--dx':dx+'px','--dy':dy+'px',animation:`fx-rise ${rand(600,1000)}ms ease-out forwards`});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),1100);
+      }
+    },
+    ripple(x,y){
+      // 5 圈水波（更连续）
+      const colors=['#60a5fa','#3b82f6','#0ea5e9','#06b6d4','#22d3ee'];
+      for(let i=0;i<5;i++){
+        const el=document.createElement('span');el.className='fx-p';
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:'24px',height:'24px',borderRadius:'50%',border:`2px solid ${colors[i]}`,transform:'translate(-50%,-50%) scale(0.1)',animation:`fx-ring ${1000+i*150}ms ease-out forwards`,animationDelay:i*100+'ms'});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),2000);
+      }
+      // 12 滴溅起水珠
+      for(let i=0;i<12;i++){
+        const ang=Math.PI*2*i/12+rand(-0.3,0.3),d=rand(20,55);
+        spawn('💧',x,y,{fontSize:rand(10,18)+'px','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d-15+'px'},'fx-burst',rand(700,1100));
+      }
+      // 中心闪光
+      const flash=document.createElement('span');flash.className='fx-p';
+      Object.assign(flash.style,{left:x+'px',top:y+'px',width:'40px',height:'40px',borderRadius:'50%',background:'radial-gradient(circle,rgba(186,230,253,.9),transparent 70%)',transform:'translate(-50%,-50%)',animation:'fx-pop 400ms ease-out forwards'});
+      fxLayer.appendChild(flash);setTimeout(()=>flash.remove(),450);
+    },
+    firework(x,y){
+      // 主爆 28 个粒子（3 色环）
+      const palettes=[['#fb923c','#fbbf24','#fde047'],['#f43f5e','#ec4899','#fda4af'],['#a78bfa','#c084fc','#e9d5ff'],['#34d399','#10b981','#86efac']];
+      const palette=pick(palettes);
+      for(let i=0;i<28;i++){
+        const ang=Math.PI*2*i/28,d=rand(60,120);
+        const el=document.createElement('span');el.className='fx-p';
+        const c=pick(palette);
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:'7px',height:'7px',borderRadius:'50%',background:c,boxShadow:`0 0 10px ${c},0 0 20px ${c}`,transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px',animation:`fx-burst ${rand(800,1200)}ms cubic-bezier(.16,1,.3,1) forwards`});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),1300);
+      }
+      // 二级爆 14 个小粒子（延迟）
+      setTimeout(()=>{
+        for(let i=0;i<14;i++){
+          const ang=Math.PI*2*Math.random(),d=rand(30,70);
+          const el=document.createElement('span');el.className='fx-p';
+          const c=pick(palette);
+          Object.assign(el.style,{left:x+'px',top:y+'px',width:'4px',height:'4px',borderRadius:'50%',background:c,boxShadow:`0 0 8px ${c}`,transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px',animation:`fx-burst ${rand(500,800)}ms ease-out forwards`});
+          fxLayer.appendChild(el);setTimeout(()=>el.remove(),900);
+        }
+      },200);
+      // 中心闪光
+      const flash=document.createElement('span');flash.className='fx-p';
+      Object.assign(flash.style,{left:x+'px',top:y+'px',width:'30px',height:'30px',borderRadius:'50%',background:`radial-gradient(circle,${palette[0]},transparent 70%)`,transform:'translate(-50%,-50%)',animation:'fx-pop 350ms ease-out forwards'});
+      fxLayer.appendChild(flash);setTimeout(()=>flash.remove(),400);
+    },
+    emojiBurst(x,y){
+      const set=['🎉','✨','⭐','🔥','💫','🎊','🌟','💥','🎁'];
+      // 主爆 14 个 emoji
+      for(let i=0;i<14;i++){
+        const ang=Math.PI*2*i/14+rand(-0.2,0.2),d=rand(60,120);
+        spawn(pick(set),x,y,{fontSize:rand(18,30)+'px','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px'},'fx-burst',rand(800,1300));
+      }
+      // 散落 8 个小 emoji
+      setTimeout(()=>{
+        for(let i=0;i<8;i++){
+          const dx=rand(-90,90),dy=rand(60,160);
+          spawn(pick(set),x,y,{fontSize:rand(12,20)+'px','--dx':dx+'px','--dy':dy+'px','--r':rand(360,720)+'deg'},'fx-sway-fall',rand(1400,2200));
+        }
+      },150);
+    },
+    stardust(x,y){
+      // 主层 20 个星尘
+      for(let i=0;i<20;i++){
+        const ang=Math.PI*2*Math.random(),d=rand(20,80);
+        const el=document.createElement('span');el.className='fx-p';
+        const c=pick(['#fef3c7','#fde68a','#fbbf24','#fff','#fef9c3','#fde047']);
+        const sz=rand(3,7);
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:sz+'px',height:sz+'px',borderRadius:'50%',background:c,boxShadow:`0 0 ${sz*3}px ${c},0 0 ${sz*5}px ${c}`,transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d-30+'px',animation:`fx-burst ${rand(700,1100)}ms ease-out forwards`,animationDelay:(i*15)+'ms'});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),1300);
+      }
+      // 流星 5 颗
+      for(let i=0;i<5;i++){
+        const ang=Math.PI*2*Math.random(),d=rand(100,180);
+        spawn('✨',x,y,{fontSize:rand(14,22)+'px','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px'},'fx-burst',rand(900,1300));
+      }
+    },
+    heart(x,y){
+      const set=['❤️','💖','💕','💗','💝','💘','♡','🩷'];
+      // 主层 14 颗心，摆动上升
+      for(let i=0;i<14;i++){
+        const dx=rand(-90,90),dy=rand(-180,-60);
+        spawn(pick(set),x,y,{
+          fontSize:rand(16,28)+'px',
+          '--dx':dx+'px','--dy':dy+'px',
+          animationDelay:(i*40)+'ms'
+        },'fx-sway-rise',rand(1400,2200));
+      }
+      // 小红点 10 个
+      for(let i=0;i<10;i++){
+        const dx=rand(-50,50),dy=rand(-100,-30);
+        const el=document.createElement('span');el.className='fx-p';
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:'4px',height:'4px',borderRadius:'50%',background:'#f43f5e',boxShadow:'0 0 6px #f43f5e',transform:'translate(-50%,-50%)','--dx':dx+'px','--dy':dy+'px',animation:`fx-rise ${rand(800,1300)}ms ease-out forwards`});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),1400);
+      }
+    },
+    bubble(x,y){
+      // 主层 16 个泡泡，摆动上升
+      for(let i=0;i<16;i++){
+        const dx=rand(-100,100),dy=rand(-220,-90);
+        const el=document.createElement('span');el.className='fx-p';
+        const sz=rand(10,28);
+        Object.assign(el.style,{
+          left:x+'px',top:y+'px',width:sz+'px',height:sz+'px',borderRadius:'50%',
+          background:'radial-gradient(circle at 30% 30%,rgba(255,255,255,.95),rgba(125,211,252,.3) 60%,rgba(56,189,248,.1))',
+          border:'1px solid rgba(125,211,252,.6)',boxShadow:'0 0 8px rgba(125,211,252,.3)',
+          transform:'translate(-50%,-50%)',
+          '--dx':dx+'px','--dy':dy+'px',
+          animation:`fx-sway-rise ${rand(1400,2400)}ms ease-out forwards`,
+          animationDelay:(i*50)+'ms'
+        });
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),2500);
+      }
+      // 微泡 12 个
+      for(let i=0;i<12;i++){
+        const dx=rand(-50,50),dy=rand(-120,-40);
+        const el=document.createElement('span');el.className='fx-p';
+        const sz=rand(3,7);
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:sz+'px',height:sz+'px',borderRadius:'50%',background:'rgba(186,230,253,.7)',boxShadow:'0 0 4px rgba(125,211,252,.5)',transform:'translate(-50%,-50%)','--dx':dx+'px','--dy':dy+'px',animation:`fx-rise ${rand(900,1500)}ms ease-out forwards`});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),1600);
+      }
+    },
+    confetti(x,y){
+      const colors=['#f43f5e','#fbbf24','#34d399','#60a5fa','#a78bfa','#fb923c','#ec4899','#22d3ee'];
+      // 主层 32 个彩带
+      for(let i=0;i<32;i++){
+        const dx=rand(-180,180),dy=rand(80,260);
+        const el=document.createElement('span');el.className='fx-p';
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:rand(4,9)+'px',height:rand(10,18)+'px',background:pick(colors),transform:'translate(-50%,-50%)','--dx':dx+'px','--dy':dy+'px','--r':rand(540,1260)+'deg',animation:`fx-sway-fall ${rand(1400,2400)}ms cubic-bezier(.34,.5,.4,1) forwards`,animationDelay:(i*25)+'ms',borderRadius:Math.random()>0.5?'1px':'50%'});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),2500);
+      }
+      // 烟雾 4 团
+      for(let i=0;i<4;i++){
+        const ang=Math.PI*2*i/4,d=rand(40,80);
+        const el=document.createElement('span');el.className='fx-p';
+        Object.assign(el.style,{left:x+'px',top:y+'px',width:'30px',height:'30px',borderRadius:'50%',background:`radial-gradient(circle,${pick(colors)}88,transparent 70%)`,transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px',animation:`fx-burst ${rand(600,900)}ms ease-out forwards`});
+        fxLayer.appendChild(el);setTimeout(()=>el.remove(),1000);
+      }
+    },
+    lightning(x,y){
+      // 主闪电
       const el=document.createElement('span');el.className='fx-p';
-      Object.assign(el.style,{left:x+'px',top:y+'px',width:'24px',height:'24px',borderRadius:'50%',border:`2px solid ${colors[i]}`,transform:'translate(-50%,-50%) scale(0.1)',animation:`fx-ring ${900+i*200}ms ease-out forwards`,animationDelay:i*80+'ms'});
-      fxLayer.appendChild(el);setTimeout(()=>el.remove(),1500);}
-      for(let i=0;i<5;i++){const dx=rand(-30,30),dy=rand(-40,-15);
-        spawn('💧',x,y,{fontSize:'14px','--dx':dx+'px','--dy':dy+'px'},'fx-rise',rand(600,900));}},
-    firework(x,y){const colors=['#fb923c','#f43f5e','#fbbf24','#a78bfa','#34d399'];for(let i=0;i<14;i++){
-      const ang=Math.PI*2*i/14,d=rand(50,90);
-      const el=document.createElement('span');el.className='fx-p';
-      Object.assign(el.style,{left:x+'px',top:y+'px',width:'6px',height:'6px',borderRadius:'50%',background:pick(colors),boxShadow:`0 0 6px ${pick(colors)}`,transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px',animation:`fx-burst ${rand(700,1000)}ms cubic-bezier(.16,1,.3,1) forwards`});
-      fxLayer.appendChild(el);setTimeout(()=>el.remove(),1100);}},
-    emojiBurst(x,y){const set=['🎉','✨','⭐','🔥','💫','🎊','🌟'];for(let i=0;i<6;i++){
-      const ang=Math.PI*2*i/6+Math.random(),d=rand(50,90);
-      spawn(pick(set),x,y,{fontSize:rand(16,24)+'px','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px'},'fx-burst',rand(700,1100));}},
-    stardust(x,y){for(let i=0;i<10;i++){const ang=Math.PI*2*Math.random(),d=rand(20,60);
-      const el=document.createElement('span');el.className='fx-p';
-      const c=pick(['#fef3c7','#fde68a','#fbbf24','#fff']);
-      Object.assign(el.style,{left:x+'px',top:y+'px',width:'4px',height:'4px',borderRadius:'50%',background:c,boxShadow:`0 0 8px ${c}`,transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d-30+'px',animation:`fx-burst ${rand(600,900)}ms ease-out forwards`});
-      fxLayer.appendChild(el);setTimeout(()=>el.remove(),1000);}},
-    heart(x,y){const set=['❤️','💖','💕','💗','♡'];for(let i=0;i<6;i++){const dx=rand(-40,40),dy=rand(-80,-30);
-      spawn(pick(set),x,y,{fontSize:rand(16,24)+'px','--dx':dx+'px','--dy':dy+'px'},'fx-rise',rand(900,1400));}},
-    bubble(x,y){for(let i=0;i<8;i++){const dx=rand(-50,50),dy=rand(-120,-60);
-      const el=document.createElement('span');el.className='fx-p';
-      const sz=rand(10,22);
-      Object.assign(el.style,{left:x+'px',top:y+'px',width:sz+'px',height:sz+'px',borderRadius:'50%',background:'radial-gradient(circle at 30% 30%,rgba(255,255,255,.9),rgba(125,211,252,.3) 60%,rgba(56,189,248,.1))',border:'1px solid rgba(125,211,252,.5)',transform:'translate(-50%,-50%)','--dx':dx+'px','--dy':dy+'px',animation:`fx-rise ${rand(1000,1600)}ms ease-out forwards`});
-      fxLayer.appendChild(el);setTimeout(()=>el.remove(),1700);}},
-    confetti(x,y){const colors=['#f43f5e','#fbbf24','#34d399','#60a5fa','#a78bfa','#fb923c'];for(let i=0;i<16;i++){
-      const dx=rand(-100,100),dy=rand(60,180);
-      const el=document.createElement('span');el.className='fx-p';
-      Object.assign(el.style,{left:x+'px',top:y+'px',width:rand(4,8)+'px',height:rand(8,14)+'px',background:pick(colors),transform:'translate(-50%,-50%)','--dx':dx+'px','--dy':dy+'px','--r':rand(360,900)+'deg',animation:`fx-spin-fall ${rand(1200,1800)}ms cubic-bezier(.34,.5,.4,1) forwards`});
-      fxLayer.appendChild(el);setTimeout(()=>el.remove(),1900);}},
-    lightning(x,y){const el=document.createElement('span');el.className='fx-p';
-      Object.assign(el.style,{left:x+'px',top:y+'px',fontSize:'36px',color:'#fbbf24',textShadow:'0 0 12px #f59e0b,0 0 24px #fbbf24',transform:'translate(-50%,-50%) scale(0.3)',animation:'fx-pop 600ms ease-out forwards'});
-      el.textContent='⚡';fxLayer.appendChild(el);setTimeout(()=>el.remove(),650);
-      for(let i=0;i<8;i++){const ang=Math.PI*2*i/8,d=rand(30,55);
+      Object.assign(el.style,{left:x+'px',top:y+'px',fontSize:'48px',color:'#fbbf24',textShadow:'0 0 16px #f59e0b,0 0 32px #fbbf24,0 0 48px rgba(251,191,36,.5)',transform:'translate(-50%,-50%) scale(0.3)',animation:'fx-pop 800ms ease-out forwards'});
+      el.textContent='⚡';fxLayer.appendChild(el);setTimeout(()=>el.remove(),850);
+      // 闪光圆
+      const flash=document.createElement('span');flash.className='fx-p';
+      Object.assign(flash.style,{left:x+'px',top:y+'px',width:'80px',height:'80px',borderRadius:'50%',background:'radial-gradient(circle,rgba(254,243,199,.9),transparent 70%)',transform:'translate(-50%,-50%)',animation:'fx-pop 500ms ease-out forwards'});
+      fxLayer.appendChild(flash);setTimeout(()=>flash.remove(),550);
+      // 16 个电火花
+      for(let i=0;i<16;i++){
+        const ang=Math.PI*2*i/16,d=rand(40,90);
         const p=document.createElement('span');p.className='fx-p';
-        Object.assign(p.style,{left:x+'px',top:y+'px',width:'3px',height:'3px',background:'#fbbf24',boxShadow:'0 0 6px #fbbf24',borderRadius:'50%',transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px',animation:`fx-burst ${rand(500,750)}ms ease-out forwards`});
-        fxLayer.appendChild(p);setTimeout(()=>p.remove(),800);}}
+        Object.assign(p.style,{left:x+'px',top:y+'px',width:rand(2,4)+'px',height:rand(6,12)+'px',background:'#fbbf24',boxShadow:'0 0 8px #fbbf24,0 0 16px #fde047',transform:`translate(-50%,-50%) rotate(${ang}rad)`,'--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px',animation:`fx-burst ${rand(500,800)}ms ease-out forwards`});
+        fxLayer.appendChild(p);setTimeout(()=>p.remove(),900);
+      }
+      // 二级小电球 8 个
+      for(let i=0;i<8;i++){
+        const ang=Math.PI*2*Math.random(),d=rand(60,110);
+        const p=document.createElement('span');p.className='fx-p';
+        Object.assign(p.style,{left:x+'px',top:y+'px',width:'5px',height:'5px',background:'#fef3c7',boxShadow:'0 0 6px #fbbf24',borderRadius:'50%',transform:'translate(-50%,-50%)','--dx':Math.cos(ang)*d+'px','--dy':Math.sin(ang)*d+'px',animation:`fx-burst ${rand(600,900)}ms ease-out forwards`});
+        fxLayer.appendChild(p);setTimeout(()=>p.remove(),1000);
+      }
+    }
   };
   const FX_NAMES=Object.keys(FX);
   let lastFx=0;
