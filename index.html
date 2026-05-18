@@ -2651,8 +2651,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <canvas id="game-canvas" width="900" height="380" style="display:block;width:100%;height:auto;background:linear-gradient(180deg,#fef3c7 0%,#fed7aa 100%)"></canvas>
         <div id="game-overlay" style="display:none;position:absolute;inset:0;background:rgba(15,23,42,0.85);color:#fff;align-items:center;justify-content:center;flex-direction:column;gap:10px;font-family:-apple-system,sans-serif">
           <div id="game-overlay-title" style="font-size:32px;font-weight:800"></div>
-          <div id="game-overlay-msg" style="font-size:14px;color:#cbd5e1;max-width:400px;text-align:center;line-height:1.7;padding:0 16px"></div>
-          <button class="btn btn-primary" onclick="game_start()" style="margin-top:8px" data-no-fx="1">▶ 再来一次</button>
+          <div id="game-overlay-msg" style="font-size:14px;color:#cbd5e1;max-width:480px;text-align:center;line-height:1.7;padding:0 16px"></div>
         </div>
       </div>
     </div>
@@ -14469,38 +14468,291 @@ window.addEventListener('keydown',e=>{
 <!-- ══════════════════════════════════════ -->
 <script>
 (function(){
-  // ── 关卡数据（数据驱动，便于扩展其它 3 关）──
-  const HEROES=['🧠','🦊','🐱','🐉','🤖','🐧','🦄','🐢','👾','🦁'];
-  const HERO_KEY='rw_game_hero';
+  // ══════════════════════════════════════
+  //  角色：emoji + Canvas 矢量玩偶
+  // ══════════════════════════════════════
+  const HERO_KEY='rw_game_hero';        // 当前主角 key（如 'emoji:🧠' 或 'doll:scholar'）
+  const PROG_KEY='rw_game_progress';    // 关卡进度 { pearl:1, pirm:0, ... } (1=通关,0=已解锁未通)
+  const EMOJI_HEROES=['🧠','🦊','🐱','🐉','🤖','🐧','🦄','🐢','👾','🦁'];
+
+  // ── Canvas 矢量玩偶：每个 draw(ctx,cx,cy,t,facing,jumping) ──
+  // facing: 1=右 / -1=左; t: 秒数, jumping: 是否离地
+  const DOLLS={
+    scholar:{name:'小研究员',draw(ctx,cx,cy,t,fa,jp){
+      const bob=jp?0:Math.sin(t*8)*1.2; const ly=Math.sin(t*8)*3;
+      ctx.save();ctx.translate(cx,cy+bob);ctx.scale(fa,1);
+      // 腿
+      ctx.fillStyle='#1f2937';
+      ctx.fillRect(-6,12,5,10+(jp?-4:ly));
+      ctx.fillRect( 1,12,5,10+(jp?-4:-ly));
+      // 身（白大褂）
+      ctx.fillStyle='#f8fafc';ctx.strokeStyle='#cbd5e1';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(-9,-2);ctx.lineTo(9,-2);ctx.lineTo(8,14);ctx.lineTo(-8,14);ctx.closePath();ctx.fill();ctx.stroke();
+      // 领子小三角
+      ctx.fillStyle='#0ea5e9';ctx.beginPath();ctx.moveTo(-2,-2);ctx.lineTo(2,-2);ctx.lineTo(0,3);ctx.closePath();ctx.fill();
+      // 手
+      ctx.fillStyle='#fcd9b6';ctx.beginPath();ctx.arc(-9,4,2.5,0,Math.PI*2);ctx.arc(9,4,2.5,0,Math.PI*2);ctx.fill();
+      // 头
+      ctx.fillStyle='#fcd9b6';ctx.beginPath();ctx.arc(0,-10,9,0,Math.PI*2);ctx.fill();
+      // 头发
+      ctx.fillStyle='#1f2937';ctx.beginPath();ctx.arc(0,-13,9,Math.PI,0);ctx.fill();
+      // 眼镜
+      ctx.strokeStyle='#1f2937';ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.arc(-3,-9,2.2,0,Math.PI*2);ctx.arc(3,-9,2.2,0,Math.PI*2);ctx.moveTo(-0.8,-9);ctx.lineTo(0.8,-9);ctx.stroke();
+      // 嘴
+      ctx.strokeStyle='#9a3412';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,-5,1.5,0,Math.PI);ctx.stroke();
+      ctx.restore();
+    }},
+    robot:{name:'机器人 Bo',draw(ctx,cx,cy,t,fa,jp){
+      const bob=jp?0:Math.sin(t*8)*1; const blink=Math.sin(t*1.4)>0.92?0.2:1;
+      ctx.save();ctx.translate(cx,cy+bob);ctx.scale(fa,1);
+      // 履带
+      ctx.fillStyle='#334155';ctx.fillRect(-10,16,20,6);
+      ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(-7,19,2.5,0,Math.PI*2);ctx.arc(0,19,2.5,0,Math.PI*2);ctx.arc(7,19,2.5,0,Math.PI*2);ctx.fill();
+      // 身
+      ctx.fillStyle='#94a3b8';ctx.fillRect(-9,-3,18,19);
+      ctx.fillStyle='#475569';ctx.fillRect(-9,-3,18,3);
+      // 胸口灯
+      ctx.fillStyle=blink>0.5?'#10b981':'#dc2626';ctx.beginPath();ctx.arc(0,5,2.2,0,Math.PI*2);ctx.fill();
+      // 手臂
+      ctx.fillStyle='#64748b';ctx.fillRect(-13,0,4,12);ctx.fillRect(9,0,4,12);
+      // 头
+      ctx.fillStyle='#cbd5e1';ctx.fillRect(-8,-18,16,15);
+      ctx.fillStyle='#475569';ctx.fillRect(-8,-18,16,2);
+      // 天线
+      ctx.strokeStyle='#475569';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(0,-23);ctx.stroke();
+      ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(0,-24,2,0,Math.PI*2);ctx.fill();
+      // 眼睛
+      ctx.fillStyle='#0ea5e9';
+      ctx.fillRect(-5,-13,3,3*blink);ctx.fillRect(2,-13,3,3*blink);
+      ctx.restore();
+    }},
+    bear:{name:'小熊',draw(ctx,cx,cy,t,fa,jp){
+      const bob=jp?0:Math.sin(t*7)*1.2;
+      ctx.save();ctx.translate(cx,cy+bob);ctx.scale(fa,1);
+      // 腿
+      ctx.fillStyle='#92400e';
+      ctx.beginPath();ctx.ellipse(-5,16,3.5,4,0,0,Math.PI*2);ctx.ellipse(5,16,3.5,4,0,0,Math.PI*2);ctx.fill();
+      // 身（圆胖）
+      ctx.fillStyle='#a16207';
+      ctx.beginPath();ctx.ellipse(0,6,10,11,0,0,Math.PI*2);ctx.fill();
+      // 肚子
+      ctx.fillStyle='#fde68a';ctx.beginPath();ctx.ellipse(0,7,5,6,0,0,Math.PI*2);ctx.fill();
+      // 手
+      ctx.fillStyle='#92400e';
+      ctx.beginPath();ctx.ellipse(-10,3,3,4,0,0,Math.PI*2);ctx.ellipse(10,3,3,4,0,0,Math.PI*2);ctx.fill();
+      // 头
+      ctx.fillStyle='#a16207';
+      ctx.beginPath();ctx.arc(0,-9,10,0,Math.PI*2);ctx.fill();
+      // 耳朵
+      ctx.beginPath();ctx.arc(-7,-17,4,0,Math.PI*2);ctx.arc(7,-17,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fcd9b6';ctx.beginPath();ctx.arc(-7,-17,2,0,Math.PI*2);ctx.arc(7,-17,2,0,Math.PI*2);ctx.fill();
+      // 脸
+      ctx.fillStyle='#fde68a';ctx.beginPath();ctx.ellipse(0,-6,5,4,0,0,Math.PI*2);ctx.fill();
+      // 眼鼻
+      ctx.fillStyle='#1f2937';
+      ctx.beginPath();ctx.arc(-3.5,-10,1.2,0,Math.PI*2);ctx.arc(3.5,-10,1.2,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(0,-6,1.5,1,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }},
+    cat:{name:'小猫',draw(ctx,cx,cy,t,fa,jp){
+      const bob=jp?0:Math.sin(t*8)*1.2; const tail=Math.sin(t*4)*0.4;
+      ctx.save();ctx.translate(cx,cy+bob);ctx.scale(fa,1);
+      // 尾巴
+      ctx.strokeStyle='#fb923c';ctx.lineWidth=4;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(-9,8);
+      ctx.quadraticCurveTo(-17-tail*4,0,-15-tail*6,-10+tail*4);ctx.stroke();
+      // 腿
+      ctx.fillStyle='#fb923c';
+      ctx.beginPath();ctx.ellipse(-5,15,3,4,0,0,Math.PI*2);ctx.ellipse(5,15,3,4,0,0,Math.PI*2);ctx.fill();
+      // 身
+      ctx.beginPath();ctx.ellipse(0,5,9,10,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fed7aa';ctx.beginPath();ctx.ellipse(0,7,4,5,0,0,Math.PI*2);ctx.fill();
+      // 头
+      ctx.fillStyle='#fb923c';ctx.beginPath();ctx.arc(0,-8,9,0,Math.PI*2);ctx.fill();
+      // 三角耳
+      ctx.beginPath();ctx.moveTo(-9,-13);ctx.lineTo(-5,-18);ctx.lineTo(-3,-12);ctx.closePath();
+      ctx.moveTo(9,-13);ctx.lineTo(5,-18);ctx.lineTo(3,-12);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#fda4af';ctx.beginPath();ctx.moveTo(-7,-14);ctx.lineTo(-5.5,-16);ctx.lineTo(-4.5,-13.5);ctx.closePath();
+      ctx.moveTo(7,-14);ctx.lineTo(5.5,-16);ctx.lineTo(4.5,-13.5);ctx.closePath();ctx.fill();
+      // 眼
+      ctx.fillStyle='#0f172a';
+      ctx.beginPath();ctx.ellipse(-3,-9,1.2,2,0,0,Math.PI*2);ctx.ellipse(3,-9,1.2,2,0,0,Math.PI*2);ctx.fill();
+      // 鼻 + 胡须
+      ctx.fillStyle='#fda4af';ctx.beginPath();ctx.moveTo(-1,-5);ctx.lineTo(1,-5);ctx.lineTo(0,-3.5);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#9a3412';ctx.lineWidth=0.6;
+      ctx.beginPath();ctx.moveTo(-3,-4);ctx.lineTo(-8,-5);ctx.moveTo(3,-4);ctx.lineTo(8,-5);ctx.stroke();
+      ctx.restore();
+    }},
+    pixel:{name:'像素怪',draw(ctx,cx,cy,t,fa,jp){
+      const bob=jp?0:Math.floor(Math.sin(t*6)*1.5);
+      ctx.save();ctx.translate(cx,cy+bob);ctx.scale(fa,1);
+      const px=3;const grid=[
+        '..PP..',
+        '.PPPP.',
+        'PPPPPP',
+        'PWPPWP',
+        'PPPPPP',
+        '.P..P.',
+        'P.PP.P',
+      ];
+      for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++){
+        const ch=grid[r][c];if(ch==='.')continue;
+        ctx.fillStyle=ch==='P'?'#7c3aed':'#fff';
+        ctx.fillRect(-9+c*px,-13+r*px,px,px);
+      }
+      ctx.restore();
+    }},
+    ghost:{name:'小幽灵',draw(ctx,cx,cy,t,fa,jp){
+      const bob=Math.sin(t*4)*2.5;
+      ctx.save();ctx.translate(cx,cy+bob);ctx.scale(fa,1);
+      ctx.globalAlpha=0.95;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#cbd5e1';ctx.lineWidth=1.2;
+      ctx.beginPath();
+      ctx.arc(0,-6,11,Math.PI,0);
+      ctx.lineTo(11,12);
+      // 波浪底
+      ctx.lineTo(7,9);ctx.lineTo(3,12);ctx.lineTo(-1,9);ctx.lineTo(-5,12);ctx.lineTo(-9,9);ctx.lineTo(-11,12);
+      ctx.closePath();ctx.fill();ctx.stroke();
+      // 眼
+      ctx.fillStyle='#0f172a';
+      ctx.beginPath();ctx.ellipse(-3.5,-6,1.8,2.6,0,0,Math.PI*2);ctx.ellipse(3.5,-6,1.8,2.6,0,0,Math.PI*2);ctx.fill();
+      // 红脸蛋
+      ctx.fillStyle='rgba(244,114,182,0.6)';
+      ctx.beginPath();ctx.arc(-6,-1,1.6,0,Math.PI*2);ctx.arc(6,-1,1.6,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }}
+  };
+
+  // ══════════════════════════════════════
+  //  4 关关卡数据（数据驱动）
+  // ══════════════════════════════════════
   const LEVELS={
     pearl:{
-      key:'pearl',name:'关 1 · PEARL 因果表征学习',unlocked:true,
+      key:'pearl',name:'关 1 · PEARL 因果表征学习',order:1,
       bgGrad:['#fef3c7','#fed7aa'],
       enemy:{emoji:'🌪️',name:'confounder 干扰变量'},
       treasure:{emoji:'⚡',name:'PSW 倾向性加权'},
-      goal:'抵达右端宝箱 ⚡，获得 PSW（Propensity Score Weighting）机制，正确剔除 confounder 影响。',
       info:'<b>因果表征学习</b>：当训练数据中存在 confounder（混淆变量）时，朴素相关性会误导模型。<b>PSW</b> 通过倾向性得分加权样本，模拟随机化实验，使模型学到稳健的因果表征。<br>本关 confounder 在平台间游荡，碰到扣 1 HP；金币代表收集到的因果证据；终点宝箱解锁 PSW 机制。',
-      platforms:[ // x,y,w,h
-        {x:0,y:340,w:900,h:40},     // 地面
+      platforms:[
+        {x:0,y:340,w:900,h:40},
         {x:160,y:260,w:120,h:14},
         {x:340,y:200,w:100,h:14},
         {x:500,y:255,w:120,h:14},
         {x:680,y:190,w:120,h:14},
       ],
-      coins:[ // x,y
-        {x:200,y:230},{x:240,y:230},{x:370,y:170},{x:540,y:225},{x:580,y:225},{x:710,y:160},{x:760,y:160}
-      ],
-      enemies:[ // x,y,minX,maxX,speed
+      coins:[{x:200,y:230},{x:240,y:230},{x:370,y:170},{x:540,y:225},{x:580,y:225},{x:710,y:160},{x:760,y:160}],
+      enemies:[
         {x:380,y:170,minX:340,maxX:430,speed:1.2},
         {x:540,y:225,minX:500,maxX:610,speed:1.6},
         {x:140,y:310,minX:60,maxX:300,speed:1.3},
       ],
       treasurePos:{x:830,y:155}
     },
-    pirm:{key:'pirm',name:'关 2 · PIRM OOD 泛化',unlocked:false,locked:'⚒ 建设中',enemy:{emoji:'🔀',name:'distribution shift'},treasure:{emoji:'🛡️',name:'Invariant Representation (IRM)'},info:'<b>OOD 泛化</b>：训练/测试分布不一致时模型容易崩。<b>IRM</b> 寻找跨环境不变的表征，提升 OOD 鲁棒性。'},
-    dgcar:{key:'dgcar',name:'关 3 · DGCAR OOD 推荐',unlocked:false,locked:'⚒ 建设中',enemy:{emoji:'🎯',name:'exposure bias'},treasure:{emoji:'⚖️',name:'IPW 重加权'},info:'<b>OOD 推荐</b>：曝光偏差让推荐系统只学到 popular item 的偏好。<b>IPW（Inverse Propensity Weighting）</b> 修正曝光不均，恢复因果排序信号。'},
-    dgbaryir:{key:'dgbaryir',name:'关 4 · DGBaryIR OOD 图像修复',unlocked:false,locked:'⚒ 建设中',enemy:{emoji:'🌫️',name:'未见退化'},treasure:{emoji:'🏛️',name:'Wasserstein Barycenter'},info:'<b>OOD 图像修复</b>：训练时未见过的退化让模型完全失效。<b>Barycenter</b> 在退化分布空间求重心，对未见退化做几何意义上的折中插值。'}
+    pirm:{
+      key:'pirm',name:'关 2 · PIRM OOD 泛化',order:2,
+      bgGrad:['#dbeafe','#93c5fd'],
+      enemy:{emoji:'🔀',name:'distribution shift'},
+      treasure:{emoji:'🛡️',name:'IRM 不变表征'},
+      info:'<b>OOD 泛化</b>：训练 / 测试分布不一致时模型崩坏。<b>IRM (Invariant Risk Minimization)</b> 在多环境上寻找跨域不变的表征，约束分类器对所有环境同时最优。<br>本关多平台代表多环境，distribution shift 在跨环境间游荡，需跳跃跨过分布鸿沟，最终抵达 IRM 宝箱。',
+      platforms:[
+        {x:0,y:340,w:240,h:40},
+        {x:310,y:340,w:160,h:40},
+        {x:540,y:340,w:140,h:40},
+        {x:750,y:340,w:150,h:40},
+        {x:120,y:255,w:100,h:14},
+        {x:280,y:200,w:110,h:14},
+        {x:460,y:240,w:100,h:14},
+        {x:620,y:185,w:110,h:14},
+        {x:780,y:240,w:100,h:14},
+      ],
+      coins:[{x:155,y:225},{x:195,y:225},{x:320,y:170},{x:360,y:170},{x:495,y:210},{x:650,y:155},{x:690,y:155},{x:810,y:210}],
+      enemies:[
+        {x:330,y:340,minX:310,maxX:450,speed:1.8},
+        {x:560,y:340,minX:540,maxX:670,speed:2.0},
+        {x:300,y:200,minX:280,maxX:380,speed:1.4},
+        {x:790,y:240,minX:780,maxX:870,speed:1.5},
+      ],
+      treasurePos:{x:850,y:200}
+    },
+    dgcar:{
+      key:'dgcar',name:'关 3 · DGCAR OOD 推荐',order:3,
+      bgGrad:['#fce7f3','#f9a8d4'],
+      enemy:{emoji:'🎯',name:'exposure bias 曝光偏差'},
+      treasure:{emoji:'⚖️',name:'IPW 重加权'},
+      info:'<b>OOD 推荐</b>：曝光偏差让推荐模型只看到 popular item 的反馈，long-tail 商品被忽略。<b>IPW（Inverse Propensity Weighting）</b> 用 1/曝光概率 给样本加权，恢复无偏排序信号。<br>本关 popular 怪物频繁来袭，需借助高低交错的平台躲避并抓住稀有金币（long-tail 信号）。',
+      platforms:[
+        {x:0,y:340,w:120,h:40},
+        {x:180,y:300,w:80,h:14},
+        {x:300,y:340,w:80,h:40},
+        {x:420,y:260,w:90,h:14},
+        {x:560,y:340,w:80,h:40},
+        {x:680,y:220,w:90,h:14},
+        {x:810,y:340,w:90,h:40},
+        {x:200,y:220,w:100,h:14},
+        {x:560,y:170,w:120,h:14},
+      ],
+      coins:[{x:230,y:190},{x:270,y:190},{x:450,y:230},{x:705,y:190},{x:600,y:140},{x:640,y:140},{x:50,y:310},{x:340,y:310}],
+      enemies:[
+        {x:300,y:340,minX:300,maxX:380,speed:2.2},
+        {x:560,y:340,minX:560,maxX:640,speed:2.4},
+        {x:200,y:220,minX:200,maxX:300,speed:1.8},
+        {x:680,y:220,minX:680,maxX:770,speed:2.0},
+      ],
+      treasurePos:{x:855,y:295}
+    },
+    dgbaryir:{
+      key:'dgbaryir',name:'关 4 · DGBaryIR OOD 图像修复',order:4,
+      bgGrad:['#ede9fe','#c4b5fd'],
+      enemy:{emoji:'🌫️',name:'未见退化 (unseen degradation)'},
+      treasure:{emoji:'🏛️',name:'Wasserstein Barycenter'},
+      info:'<b>OOD 图像修复</b>：训练时未见过的退化（雾/雪/雨/低光）让模型完全失效。<b>Wasserstein Barycenter</b> 在退化分布空间求几何重心，对未见退化做插值意义上的折中，泛化到未见域。<br>这是最终 boss 关——未见退化迷雾密布、地形跨度大，需收齐所有金币才解锁宝箱。',
+      platforms:[
+        {x:0,y:340,w:160,h:40},
+        {x:230,y:280,w:90,h:14},
+        {x:380,y:230,w:80,h:14},
+        {x:520,y:280,w:80,h:14},
+        {x:660,y:230,w:80,h:14},
+        {x:780,y:170,w:120,h:14},
+        {x:130,y:200,w:80,h:14},
+        {x:340,y:340,w:80,h:40},
+        {x:560,y:340,w:80,h:40},
+        {x:780,y:340,w:120,h:40},
+      ],
+      coins:[{x:160,y:170},{x:265,y:250},{x:410,y:200},{x:550,y:250},{x:690,y:200},{x:820,y:140},{x:860,y:140},{x:80,y:310},{x:600,y:310}],
+      enemies:[
+        {x:240,y:280,minX:230,maxX:310,speed:1.6},
+        {x:390,y:230,minX:380,maxX:450,speed:1.4},
+        {x:530,y:280,minX:520,maxX:590,speed:1.7},
+        {x:670,y:230,minX:660,maxX:730,speed:1.5},
+        {x:160,y:340,minX:30,maxX:150,speed:1.8},
+      ],
+      treasurePos:{x:850,y:135},
+      requireAllCoins:true
+    }
   };
+
+  // ══════════════════════════════════════
+  //  进度（解锁状态）
+  // ══════════════════════════════════════
+  function loadProg(){try{return JSON.parse(localStorage.getItem(PROG_KEY))||{pearl:0}}catch(e){return{pearl:0}}}
+  function saveProg(p){localStorage.setItem(PROG_KEY,JSON.stringify(p))}
+  function isUnlocked(key){
+    const p=loadProg();
+    if(key in p)return true;
+    // 按 order 线性解锁：前一关通关后才解锁
+    const lv=LEVELS[key];if(!lv)return false;
+    if(lv.order===1)return true;
+    const prev=Object.values(LEVELS).find(l=>l.order===lv.order-1);
+    return prev&&p[prev.key]===1;  // 前一关已通关
+  }
+  function isCleared(key){const p=loadProg();return p[key]===1}
+  function markCleared(key){const p=loadProg();p[key]=1;
+    // 解锁下一关
+    const lv=LEVELS[key];const next=Object.values(LEVELS).find(l=>l.order===lv.order+1);
+    if(next&&!(next.key in p))p[next.key]=0;
+    saveProg(p);
+  }
 
   // ── DOM 引用 ──
   const $=id=>document.getElementById(id);
@@ -14516,13 +14768,9 @@ window.addEventListener('keydown',e=>{
   function initUI(){
     if(inited)return;inited=true;
     ctx=canvas.getContext('2d');
-    const hero=localStorage.getItem(HERO_KEY)||'🧠';
-    const picker=$('game-hero-picker');
-    picker.innerHTML=HEROES.map(h=>`<button data-hero="${h}" class="game-hero-btn" onclick="game_pickHero('${h}')" style="background:${h===hero?'rgba(251,146,60,0.18)':'var(--surface2)'};border:1.5px solid ${h===hero?'#fb923c':'var(--border)'};border-radius:8px;width:34px;height:34px;font-size:18px;cursor:pointer;padding:0;line-height:1">${h}</button>`).join('');
-    const sel=$('game-level-sel');
-    sel.innerHTML=Object.values(LEVELS).map(l=>`<option value="${l.key}" ${l.unlocked?'':'disabled'}>${l.name}${l.unlocked?'':' · 🔒'}</option>`).join('');
-    sel.value='pearl';
-    loadLevel('pearl');
+    renderHeroPicker();
+    renderLevelSelect();
+    loadLevel($('game-level-sel').value||'pearl');
     window.addEventListener('keydown',e=>{
       if(!isGameTabActive())return;
       keys[e.key.toLowerCase()]=true;
@@ -14530,6 +14778,35 @@ window.addEventListener('keydown',e=>{
       if(e.key.toLowerCase()==='r')game_start();
     });
     window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+  }
+
+  function renderHeroPicker(){
+    const cur=localStorage.getItem(HERO_KEY)||'emoji:🧠';
+    const picker=$('game-hero-picker');
+    const emojiBtns=EMOJI_HEROES.map(h=>{const k=`emoji:${h}`;const on=k===cur;
+      return `<button data-hero="${k}" class="game-hero-btn" onclick="game_pickHero('${k}')" title="${h}" style="background:${on?'rgba(251,146,60,0.18)':'var(--surface2)'};border:1.5px solid ${on?'#fb923c':'var(--border)'};border-radius:8px;width:36px;height:36px;font-size:18px;cursor:pointer;padding:0;line-height:1">${h}</button>`;
+    }).join('');
+    const dollBtns=Object.entries(DOLLS).map(([k,d])=>{const key=`doll:${k}`;const on=key===cur;
+      return `<button data-hero="${key}" class="game-hero-btn" onclick="game_pickHero('${key}')" title="${d.name}" style="background:${on?'rgba(124,58,237,0.18)':'var(--surface2)'};border:1.5px solid ${on?'#a78bfa':'var(--border)'};border-radius:8px;width:36px;height:36px;cursor:pointer;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center"><canvas data-doll="${k}" width="32" height="32" style="display:block"></canvas></button>`;
+    }).join('');
+    picker.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;gap:3px;align-items:center"><span style="font-size:10px;color:var(--text2);width:34px">Emoji</span>${emojiBtns}</div>
+      <div style="display:flex;gap:3px;align-items:center"><span style="font-size:10px;color:var(--text2);width:34px">玩偶</span>${dollBtns}</div>
+    </div>`;
+    // 把每个 doll 缩略图画到对应小 canvas
+    picker.querySelectorAll('canvas[data-doll]').forEach(c=>{
+      const k=c.dataset.doll;const cc=c.getContext('2d');cc.clearRect(0,0,32,32);
+      DOLLS[k].draw(cc,16,18,0,1,false);
+    });
+  }
+
+  function renderLevelSelect(){
+    const sel=$('game-level-sel');const prev=sel.value;
+    sel.innerHTML=Object.values(LEVELS).sort((a,b)=>a.order-b.order).map(l=>{
+      const un=isUnlocked(l.key);const cl=isCleared(l.key);
+      return `<option value="${l.key}" ${un?'':'disabled'}>${l.name}${cl?' · ✅':(un?'':' · 🔒')}</option>`;
+    }).join('');
+    sel.value=(prev&&isUnlocked(prev))?prev:'pearl';
   }
 
   function isGameTabActive(){
@@ -14541,18 +14818,19 @@ window.addEventListener('keydown',e=>{
     const L=LEVELS[key];if(!L)return;
     curLevel=L;
     $('game-hud-level').textContent=L.name;
-    $('game-level-info').innerHTML=L.unlocked?L.info:(L.locked+' — '+L.info);
-    if(!L.unlocked){drawLocked(L);return;}
+    $('game-level-info').innerHTML=L.info||'';
+    if(!isUnlocked(key)){drawLocked(L);return;}
     resetState();
-    draw();  // 静态画一帧
+    draw();
   }
 
   function resetState(){
-    if(!curLevel||!curLevel.unlocked)return;
+    if(!curLevel||!isUnlocked(curLevel.key))return;
     state={
-      hero:{x:30,y:300,w:30,h:34,vx:0,vy:0,onGround:false},
+      hero:{x:30,y:300,w:30,h:34,vx:0,vy:0,onGround:false,facing:1},
       hp:3,coins:0,treasure:0,t0:performance.now(),tNow:0,
       coinList:curLevel.coins.map(c=>({...c,alive:true})),
+      coinTotal:curLevel.coins.length,
       enemyList:curLevel.enemies.map(e=>({...e,dir:1})),
       treasurePos:{...curLevel.treasurePos,taken:false},
       over:false,won:false,hurtTimer:0
@@ -14566,7 +14844,9 @@ window.addEventListener('keydown',e=>{
 
   function start(){
     initUI();
-    if(!curLevel||!curLevel.unlocked){alert('该关卡暂未开放');return;}
+    const sel=$('game-level-sel').value;
+    if(sel&&isUnlocked(sel))loadLevel(sel);
+    if(!curLevel||!isUnlocked(curLevel.key)){alert('该关卡暂未解锁');return;}
     resetState();
     cancelAnimationFrame(rafId);
     state.t0=performance.now();
@@ -14587,8 +14867,8 @@ window.addEventListener('keydown',e=>{
     $('game-hud-time').textContent=state.tNow.toFixed(1);
     const h=state.hero;
     // 输入
-    if(keys['a']||keys['arrowleft'])h.vx-=0.7;
-    if(keys['d']||keys['arrowright'])h.vx+=0.7;
+    if(keys['a']||keys['arrowleft']){h.vx-=0.7;h.facing=-1;}
+    if(keys['d']||keys['arrowright']){h.vx+=0.7;h.facing=1;}
     if((keys['w']||keys['arrowup']||keys[' '])&&h.onGround){h.vy=JUMP;h.onGround=false;}
     // 物理
     h.vx*=FRICTION;if(Math.abs(h.vx)<0.05)h.vx=0;h.vx=Math.max(-MOVE*1.5,Math.min(MOVE*1.5,h.vx));
@@ -14629,14 +14909,22 @@ window.addEventListener('keydown',e=>{
     }
     // 宝箱
     const t=state.treasurePos;
-    if(!t.taken&&Math.hypot((h.x+h.w/2)-t.x,(h.y+h.h/2)-t.y)<26){
+    if(!t.taken&&Math.hypot((h.x+h.w/2)-t.x,(h.y+h.h/2)-t.y)<28){
+      if(curLevel.requireAllCoins&&state.coins<state.coinTotal){
+        state.hudHint='差 '+(state.coinTotal-state.coins)+' 个金币才能开启宝箱';
+        return;
+      }
       t.taken=true;state.treasure=1;$('game-hud-treasure').textContent='1';
-      endGame(true,`🎉 解锁 ${curLevel.treasure.name}！收集金币 ${state.coins} · 用时 ${state.tNow.toFixed(1)}s`);
+      markCleared(curLevel.key);
+      renderLevelSelect();
+      const nextLv=Object.values(LEVELS).find(l=>l.order===curLevel.order+1);
+      const more=nextLv?`<br>✨ 已解锁下一关：${nextLv.name}`:'<br>🎓 全部关卡通关！恭喜成为研究宗师';
+      endGame(true,`🎉 解锁 ${curLevel.treasure.name}！金币 ${state.coins}/${state.coinTotal} · 用时 ${state.tNow.toFixed(1)}s${more}`,nextLv);
     }
   }
 
-  function endGame(won,msg){
-    state.over=true;state.won=won;
+  function endGame(won,msg,nextLv){
+    state.over=true;state.won=won;state.nextLv=nextLv||null;
     cancelAnimationFrame(rafId);
     showOverlay(won?'🏆 VICTORY':'💥 GAME OVER',msg);
   }
@@ -14644,7 +14932,20 @@ window.addEventListener('keydown',e=>{
   function showOverlay(title,msg){
     const ov=$('game-overlay');
     $('game-overlay-title').textContent=title;
-    $('game-overlay-msg').textContent=msg;
+    $('game-overlay-msg').innerHTML=msg;
+    // 替换按钮区
+    let btns=ov.querySelector('.game-overlay-btns');
+    if(!btns){btns=document.createElement('div');btns.className='game-overlay-btns';btns.style.cssText='display:flex;gap:10px;margin-top:8px';ov.appendChild(btns);}
+    btns.innerHTML='';
+    if(state&&state.nextLv){
+      const b=document.createElement('button');b.className='btn btn-primary';b.setAttribute('data-no-fx','1');
+      b.textContent='▶ 进入下一关：'+state.nextLv.name.split('·')[1].trim();
+      b.onclick=()=>{$('game-level-sel').value=state.nextLv.key;loadLevel(state.nextLv.key);start();};
+      btns.appendChild(b);
+    }
+    const r=document.createElement('button');r.className='btn btn-ghost';r.setAttribute('data-no-fx','1');
+    r.textContent='↻ 重玩本关';r.onclick=start;r.style.color='#fff';r.style.borderColor='#94a3b8';
+    btns.appendChild(r);
     ov.style.display='flex';
   }
   function hideOverlay(){$('game-overlay').style.display='none';}
@@ -14675,10 +14976,27 @@ window.addEventListener('keydown',e=>{
       ctx.save();ctx.translate(t.x,t.y);ctx.scale(sc,sc);ctx.font='32px serif';ctx.fillText(curLevel.treasure.emoji,0,0);ctx.restore();
     }
     // 主角
-    const hero=localStorage.getItem(HERO_KEY)||'🧠';
     const blink=state.hurtTimer>0&&Math.floor(state.hurtTimer/5)%2===0;
-    if(!blink){ctx.font='30px serif';ctx.textBaseline='middle';ctx.textAlign='center';
-      ctx.fillText(hero,state.hero.x+state.hero.w/2,state.hero.y+state.hero.h/2);}
+    if(!blink){
+      const hk=localStorage.getItem(HERO_KEY)||'emoji:🧠';
+      const cx=state.hero.x+state.hero.w/2,cy=state.hero.y+state.hero.h/2;
+      const fa=state.hero.facing||1, jp=!state.hero.onGround;
+      if(hk.startsWith('doll:')){
+        const dk=hk.slice(5);if(DOLLS[dk])DOLLS[dk].draw(ctx,cx,cy,state.tNow,fa,jp);
+      }else{
+        const e=hk.slice(6);
+        ctx.font='30px serif';ctx.textBaseline='middle';ctx.textAlign='center';
+        ctx.save();ctx.translate(cx,cy);ctx.scale(fa,1);ctx.fillText(e,0,0);ctx.restore();
+      }
+    }
+    // 提示文字（差几个金币）
+    if(state.hudHint){
+      ctx.fillStyle='rgba(15,23,42,0.85)';ctx.font='13px -apple-system,sans-serif';ctx.textAlign='center';
+      const tw=ctx.measureText(state.hudHint).width;
+      ctx.fillRect(canvas.width/2-tw/2-8,10,tw+16,22);
+      ctx.fillStyle='#fef3c7';ctx.fillText(state.hudHint,canvas.width/2,21+5);
+      state.hudHintT=(state.hudHintT||0)+1;if(state.hudHintT>120){state.hudHint=null;state.hudHintT=0;}
+    }
     // 终点旗
     ctx.fillStyle='#dc2626';ctx.fillRect(canvas.width-12,canvas.height-160,3,120);
     ctx.fillStyle='#fbbf24';ctx.fillRect(canvas.width-12,canvas.height-160,30,18);
@@ -14692,10 +15010,9 @@ window.addEventListener('keydown',e=>{
     ctx.fillStyle='#1e293b';ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle='#94a3b8';ctx.font='bold 22px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('🔒 '+L.name,canvas.width/2,canvas.height/2-20);
+    const prev=Object.values(LEVELS).find(l=>l.order===L.order-1);
     ctx.font='14px -apple-system,sans-serif';ctx.fillStyle='#cbd5e1';
-    ctx.fillText(L.locked||'敬请期待',canvas.width/2,canvas.height/2+14);
-    ctx.font='11px -apple-system,sans-serif';ctx.fillStyle='#64748b';
-    ctx.fillText('完成 PEARL 关后扩展',canvas.width/2,canvas.height/2+36);
+    ctx.fillText(prev?'通关 '+prev.name+' 后解锁':'敬请期待',canvas.width/2,canvas.height/2+14);
   }
 
   // ── Tab 切换 ──
@@ -14709,12 +15026,14 @@ window.addEventListener('keydown',e=>{
     $('intel-tab-game').style.display=name==='game'?'block':'none';
     if(name==='game'){initUI();}
   };
-  window.game_pickHero=function(h){
-    localStorage.setItem(HERO_KEY,h);
+  window.game_pickHero=function(key){
+    localStorage.setItem(HERO_KEY,key);
+    const isDoll=key.startsWith('doll:');
     document.querySelectorAll('.game-hero-btn').forEach(b=>{
-      const on=b.dataset.hero===h;
-      b.style.background=on?'rgba(251,146,60,0.18)':'var(--surface2)';
-      b.style.border=`1.5px solid ${on?'#fb923c':'var(--border)'}`;
+      const on=b.dataset.hero===key;
+      const accent=on?(isDoll?'#a78bfa':'#fb923c'):'var(--border)';
+      const bg=on?(isDoll?'rgba(124,58,237,0.18)':'rgba(251,146,60,0.18)'):'var(--surface2)';
+      b.style.background=bg;b.style.border=`1.5px solid ${accent}`;
     });
     if(state)draw();
   };
