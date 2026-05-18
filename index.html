@@ -2639,13 +2639,29 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <button class="btn btn-primary btn-sm" onclick="game_start()">▶ 开始 / 重玩</button>
         </div>
       </div>
-      <!-- AI 关卡定制 -->
-      <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--text2);white-space:nowrap">🤖 按研究方向定制 4 关：</span>
-        <input id="game-field-inp" placeholder="如：流体力学 / 强化学习 / 凝聚态物理…" style="flex:1;min-width:200px;max-width:340px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);font-size:13px">
-        <button class="btn btn-primary btn-sm" onclick="game_aiGenerate()" id="game-ai-gen-btn">✨ AI 生成</button>
-        <button class="btn btn-ghost btn-sm" onclick="game_resetDefault()" title="恢复因果/OOD 默认 4 关">↺ 默认</button>
-        <span id="game-ai-status" style="font-size:11px;color:var(--text2)"></span>
+      <!-- 知识点 → AI 生成新关 -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600">🧪 上传知识点 → AI 即时生成一关</span>
+          <span style="font-size:11px;color:var(--text2)">粘贴文本 / 选文件 / 从 Zotero 复制</span>
+        </div>
+        <textarea id="game-kp-text" placeholder="粘贴本次想做成关卡的知识点（章节摘要、公式段落、论文片段…），AI 会按这个内容生成关卡名、敌人、宝箱和说明。" rows="3" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);font-size:12px;font-family:inherit;line-height:1.5;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <input type="file" id="game-kp-file" accept=".md,.txt,.pdf" style="display:none" onchange="game_loadKpFile(this)">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('game-kp-file').click()">📂 选文件 (md/txt/pdf)</button>
+          <button class="btn btn-ghost btn-sm" onclick="game_zoteroHint()" title="如何从 Zotero 引入">📚 Zotero 引入</button>
+          <span style="font-size:11px;color:var(--text2);margin-left:4px">难度</span>
+          <select id="game-kp-diff" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);font-size:12px">
+            <option value="1">⭐ 入门</option>
+            <option value="2">⭐⭐ 简单</option>
+            <option value="3" selected>⭐⭐⭐ 普通</option>
+            <option value="4">⭐⭐⭐⭐ 困难</option>
+            <option value="5">⭐⭐⭐⭐⭐ 噩梦</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="game_addCustomLevel()" id="game-kp-btn">✨ 生成新关</button>
+          <button class="btn btn-ghost btn-sm" onclick="game_clearCustom()" title="清空所有自定义关卡">🗑 清空自定义</button>
+          <span id="game-kp-status" style="font-size:11px;color:var(--text2);flex:1;min-width:120px"></span>
+        </div>
       </div>
     </div>
 
@@ -14740,93 +14756,181 @@ window.addEventListener('keydown',e=>{
     }
   };
 
-  // ── 保留默认关卡副本（用于 AI 覆盖时的物理布局兜底 & 恢复默认）
+  // ── 保留默认关卡副本
   const DEFAULT_LEVELS=JSON.parse(JSON.stringify(LEVELS));
 
   // ══════════════════════════════════════
-  //  AI 生成关卡（按用户研究方向定制）
+  //  自定义关卡（用户上传知识点 → AI 生成）
   // ══════════════════════════════════════
-  const AI_LV_KEY='rw_game_ai_levels';
-  const AI_FIELD_KEY='rw_game_ai_field';
-  const ORDER_KEYS=['pearl','pirm','dgcar','dgbaryir'];
+  const CUSTOM_KEY='rw_game_custom_levels';     // 数组，按添加顺序
+  const DEFAULT_ORDER=['pearl','pirm','dgcar','dgbaryir'];
+  // 当前所有关卡的顺序键（默认 4 + 自定义 N）
+  let LEVEL_ORDER=[...DEFAULT_ORDER];
 
-  function applyAILevels(arr,field){
-    ORDER_KEYS.forEach((k,i)=>{
-      const tpl=DEFAULT_LEVELS[k];const lv=arr[i]||{};
-      const grad=(Array.isArray(lv.bgGrad)&&lv.bgGrad.length===2&&lv.bgGrad.every(c=>/^#[0-9a-f]{6}$/i.test(c)))?lv.bgGrad:tpl.bgGrad;
-      let nm=(lv.name||tpl.name.split('·')[1]||'').trim();
-      nm=nm.replace(/^关\s*\d+\s*[·.\-:：]?\s*/,'').trim();
-      LEVELS[k]={
-        ...tpl,
-        name:`关 ${tpl.order} · ${nm}`,
-        bgGrad:grad,
-        enemy:(lv.enemy&&lv.enemy.emoji&&lv.enemy.name)?lv.enemy:tpl.enemy,
-        treasure:(lv.treasure&&lv.treasure.emoji&&lv.treasure.name)?lv.treasure:tpl.treasure,
-        info:lv.info||tpl.info,
-        _aiField:field||''
-      };
+  // 难度模板：1-5 星，影响平台/金币/敌人密度速度 & HP & 金币要求
+  function genLayoutByDifficulty(d){
+    d=Math.max(1,Math.min(5,parseInt(d)||3));
+    // 各档预设
+    const tpls={
+      1:{ // 入门
+        platforms:[{x:0,y:340,w:900,h:40},{x:160,y:270,w:140,h:14},{x:380,y:230,w:120,h:14},{x:580,y:270,w:140,h:14},{x:770,y:220,w:110,h:14}],
+        coins:[{x:200,y:240},{x:260,y:240},{x:430,y:200},{x:620,y:240},{x:820,y:190}],
+        enemies:[{x:140,y:310,minX:50,maxX:280,speed:1.2},{x:440,y:230,minX:380,maxX:480,speed:1.3}],
+        treasurePos:{x:840,y:185},maxHP:3,requireAllCoins:false
+      },
+      2:{
+        platforms:[{x:0,y:340,w:900,h:40},{x:140,y:280,w:110,h:14},{x:310,y:230,w:100,h:14},{x:470,y:270,w:110,h:14},{x:630,y:220,w:100,h:14},{x:770,y:170,w:120,h:14}],
+        coins:[{x:175,y:250},{x:340,y:200},{x:510,y:240},{x:670,y:190},{x:790,y:140},{x:840,y:140}],
+        enemies:[{x:150,y:310,minX:50,maxX:300,speed:1.5},{x:340,y:230,minX:310,maxX:400,speed:1.6},{x:510,y:270,minX:470,maxX:570,speed:1.5}],
+        treasurePos:{x:830,y:135},maxHP:3,requireAllCoins:false
+      },
+      3:{
+        platforms:[{x:0,y:340,w:200,h:40},{x:270,y:340,w:140,h:40},{x:480,y:340,w:140,h:40},{x:690,y:340,w:210,h:40},{x:130,y:265,w:90,h:14},{x:290,y:220,w:100,h:14},{x:450,y:240,w:90,h:14},{x:610,y:200,w:100,h:14},{x:750,y:250,w:100,h:14}],
+        coins:[{x:165,y:235},{x:330,y:190},{x:480,y:210},{x:640,y:170},{x:790,y:220},{x:60,y:310},{x:550,y:310},{x:850,y:310}],
+        enemies:[{x:290,y:340,minX:270,maxX:400,speed:1.8},{x:495,y:340,minX:480,maxX:610,speed:1.9},{x:310,y:220,minX:290,maxX:380,speed:1.5},{x:760,y:250,minX:750,maxX:840,speed:1.7}],
+        treasurePos:{x:855,y:215},maxHP:3,requireAllCoins:false
+      },
+      4:{
+        platforms:[{x:0,y:340,w:140,h:40},{x:210,y:300,w:80,h:14},{x:340,y:340,w:90,h:40},{x:470,y:260,w:90,h:14},{x:610,y:340,w:90,h:40},{x:730,y:210,w:90,h:14},{x:830,y:340,w:70,h:40},{x:170,y:220,w:90,h:14},{x:560,y:170,w:120,h:14}],
+        coins:[{x:200,y:190},{x:235,y:190},{x:495,y:230},{x:755,y:180},{x:600,y:140},{x:640,y:140},{x:380,y:310},{x:650,y:310}],
+        enemies:[{x:340,y:340,minX:340,maxX:420,speed:2.2},{x:610,y:340,minX:610,maxX:690,speed:2.3},{x:180,y:220,minX:170,maxX:250,speed:1.9},{x:740,y:210,minX:730,maxX:810,speed:2.0},{x:50,y:310,minX:20,maxX:130,speed:1.7}],
+        treasurePos:{x:865,y:295},maxHP:3,requireAllCoins:false
+      },
+      5:{ // 噩梦：金币必须收齐
+        platforms:[{x:0,y:340,w:120,h:40},{x:180,y:285,w:80,h:14},{x:320,y:235,w:75,h:14},{x:450,y:285,w:75,h:14},{x:580,y:235,w:75,h:14},{x:710,y:175,w:110,h:14},{x:130,y:200,w:75,h:14},{x:280,y:340,w:70,h:40},{x:480,y:340,w:70,h:40},{x:680,y:340,w:70,h:40},{x:820,y:340,w:80,h:40}],
+        coins:[{x:155,y:170},{x:215,y:255},{x:350,y:205},{x:480,y:255},{x:610,y:205},{x:750,y:145},{x:790,y:145},{x:60,y:310},{x:520,y:310},{x:730,y:310}],
+        enemies:[{x:185,y:285,minX:180,maxX:255,speed:2.4},{x:325,y:235,minX:320,maxX:390,speed:2.2},{x:455,y:285,minX:450,maxX:520,speed:2.5},{x:585,y:235,minX:580,maxX:650,speed:2.3},{x:140,y:340,minX:30,maxX:110,speed:2.0},{x:680,y:340,minX:680,maxX:740,speed:2.4}],
+        treasurePos:{x:855,y:140},maxHP:3,requireAllCoins:true
+      }
+    };
+    return tpls[d];
+  }
+
+  // 自定义关 storage
+  function loadCustom(){try{return JSON.parse(localStorage.getItem(CUSTOM_KEY))||[]}catch(e){return[]}}
+  function saveCustom(arr){localStorage.setItem(CUSTOM_KEY,JSON.stringify(arr))}
+
+  // 用一段知识点摘要 + AI 返回的主题 + 难度，组成一个完整关卡对象
+  function buildCustomLevel(ai,kp,difficulty,idx){
+    const layout=genLayoutByDifficulty(difficulty);
+    const grad=(Array.isArray(ai.bgGrad)&&ai.bgGrad.length===2&&ai.bgGrad.every(c=>/^#[0-9a-f]{6}$/i.test(c)))
+      ?ai.bgGrad:['#fef9c3','#fde68a'];
+    let nm=(ai.name||'自定义知识点').trim().replace(/^关\s*\d+\s*[·.\-:：]?\s*/,'').trim();
+    const order=DEFAULT_ORDER.length+idx+1;
+    const key='custom_'+Date.now()+'_'+idx;
+    return {
+      key,order,custom:true,difficulty,
+      name:`关 ${order} · ${nm} ${'★'.repeat(difficulty)}`,
+      bgGrad:grad,
+      enemy:(ai.enemy&&ai.enemy.emoji&&ai.enemy.name)?ai.enemy:{emoji:'❓',name:'未知难点'},
+      treasure:(ai.treasure&&ai.treasure.emoji&&ai.treasure.name)?ai.treasure:{emoji:'💡',name:'核心方法'},
+      info:(ai.info||'')+`<br><span style="font-size:11px;color:var(--text2)">📎 知识点来源（节选 200 字）：${kp.slice(0,200).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}${kp.length>200?'…':''}</span>`,
+      ...layout
+    };
+  }
+
+  // 重建 LEVELS 注册表
+  function rebuildLevels(){
+    // 重置默认 4
+    DEFAULT_ORDER.forEach(k=>{LEVELS[k]=JSON.parse(JSON.stringify(DEFAULT_LEVELS[k]));});
+    // 清除原自定义
+    Object.keys(LEVELS).filter(k=>k.startsWith('custom_')).forEach(k=>delete LEVELS[k]);
+    LEVEL_ORDER=[...DEFAULT_ORDER];
+    loadCustom().forEach(lv=>{
+      LEVELS[lv.key]=lv;LEVEL_ORDER.push(lv.key);
     });
   }
 
-  function restoreDefaultLevels(){
-    ORDER_KEYS.forEach(k=>{LEVELS[k]=JSON.parse(JSON.stringify(DEFAULT_LEVELS[k]));});
-  }
+  async function addCustomLevel(){
+    const kpEl=$('game-kp-text');const diffEl=$('game-kp-diff');
+    const status=$('game-kp-status');const btn=$('game-kp-btn');
+    const kp=(kpEl.value||'').trim();
+    const difficulty=parseInt(diffEl.value)||3;
+    if(!kp||kp.length<20){status.style.color='#f59e0b';status.textContent='⚠ 知识点至少 20 字';return;}
+    if(typeof window._callAI!=='function'){status.style.color='#ef4444';status.textContent='⚠ 未找到 AI 接口';return;}
+    btn.disabled=true;status.style.color='var(--text2)';status.textContent='AI 解析知识点中…（10-20s）';
+    const prompt=`你是科研游戏关卡设计师。下面是用户上传的「专业知识点」原文，请基于它设计 1 关闯关游戏的主题元素：敌人=该知识点中的核心难题，宝箱=破解这个难题的方法/工具/定理。
 
-  function tryRestoreAICache(){
-    const raw=localStorage.getItem(AI_LV_KEY);if(!raw)return false;
-    try{
-      const arr=JSON.parse(raw);if(!Array.isArray(arr)||arr.length<4)return false;
-      applyAILevels(arr,localStorage.getItem(AI_FIELD_KEY)||'');
-      return true;
-    }catch(e){return false;}
-  }
+知识点原文（${kp.length} 字）：
+"""
+${kp.slice(0,3000)}
+"""
 
-  async function aiGenerate(){
-    const inp=$('game-field-inp');const status=$('game-ai-status');const btn=$('game-ai-gen-btn');
-    const field=(inp.value||'').trim();
-    if(!field){status.textContent='⚠ 请先输入研究方向';return;}
-    if(typeof window._callAI!=='function'){status.textContent='⚠ 未找到 AI 接口';return;}
-    btn.disabled=true;status.style.color='var(--text2)';status.textContent='生成中…（约 10-20s）';
-    const prompt=`你是科研主题游戏关卡设计师。用户的研究方向是：「${field}」。
-请为这个领域设计 4 关「打怪闯关」游戏的主题元素，按学术难度递增排列。每关代表该领域的一个核心难题，敌人=该难题，宝箱=破解该难题的经典方法。
+难度：${difficulty}/5 星（${['入门','简单','普通','困难','噩梦'][difficulty-1]}）—— 仅作为基调参考，不影响输出字段。
 
-只输出严格 JSON（不要 markdown 代码块、不要注释、不要多余文字），格式如下：
-{
-  "levels":[
-    {"name":"中文主题名（不超过 12 字）","bgGrad":["#xxxxxx","#yyyyyy"],"enemy":{"emoji":"单个 emoji","name":"敌人含义（学术术语，10 字内）"},"treasure":{"emoji":"单个 emoji","name":"破解方法（学术术语，14 字内）"},"info":"<b>问题</b>：该领域第几个核心难题是什么。<b>方法</b>：宝箱代表的方法是什么、为什么能破解。<br>本关 敌人emoji 代表 xxx，需借助 宝箱emoji 跳过/击败。50-90 字。"},
-    ... 4 项
-  ]
-}
+只输出严格 JSON（不要 markdown 代码块、不要注释、第一个字符必须是 {），格式：
+{"name":"中文主题名（基于知识点，不超过 14 字）","bgGrad":["#xxxxxx","#yyyyyy"],"enemy":{"emoji":"单个 emoji","name":"敌人含义（学术术语，10 字内）"},"treasure":{"emoji":"单个 emoji","name":"破解方法（学术术语，14 字内）"},"info":"<b>问题</b>：知识点中的核心难题是什么。<b>方法</b>：宝箱代表的方法/工具是什么、为什么能破解。<br>本关你需要 …… 60-100 字。"}
 
 约束：
-- bgGrad 4 关使用不同色系（例如：暖橙→冷蓝→粉紫→深绿），均为合法 6 位十六进制
-- emoji 必须能直观表达该学术概念（如流体力学的湍流可用 🌊 或 🌀）
-- name 用术语别用空话，info 用真实学术语汇
-- 严禁出现 \`\`\`json 或解释性前后缀，第一个字符必须是 {`;
+- name/enemy/treasure/info 必须忠实于知识点原文，不能套话
+- bgGrad 选合适色系（如数学/物理偏冷蓝、生物偏绿、化学偏橙）
+- emoji 必须能直观表达该学术概念`;
     let raw=null;
-    try{raw=await window._callAI(prompt,1800);}catch(e){raw=null;}
+    try{raw=await window._callAI(prompt,1500);}catch(e){raw=null;}
     btn.disabled=false;
-    if(!raw){status.style.color='#ef4444';status.textContent='❌ AI 无响应，检查个人设置里的 AI 配置';return;}
-    // 提取 JSON
+    if(!raw){status.style.color='#ef4444';status.textContent='❌ AI 无响应';return;}
     const m=raw.match(/\{[\s\S]*\}/);
-    if(!m){status.style.color='#ef4444';status.textContent='❌ 解析失败，未找到 JSON';console.warn('[ai-game] raw:',raw);return;}
-    let obj;try{obj=JSON.parse(m[0]);}catch(e){status.style.color='#ef4444';status.textContent='❌ JSON 解析失败：'+e.message;console.warn('[ai-game] raw:',raw);return;}
-    if(!obj.levels||!Array.isArray(obj.levels)||obj.levels.length<4){status.style.color='#ef4444';status.textContent='❌ 返回不含 4 个关卡';return;}
-    applyAILevels(obj.levels,field);
-    localStorage.setItem(AI_LV_KEY,JSON.stringify(obj.levels));
-    localStorage.setItem(AI_FIELD_KEY,field);
-    status.style.color='#10b981';status.textContent='✅ 已生成 · 主题「'+field+'」';
+    if(!m){status.style.color='#ef4444';status.textContent='❌ 未找到 JSON';console.warn('[ai-game] raw:',raw);return;}
+    let ai;try{ai=JSON.parse(m[0]);}catch(e){status.style.color='#ef4444';status.textContent='❌ JSON 解析失败';console.warn('[ai-game] raw:',raw);return;}
+    const cur=loadCustom();
+    const newLv=buildCustomLevel(ai,kp,difficulty,cur.length);
+    cur.push(newLv);saveCustom(cur);
+    // 同时自动解锁这一关（自定义关默认解锁，无需通关前序）
+    const prog=loadProg();prog[newLv.key]=0;saveProg(prog);
+    rebuildLevels();
     renderLevelSelect();
-    loadLevel($('game-level-sel').value||'pearl');
+    $('game-level-sel').value=newLv.key;
+    loadLevel(newLv.key);
+    kpEl.value='';
+    status.style.color='#10b981';status.textContent=`✅ 已添加：${newLv.name}（自定义关默认解锁，可直接玩）`;
   }
 
-  function resetDefault(){
-    restoreDefaultLevels();
-    localStorage.removeItem(AI_LV_KEY);localStorage.removeItem(AI_FIELD_KEY);
-    $('game-field-inp').value='';
-    const status=$('game-ai-status');status.style.color='var(--text2)';status.textContent='已恢复默认（因果/OOD）4 关';
-    renderLevelSelect();
-    loadLevel($('game-level-sel').value||'pearl');
+  function clearCustom(){
+    if(!confirm('清空所有自定义关卡？默认 4 关不受影响。'))return;
+    localStorage.removeItem(CUSTOM_KEY);
+    // 清除自定义关的进度
+    const p=loadProg();Object.keys(p).filter(k=>k.startsWith('custom_')).forEach(k=>delete p[k]);saveProg(p);
+    rebuildLevels();renderLevelSelect();loadLevel('pearl');
+    const s=$('game-kp-status');s.style.color='var(--text2)';s.textContent='已清空自定义关卡';
+  }
+
+  async function loadKpFile(input){
+    const f=input.files[0];if(!f)return;
+    const status=$('game-kp-status');
+    const ext=(f.name.split('.').pop()||'').toLowerCase();
+    try{
+      if(ext==='md'||ext==='txt'){
+        const txt=await f.text();
+        $('game-kp-text').value=txt.slice(0,5000);
+        status.style.color='var(--text2)';status.textContent=`已读取 ${f.name} (${txt.length} 字${txt.length>5000?', 截前 5000':''})`;
+      }else if(ext==='pdf'){
+        // 按需动态加载 pdf.js
+        status.style.color='var(--text2)';status.textContent='解析 PDF 中…';
+        if(!window.pdfjsLib){
+          await loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        }
+        const buf=await f.arrayBuffer();
+        const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+        let txt='';const N=Math.min(pdf.numPages,20);
+        for(let i=1;i<=N;i++){
+          const pg=await pdf.getPage(i);
+          const c=await pg.getTextContent();
+          txt+=c.items.map(it=>it.str).join(' ')+'\n';
+          if(txt.length>5000)break;
+        }
+        $('game-kp-text').value=txt.slice(0,5000);
+        status.style.color='var(--text2)';status.textContent=`已解析 ${f.name} 前 ${N} 页（${txt.length} 字${txt.length>5000?', 截前 5000':''}）`;
+      }else{
+        status.style.color='#ef4444';status.textContent='不支持的文件类型，仅 md/txt/pdf';
+      }
+    }catch(e){status.style.color='#ef4444';status.textContent='读取失败：'+e.message;}
+    input.value='';
+  }
+  function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);})}
+
+  function zoteroHint(){
+    alert('💡 从 Zotero 引入步骤：\n\n1. Zotero 打开目标条目，右键「附件 → 用 PDF 阅读器打开」\n2. 全选笔记/摘要/正文复制\n3. 粘贴到上方文本框，点击「✨ 生成新关」\n\n或：在 Zotero 网页版导出 BibTeX/Notes 后，把摘要文本粘进来。');
   }
 
   // ══════════════════════════════════════
@@ -14837,11 +14941,13 @@ window.addEventListener('keydown',e=>{
   function isUnlocked(key){
     const p=loadProg();
     if(key in p)return true;
-    // 按 order 线性解锁：前一关通关后才解锁
     const lv=LEVELS[key];if(!lv)return false;
+    // 自定义关默认解锁（生成时已写 progress）
+    if(lv.custom)return true;
     if(lv.order===1)return true;
-    const prev=Object.values(LEVELS).find(l=>l.order===lv.order-1);
-    return prev&&p[prev.key]===1;  // 前一关已通关
+    // 默认 4 关线性解锁
+    const prev=DEFAULT_ORDER.find(k=>LEVELS[k]&&LEVELS[k].order===lv.order-1);
+    return prev&&p[prev]===1;
   }
   function isCleared(key){const p=loadProg();return p[key]===1}
   function markCleared(key){const p=loadProg();p[key]=1;
@@ -14865,21 +14971,12 @@ window.addEventListener('keydown',e=>{
   function initUI(){
     if(inited)return;inited=true;
     ctx=canvas.getContext('2d');
-    // 尝试恢复 AI 缓存的关卡定制
-    const restored=tryRestoreAICache();
-    const fieldInp=$('game-field-inp');
-    if(restored){
-      fieldInp.value=localStorage.getItem(AI_FIELD_KEY)||'';
-      $('game-ai-status').textContent='已加载缓存 · 「'+fieldInp.value+'」';
-    }else{
-      // 从用户 cfg 自动预填
-      try{const cfg=(typeof getCfg==='function')?getCfg():null;
-        if(cfg){fieldInp.placeholder=(cfg.areas&&cfg.areas[0])?(`如：${cfg.areas[0]} / ${cfg.areas[1]||'强化学习'}…`):fieldInp.placeholder;}
-      }catch(e){}
-    }
+    rebuildLevels();
     renderHeroPicker();
     renderLevelSelect();
     loadLevel($('game-level-sel').value||'pearl');
+    const cnt=loadCustom().length;
+    if(cnt>0){const s=$('game-kp-status');s.style.color='var(--text2)';s.textContent=`已有 ${cnt} 个自定义关卡`;}
     window.addEventListener('keydown',e=>{
       if(!isGameTabActive())return;
       keys[e.key.toLowerCase()]=true;
@@ -14911,9 +15008,11 @@ window.addEventListener('keydown',e=>{
 
   function renderLevelSelect(){
     const sel=$('game-level-sel');const prev=sel.value;
-    sel.innerHTML=Object.values(LEVELS).sort((a,b)=>a.order-b.order).map(l=>{
+    const items=LEVEL_ORDER.map(k=>LEVELS[k]).filter(Boolean);
+    sel.innerHTML=items.map(l=>{
       const un=isUnlocked(l.key);const cl=isCleared(l.key);
-      return `<option value="${l.key}" ${un?'':'disabled'}>${l.name}${cl?' · ✅':(un?'':' · 🔒')}</option>`;
+      const star=l.custom?'':(cl?' · ✅':(un?'':' · 🔒'));
+      return `<option value="${l.key}" ${un?'':'disabled'}>${l.name}${star}</option>`;
     }).join('');
     sel.value=(prev&&isUnlocked(prev))?prev:'pearl';
   }
@@ -15148,8 +15247,10 @@ window.addEventListener('keydown',e=>{
   };
   window.game_loadLevel=loadLevel;
   window.game_start=start;
-  window.game_aiGenerate=aiGenerate;
-  window.game_resetDefault=resetDefault;
+  window.game_addCustomLevel=addCustomLevel;
+  window.game_clearCustom=clearCustom;
+  window.game_loadKpFile=loadKpFile;
+  window.game_zoteroHint=zoteroHint;
 })();
 </script>
 
