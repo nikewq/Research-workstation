@@ -2695,25 +2695,26 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     <!-- 顶部：库存条 + 操作 -->
     <div class="card" style="margin-bottom:14px;padding:14px 16px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-        <div>
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px">🌾 科研农场 · Research Farm</div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px"><span id="farm-title">🌾 科研农场 · Research Farm</span></div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6" id="farm-welcome">
             种作物 → 收获 → 卖钱解锁奖励 · 完成番茄钟 → 加速生长 · 成熟作物可能冒❓→答对赏励
           </div>
         </div>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:14px;font-weight:700">
-          <span style="color:#fbbf24" title="金币">💰 <span id="farm-gold">0</span></span>
-          <span style="color:#a78bfa" title="加速生长器：从番茄钟换得">⚡ <span id="farm-accel">0</span></span>
-          <span style="color:#10b981" title="肥料：商店购买">🧪 <span id="farm-fert">0</span></span>
+          <span style="color:#fbbf24" title="金币"><span id="farm-gold-icon">💰</span> <span id="farm-gold">0</span></span>
+          <span style="color:#a78bfa" id="farm-accel-wrap" title="加速器：番茄钟换得"><span id="farm-accel-icon">⚡</span> <span id="farm-accel">0</span></span>
+          <span style="color:#10b981" id="farm-fert-wrap" title="肥料：商店购买"><span id="farm-fert-icon">🧪</span> <span id="farm-fert">0</span></span>
           <button class="btn btn-primary btn-sm" onclick="farm_openShop()">🛍️ 商店</button>
           <button class="btn btn-ghost btn-sm" onclick="farm_openMilestones()" title="金币里程碑奖励">🏆 里程碑</button>
           <button class="btn btn-ghost btn-sm" onclick="farm_openAchievements()" title="成就榜" style="position:relative">🏅 成就 <span id="farm-ach-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;padding:1px 5px;font-weight:700">0</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="farm_themeMenu()" title="按你的研究方向主题化整个农场">🎨 主题</button>
         </div>
       </div>
     </div>
 
     <!-- 农场网格 -->
-    <div class="card" style="padding:18px 16px;background:linear-gradient(180deg,#dcfce7 0%,#bbf7d0 100%);border:1px solid #86efac">
+    <div class="card" id="farm-bg" style="padding:18px 16px;background:linear-gradient(180deg,#dcfce7 0%,#bbf7d0 100%);border:1px solid #86efac">
       <div id="farm-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:780px;margin:0 auto"></div>
       <div id="farm-tip" style="text-align:center;font-size:11px;color:#15803d;margin-top:12px">💡 点击空地播种 · 点击成熟作物收获 · 点击 ❓ 答题得奖励</div>
     </div>
@@ -2780,9 +2781,9 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 </div>
 
 <style>
-.farm-plot{aspect-ratio:1;border-radius:8px;background:#a16207;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:transform .15s,box-shadow .15s;border:2px solid transparent;font-size:28px;line-height:1;user-select:none}
+.farm-plot{aspect-ratio:1;border-radius:8px;background:var(--farm-soil,#a16207);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:transform .15s,box-shadow .15s;border:2px solid transparent;font-size:28px;line-height:1;user-select:none}
 .farm-plot:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15);border-color:#fbbf24}
-.farm-plot.empty{background:repeating-linear-gradient(45deg,#92400e 0,#92400e 6px,#78350f 6px,#78350f 12px);color:rgba(255,255,255,0.4);font-size:22px}
+.farm-plot.empty{background:repeating-linear-gradient(45deg,var(--farm-soil,#92400e) 0,var(--farm-soil,#92400e) 6px,var(--farm-soil2,#78350f) 6px,var(--farm-soil2,#78350f) 12px);color:rgba(255,255,255,0.4);font-size:22px}
 .farm-plot.empty:hover::after{content:'+';position:absolute;font-size:38px;color:#fff;text-shadow:0 0 6px rgba(0,0,0,0.4)}
 .farm-plot.ripe{background:linear-gradient(180deg,#fef3c7,#fde68a);animation:farmRipe 1.4s ease-in-out infinite}
 .farm-plot .stage-bar{position:absolute;bottom:4px;left:6px;right:6px;height:5px;background:rgba(0,0,0,0.3);border-radius:3px;overflow:hidden}
@@ -15590,7 +15591,58 @@ ${kp.slice(0,3000)}
 
   // ── 状态 ──
   const FARM_KEY='rw_farm_state_v1';
+  const SKIN_KEY='rw_farm_skin_v1';
   const PLOTS=24; // 6×4
+  let skin=null; // {farmName, welcomeLine, bgGradient[2], soilColor, soilColor2, accelEmoji, accelName, fertEmoji, fertName, goldEmoji, goldName, cropMap:{key:{emoji,name}}}
+  function loadSkin(){try{const s=JSON.parse(localStorage.getItem(SKIN_KEY));return s||null;}catch(e){return null;}}
+  function saveSkin(s){localStorage.setItem(SKIN_KEY,JSON.stringify(s));}
+  function clearSkin(){localStorage.removeItem(SKIN_KEY);skin=null;}
+
+  // 作物显示（皮肤覆盖 → 默认）
+  function display(key){
+    const c=CROPS[key];if(!c)return{emoji:'🌱',name:'?'};
+    if(skin&&skin.cropMap&&skin.cropMap[key]){
+      const m=skin.cropMap[key];
+      return{emoji:m.emoji||c.emoji,name:m.name||c.name};
+    }
+    return{emoji:c.emoji,name:c.name};
+  }
+  function uiName(slot){
+    // slot: 'accel'|'fert'|'gold'
+    if(!skin)return{accel:{e:'⚡',n:'加速器'},fert:{e:'🧪',n:'肥料'},gold:{e:'💰',n:'金币'}}[slot];
+    if(slot==='accel')return{e:skin.accelEmoji||'⚡',n:skin.accelName||'加速器'};
+    if(slot==='fert' )return{e:skin.fertEmoji ||'🧪',n:skin.fertName ||'肥料'};
+    if(slot==='gold' )return{e:skin.goldEmoji ||'💰',n:skin.goldName ||'金币'};
+    return{e:'',n:''};
+  }
+  function applySkinDOM(){
+    // 顶部农场名 / 欢迎语
+    const t=$('farm-title'),w=$('farm-welcome');
+    if(skin){
+      if(t)t.textContent='🌾 '+skin.farmName;
+      if(w)w.textContent=skin.welcomeLine;
+    }else{
+      if(t)t.textContent='🌾 科研农场 · Research Farm';
+      if(w)w.textContent='种作物 → 收获 → 卖钱解锁奖励 · 完成番茄钟 → 加速生长 · 成熟作物可能冒❓→答对赏励';
+    }
+    // HUD 图标
+    const ag=uiName('gold'),aa=uiName('accel'),af=uiName('fert');
+    $('farm-gold-icon').textContent=ag.e;$('farm-accel-icon').textContent=aa.e;$('farm-fert-icon').textContent=af.e;
+    $('farm-gold-icon').parentElement.title=ag.n;
+    $('farm-accel-wrap').title=aa.n+'：番茄钟换得';
+    $('farm-fert-wrap').title=af.n+'：商店购买';
+    // 背景
+    const bg=$('farm-bg');
+    if(bg){
+      const g=(skin&&Array.isArray(skin.bgGradient)&&skin.bgGradient.length===2)?skin.bgGradient:['#dcfce7','#bbf7d0'];
+      bg.style.background=`linear-gradient(180deg,${g[0]} 0%,${g[1]} 100%)`;
+      bg.style.borderColor=g[1];
+    }
+    // 田垄底色（注入 CSS 变量）
+    const root=document.documentElement;
+    if(skin&&skin.soilColor){root.style.setProperty('--farm-soil',skin.soilColor);root.style.setProperty('--farm-soil2',skin.soilColor2||skin.soilColor);}
+    else{root.style.removeProperty('--farm-soil');root.style.removeProperty('--farm-soil2');}
+  }
   function defaultState(){
     return {
       plots:Array(PLOTS).fill(null).map(()=>null),
@@ -15682,13 +15734,14 @@ ${kp.slice(0,3000)}
       if(!p){html.push(`<div class="farm-plot empty" data-idx="${i}" onclick="farm_clickPlot(${i})">＋</div>`);continue;}
       maybeSpawnQuestion(p);
       const c=CROPS[p.crop];
+      const d=display(p.crop);
       const st=getCropStage(p);
       const ripe=st===c.stages-1;
-      const emoji=ripe?c.emoji:(STAGE_EMOJI[Math.min(st,STAGE_EMOJI.length-1)]||'🌱');
+      const emoji=ripe?d.emoji:(STAGE_EMOJI[Math.min(st,STAGE_EMOJI.length-1)]||'🌱');
       const cls=['farm-plot'];if(ripe)cls.push('ripe');
       const q=p.hasQ?`<div class="q-badge">❓</div>`:'';
       const pct=growthPct(p);
-      html.push(`<div class="${cls.join(' ')}" data-idx="${i}" onclick="farm_clickPlot(${i})" title="${esc(c.name)} · ${stageProgress(p)} 阶段 · ${timeLeft(p)}">${emoji}<div class="stage-bar"><div class="stage-bar-fill" style="width:${pct}%"></div></div>${q}</div>`);
+      html.push(`<div class="${cls.join(' ')}" data-idx="${i}" onclick="farm_clickPlot(${i})" title="${esc(d.name)} · ${stageProgress(p)} 阶段 · ${timeLeft(p)}">${emoji}<div class="stage-bar"><div class="stage-bar-fill" style="width:${pct}%"></div></div>${q}</div>`);
     }
     grid.innerHTML=html.join('');
   }
@@ -15700,6 +15753,7 @@ ${kp.slice(0,3000)}
     const p=S.plots[idx];
     const popup=$('farm-popup');
     popupOpenIdx=idx;
+    const ag=uiName('gold'),aa=uiName('accel'),af=uiName('fert');
     if(!p){
       // 空地：选种子
       const seeds=Object.entries(S.ownedSeeds||{}).filter(([,n])=>n>0);
@@ -15707,19 +15761,19 @@ ${kp.slice(0,3000)}
         popup.innerHTML=`<div style="font-size:13px;margin-bottom:8px">🌱 没有种子了</div><button class="btn btn-primary btn-sm" onclick="farm_openShop();farm_closePopup()">去商店买</button>`;
       }else{
         popup.innerHTML=`<div style="font-size:13px;margin-bottom:8px;font-weight:600">🌱 选择种子播种</div>`+
-          seeds.map(([k,n])=>{const c=CROPS[k];return `<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;margin-bottom:4px;font-size:13px" onclick="farm_plant(${idx},'${k}');farm_closePopup()"><span style="font-size:20px;margin-right:8px">${c.emoji}</span>${c.name} · ${c.totalMin}min · 售价${c.price}金 <span style="margin-left:auto;color:var(--text2)">×${n}</span></button>`;}).join('');
+          seeds.map(([k,n])=>{const c=CROPS[k];const d=display(k);return `<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;margin-bottom:4px;font-size:13px" onclick="farm_plant(${idx},'${k}');farm_closePopup()"><span style="font-size:20px;margin-right:8px">${d.emoji}</span>${d.name} · ${c.totalMin}min · 售价${c.price}${ag.e} <span style="margin-left:auto;color:var(--text2)">×${n}</span></button>`;}).join('');
       }
     }else if(isRipe(p)){
-      const c=CROPS[p.crop];
-      popup.innerHTML=`<div style="font-size:13px;margin-bottom:8px;font-weight:600">${c.emoji} ${c.name} 已成熟</div>
-        <button class="btn btn-primary" style="width:100%;margin-bottom:4px" onclick="farm_harvest(${idx});farm_closePopup()">🌾 收获 (+${c.price}金) </button>
+      const c=CROPS[p.crop];const d=display(p.crop);
+      popup.innerHTML=`<div style="font-size:13px;margin-bottom:8px;font-weight:600">${d.emoji} ${d.name} 已成熟</div>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:4px" onclick="farm_harvest(${idx});farm_closePopup()">🌾 收获 (+${c.price}${ag.e}) </button>
         ${p.hasQ?`<button class="btn btn-ghost" style="width:100%" onclick="farm_askQuestion(${idx});farm_closePopup()">❓ 答题领奖</button>`:''}`;
     }else{
-      const c=CROPS[p.crop];
-      popup.innerHTML=`<div style="font-size:13px;margin-bottom:8px;font-weight:600">${c.emoji} ${c.name}</div>
+      const c=CROPS[p.crop];const d=display(p.crop);
+      popup.innerHTML=`<div style="font-size:13px;margin-bottom:8px;font-weight:600">${d.emoji} ${d.name}</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${stageProgress(p)} 阶段 · 剩余 ${timeLeft(p)}</div>
-        <button class="btn btn-primary" style="width:100%;margin-bottom:4px;${S.accel<=0?'opacity:.4;pointer-events:none':''}" onclick="farm_useAccel(${idx});farm_closePopup()">⚡ 加速器 跳 1 阶段 (剩 ${S.accel})</button>
-        <button class="btn btn-ghost" style="width:100%;margin-bottom:4px;${S.fert<=0?'opacity:.4;pointer-events:none':''}" onclick="farm_useFert(${idx});farm_closePopup()">🧪 肥料 (产量 ×1.5, 剩 ${S.fert})</button>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:4px;${S.accel<=0?'opacity:.4;pointer-events:none':''}" onclick="farm_useAccel(${idx});farm_closePopup()">${aa.e} ${aa.n} 跳 1 阶段 (剩 ${S.accel})</button>
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:4px;${S.fert<=0?'opacity:.4;pointer-events:none':''}" onclick="farm_useFert(${idx});farm_closePopup()">${af.e} ${af.n} (产量 ×1.5, 剩 ${S.fert})</button>
         <button class="btn btn-ghost" style="width:100%;color:#ef4444" onclick="farm_remove(${idx});farm_closePopup()">🗑 铲掉</button>`;
     }
     // 定位
@@ -15804,36 +15858,36 @@ ${kp.slice(0,3000)}
   }
   function renderShop(){
     const body=$('farm-shop-body');
+    const ag=uiName('gold'),af=uiName('fert');
     if(shopTab==='buy'){
       const items=[];
-      // 种子（按解锁状态）
       Object.entries(CROPS).forEach(([k,c])=>{
+        const d=display(k);
         const unlocked=c.unlock===0||S.gold>=c.unlock||S.milestones['gold_'+c.unlock];
-        const lock=!unlocked?`<span style="font-size:11px;color:#ef4444">🔒 累计 ${c.unlock} 金解锁</span>`:'';
+        const lock=!unlocked?`<span style="font-size:11px;color:#ef4444">🔒 累计 ${c.unlock}${ag.e} 解锁</span>`:'';
         items.push(`<div class="farm-shop-card">
-          <span class="emoji">${c.emoji}</span>
+          <span class="emoji">${d.emoji}</span>
           <div style="flex:1">
-            <div style="font-size:13px;font-weight:600">${c.name} 种子</div>
-            <div style="font-size:11px;color:var(--text2)">${c.totalMin}min 成熟 · 售价 ${c.price}金 · 利润 ${c.price-c.seedCost}金 · ${lock}</div>
+            <div style="font-size:13px;font-weight:600">${d.name} 种子</div>
+            <div style="font-size:11px;color:var(--text2)">${c.totalMin}min 成熟 · 售价 ${c.price}${ag.e} · 利润 ${c.price-c.seedCost}${ag.e} · ${lock}</div>
           </div>
-          <button class="btn btn-primary btn-sm" ${(!unlocked||S.gold<c.seedCost)?'disabled':''} onclick="farm_buySeed('${k}')">买 (${c.seedCost}金)</button>
+          <button class="btn btn-primary btn-sm" ${(!unlocked||S.gold<c.seedCost)?'disabled':''} onclick="farm_buySeed('${k}')">买 (${c.seedCost}${ag.e})</button>
         </div>`);
       });
-      // 肥料
       items.push(`<div class="farm-shop-card" style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px">
-        <span class="emoji">🧪</span>
-        <div style="flex:1"><div style="font-size:13px;font-weight:600">肥料</div><div style="font-size:11px;color:var(--text2)">使作物产量 ×1.5</div></div>
-        <button class="btn btn-primary btn-sm" ${S.gold<15?'disabled':''} onclick="farm_buyFert()">买 (15金)</button>
+        <span class="emoji">${af.e}</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600">${af.n}</div><div style="font-size:11px;color:var(--text2)">使作物产量 ×1.5</div></div>
+        <button class="btn btn-primary btn-sm" ${S.gold<15?'disabled':''} onclick="farm_buyFert()">买 (15${ag.e})</button>
       </div>`);
       body.innerHTML=items.join('');
     }else{
       const entries=Object.entries(S.inv||{}).filter(([,n])=>n>0);
       if(entries.length===0){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2)">库存空空，先去收获作物吧 🌱</div>';return;}
-      body.innerHTML=entries.map(([k,n])=>{const c=CROPS[k];return `<div class="farm-shop-card">
-        <span class="emoji">${c.emoji}</span>
-        <div style="flex:1"><div style="font-size:13px;font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text2)">库存 ${n} 个 · 单价 ${c.price}金</div></div>
+      body.innerHTML=entries.map(([k,n])=>{const c=CROPS[k];const d=display(k);return `<div class="farm-shop-card">
+        <span class="emoji">${d.emoji}</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600">${d.name}</div><div style="font-size:11px;color:var(--text2)">库存 ${n} 个 · 单价 ${c.price}${ag.e}</div></div>
         <button class="btn btn-ghost btn-sm" onclick="farm_sell('${k}',1)">卖 1</button>
-        <button class="btn btn-primary btn-sm" onclick="farm_sell('${k}',${n})">卖全部 (+${c.price*n}金)</button>
+        <button class="btn btn-primary btn-sm" onclick="farm_sell('${k}',${n})">卖全部 (+${c.price*n}${ag.e})</button>
       </div>`;}).join('');
     }
   }
@@ -16134,10 +16188,85 @@ ${kp.slice(0,3000)}
   }
 
   // ══════════════════════════════════════
+  //  AI 主题皮肤
+  // ══════════════════════════════════════
+  async function generateSkin(){
+    if(typeof window._callAI!=='function'){alert('未配置 AI 模型，请先在《个人设置》中配置');return;}
+    const cfg=(typeof getCfg==='function')?getCfg():{};
+    const dir=(cfg.areas||[]).join(' / ')||cfg.field||'通用科研';
+    const cropKeys=Object.keys(CROPS);
+    if(typeof toast==='function')toast('🎨 AI 生成主题中…（10-20s）');
+    const prompt=`你是研究方向主题游戏设计师。用户的研究方向是「${dir}」。
+请把通用农场游戏「主题化」成该领域的研究场景，让作物、道具、农场名都变成该领域的术语/隐喻。
+
+只输出严格 JSON（第一字符必须 {，不要 markdown 代码块）：
+{
+  "farmName":"主题农场名（≤16字，融入方向，可俏皮）",
+  "welcomeLine":"一句话欢迎语（30-60字，体现方向乐趣）",
+  "bgGradient":["#xxxxxx","#yyyyyy"],
+  "soilColor":"#xxxxxx",
+  "soilColor2":"#yyyyyy",
+  "accelEmoji":"单 emoji",
+  "accelName":"加速器主题名（≤10字，融入方向）",
+  "fertEmoji":"单 emoji",
+  "fertName":"肥料主题名（≤10字）",
+  "goldEmoji":"单 emoji",
+  "goldName":"金币主题名（≤6字，如 灵感点/impact/积分）",
+  "cropMap":{
+    ${cropKeys.map(k=>`"${k}":{"emoji":"单 emoji","name":"主题作物名（≤10字，融入方向，每个不同）"}`).join(',\n    ')}
+  }
+}
+
+要求：
+- bgGradient/soilColor 选合适色系（生物=绿，物理=冷蓝，化学=橙黄，数学/CS=紫蓝，地质=赭，流体=波蓝）
+- soilColor 是田垄底色（土壤主色），soilColor2 是斜纹高亮（略亮于 soilColor）
+- 11 种作物主题名不要重复，名字要专业但有趣（如流体力学可以是"层流"/"湍流涡量"/"边界层"/"卡门涡街"/"Reynolds 数"/"Kolmogorov 标度"…）
+- emoji 必须直观表达术语，不要用文字
+- farmName 例子：因果→「干预实验室农场」、流体→「卡门涡街研究院」、生物→「分子田园」`;
+    let raw=null;try{raw=await window._callAI(prompt,2200);}catch(e){raw=null;}
+    if(!raw){alert('AI 无响应，请检查 AI 配置');return;}
+    const m=raw.match(/\{[\s\S]*\}/);
+    if(!m){alert('解析失败：未找到 JSON');console.warn('[farm-skin] raw:',raw);return;}
+    let obj;try{obj=JSON.parse(m[0]);}catch(e){alert('JSON 解析失败：'+e.message);console.warn('[farm-skin] raw:',raw);return;}
+    // 校验关键字段
+    if(!obj.farmName||!obj.cropMap){alert('返回缺关键字段');return;}
+    // bgGradient/soilColor hex 校验
+    const isHex=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c);
+    if(!Array.isArray(obj.bgGradient)||obj.bgGradient.length!==2||!obj.bgGradient.every(isHex)){
+      obj.bgGradient=['#dcfce7','#bbf7d0'];
+    }
+    if(!isHex(obj.soilColor))obj.soilColor='#a16207';
+    if(!isHex(obj.soilColor2))obj.soilColor2='#78350f';
+    skin=obj;saveSkin(skin);
+    applySkinDOM();render();renderShop&&renderShop();
+    alert(`🎨 主题已切换为「${obj.farmName}」\n\n${obj.welcomeLine}`);
+  }
+  function resetSkin(){
+    if(!confirm('恢复默认农场主题？'))return;
+    clearSkin();applySkinDOM();render();renderShop&&renderShop();
+    if(typeof toast==='function')toast('🌾 已恢复默认农场主题');
+  }
+  function themeMenu(){
+    const cur=skin?`当前主题：「${skin.farmName}」\n\n`:'当前：默认农场\n\n';
+    const cfg=(typeof getCfg==='function')?getCfg():{};
+    const dir=(cfg.areas||[]).join(' / ')||cfg.field||'(未设置研究方向)';
+    const choice=prompt(`${cur}AI 会按你的研究方向「${dir}」重铸整个农场（农场名、欢迎语、背景色、田垄色、11种作物 emoji+主题名、加速器/肥料/金币命名）。
+
+输入数字选择：
+  1 = 按当前研究方向生成主题
+  2 = 恢复默认（番茄/小麦/草莓…）
+  其他 = 取消`,'1');
+    if(choice==='1')generateSkin();
+    else if(choice==='2')resetSkin();
+  }
+
+  // ══════════════════════════════════════
   //  初始化
   // ══════════════════════════════════════
   function init(){
     S=loadFarm();
+    skin=loadSkin();
+    applySkinDOM();
     render();refreshAchBadge();checkAchievements();
     if(renderIv)clearInterval(renderIv);
     renderIv=setInterval(()=>{
@@ -16171,6 +16300,9 @@ ${kp.slice(0,3000)}
   window.farm_openAchievements=openAchievements;
   window.farm_closeAchievements=closeAchievements;
   window.farm_claimAch=claimAch;
+  window.farm_themeMenu=themeMenu;
+  window.farm_generateSkin=generateSkin;
+  window.farm_resetSkin=resetSkin;
 })();
 </script>
 
