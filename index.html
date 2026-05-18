@@ -2707,6 +2707,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <span style="color:#10b981" title="肥料：商店购买">🧪 <span id="farm-fert">0</span></span>
           <button class="btn btn-primary btn-sm" onclick="farm_openShop()">🛍️ 商店</button>
           <button class="btn btn-ghost btn-sm" onclick="farm_openMilestones()" title="金币里程碑奖励">🏆 里程碑</button>
+          <button class="btn btn-ghost btn-sm" onclick="farm_openAchievements()" title="成就榜" style="position:relative">🏅 成就 <span id="farm-ach-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;padding:1px 5px;font-weight:700">0</span></button>
         </div>
       </div>
     </div>
@@ -2744,6 +2745,18 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         </div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:14px">累计金币达成里程碑即可领取奖励（永久解锁）</div>
         <div id="farm-mile-body"></div>
+      </div>
+    </div>
+
+    <!-- 成就浮层 -->
+    <div id="farm-ach-modal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(15,23,42,0.6);align-items:center;justify-content:center" onclick="if(event.target===this)farm_closeAchievements()">
+      <div style="background:var(--surface);border-radius:14px;width:min(680px,92vw);max-height:82vh;overflow:auto;padding:20px 22px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:16px;font-weight:700">🏅 成就榜</div>
+          <button class="btn btn-ghost btn-sm" onclick="farm_closeAchievements()">×</button>
+        </div>
+        <div id="farm-ach-summary" style="font-size:12px;color:var(--text2);margin-bottom:14px"></div>
+        <div id="farm-ach-body"></div>
       </div>
     </div>
 
@@ -15384,16 +15397,29 @@ ${kp.slice(0,3000)}
   const PLOTS=24; // 6×4
   function defaultState(){
     return {
-      plots:Array(PLOTS).fill(null).map(()=>null), // null=空 / {crop,plantedAt,boostedMs:0,hasQ:false,qAskedAt:0}
+      plots:Array(PLOTS).fill(null).map(()=>null),
       gold:50,accel:0,fert:2,
-      inv:{}, // 库存：作物 key → 数量
-      milestones:{}, // 已领取：'gold_100':true 等
+      inv:{},
+      milestones:{},
+      // 统计（成就 / 里程碑用）
       seedsBought:0,harvests:0,questionsAnswered:0,questionsCorrect:0,
-      ownedSeeds:{tomato:3,wheat:2}, // 初始 5 颗种子
+      goldEarned:0,            // 历史累计赚到的金（卖+收获，不减）
+      accelUsed:0,fertUsed:0,
+      cropsPlantedSet:[],      // 种过的 crop key 数组
+      streakHigh:0,streakBest:0, // 连续 80+ 答题
+      ownedSeeds:{tomato:3,wheat:2},
+      achievements:{},         // 已领取的成就 key
       lastTick:Date.now()
     };
   }
-  function loadFarm(){try{const s=JSON.parse(localStorage.getItem(FARM_KEY));return s||defaultState();}catch(e){return defaultState();}}
+  function loadFarm(){
+    try{const s=JSON.parse(localStorage.getItem(FARM_KEY));
+      if(!s)return defaultState();
+      // 向后兼容：补齐缺字段
+      const d=defaultState();for(const k in d){if(!(k in s))s[k]=d[k];}
+      return s;
+    }catch(e){return defaultState();}
+  }
   function saveFarm(s){localStorage.setItem(FARM_KEY,JSON.stringify(s));}
   let S=null;
   let renderIv=null;
@@ -15523,17 +15549,18 @@ ${kp.slice(0,3000)}
     if(!S.ownedSeeds[key]||S.ownedSeeds[key]<=0)return;
     S.ownedSeeds[key]--;
     S.plots[idx]={crop:key,plantedAt:Date.now(),boostedMs:0,hasQ:false,qAskedAt:0,fertBonus:1};
-    saveFarm(S);render();
+    if(!S.cropsPlantedSet.includes(key))S.cropsPlantedSet.push(key);
+    saveFarm(S);render();checkAchievements();
   }
   function harvest(idx){
     const p=S.plots[idx];if(!p||!isRipe(p))return;
     const c=CROPS[p.crop];
     const yieldGold=Math.round(c.price*(p.fertBonus||1));
-    S.gold+=yieldGold;
+    S.gold+=yieldGold;S.goldEarned+=yieldGold;
     S.inv[p.crop]=(S.inv[p.crop]||0)+1;
     S.harvests++;
     S.plots[idx]=null;
-    saveFarm(S);render();checkMilestones(true);
+    saveFarm(S);render();checkMilestones(true);checkAchievements();
     flashGold('+'+yieldGold);
   }
   function useAccel(idx){
@@ -15542,14 +15569,14 @@ ${kp.slice(0,3000)}
     const c=CROPS[p.crop];
     const oneStageMs=c.totalMin*60000/c.stages;
     p.boostedMs=(p.boostedMs||0)+oneStageMs;
-    S.accel--;
-    saveFarm(S);render();
+    S.accel--;S.accelUsed=(S.accelUsed||0)+1;
+    saveFarm(S);render();checkAchievements();
   }
   function useFert(idx){
     const p=S.plots[idx];if(!p||S.fert<=0)return;
     p.fertBonus=Math.min(2,(p.fertBonus||1)+0.5);
-    S.fert--;
-    saveFarm(S);render();
+    S.fert--;S.fertUsed=(S.fertUsed||0)+1;
+    saveFarm(S);render();checkAchievements();
   }
   function removePlot(idx){
     if(!confirm('确定铲掉这块作物？'))return;
@@ -15618,14 +15645,14 @@ ${kp.slice(0,3000)}
     const c=CROPS[k];if(!c)return;
     if(S.gold<c.seedCost)return;
     S.gold-=c.seedCost;S.ownedSeeds[k]=(S.ownedSeeds[k]||0)+1;S.seedsBought++;
-    saveFarm(S);render();renderShop();
+    saveFarm(S);render();renderShop();checkAchievements();
   }
   function buyFert(){if(S.gold<15)return;S.gold-=15;S.fert++;saveFarm(S);render();renderShop();}
   function sell(k,n){
     if(!S.inv[k]||S.inv[k]<n)return;
     const c=CROPS[k];S.inv[k]-=n;if(S.inv[k]<=0)delete S.inv[k];
-    S.gold+=c.price*n;
-    saveFarm(S);render();renderShop();checkMilestones(true);
+    const earned=c.price*n;S.gold+=earned;S.goldEarned+=earned;
+    saveFarm(S);render();renderShop();checkMilestones(true);checkAchievements();
   }
 
   // ══════════════════════════════════════
@@ -15704,12 +15731,134 @@ ${kp.slice(0,3000)}
   }
 
   // ══════════════════════════════════════
+  //  成就榜
+  // ══════════════════════════════════════
+  const ACH=[
+    // 入门 · 铜
+    {key:'first_plant',  tier:'铜', icon:'🌱', title:'第一颗种子',  desc:'种下你的第一颗作物',          check:s=>s.cropsPlantedSet.length>=1, reward:{accel:1}},
+    {key:'first_harvest',tier:'铜', icon:'🌾', title:'初次收获',    desc:'收获 1 个作物',                check:s=>s.harvests>=1,                 reward:{gold:10}},
+    {key:'buy_first',    tier:'铜', icon:'🛒', title:'剁手开张',    desc:'第一次从商店买种子',           check:s=>s.seedsBought>=1,               reward:{fert:1}},
+    // 收获系列
+    {key:'harvest_10',   tier:'铜', icon:'🌽', title:'勤劳园丁',    desc:'累计收获 10 个作物',           check:s=>s.harvests>=10,                 reward:{fert:2}},
+    {key:'harvest_50',   tier:'银', icon:'🚜', title:'收获能手',    desc:'累计收获 50 个作物',           check:s=>s.harvests>=50,                 reward:{accel:3}},
+    {key:'harvest_200',  tier:'金', icon:'🏆', title:'丰收传奇',    desc:'累计收获 200 个作物',          check:s=>s.harvests>=200,                reward:{accel:10,fert:5}},
+    // 金币
+    {key:'gold_500',     tier:'铜', icon:'💴', title:'小有积蓄',    desc:'历史累计赚 500 金',            check:s=>s.goldEarned>=500,              reward:{accel:1}},
+    {key:'gold_5k',      tier:'银', icon:'💰', title:'第一桶金',    desc:'历史累计赚 5,000 金',          check:s=>s.goldEarned>=5000,             reward:{seed:{key:'pumpkin',n:1}}},
+    {key:'gold_50k',     tier:'金', icon:'🤑', title:'农场富翁',    desc:'历史累计赚 50,000 金',         check:s=>s.goldEarned>=50000,            reward:{seed:{key:'cherry',n:2}}},
+    // 答题
+    {key:'q_1',          tier:'铜', icon:'❓', title:'好奇宝宝',    desc:'回答 1 道问答题',              check:s=>s.questionsAnswered>=1,         reward:{accel:1}},
+    {key:'q_correct_10', tier:'银', icon:'🎓', title:'答题达人',    desc:'答对 10 道题（≥60 分）',       check:s=>s.questionsCorrect>=10,         reward:{accel:3,fert:2}},
+    {key:'q_correct_50', tier:'金', icon:'🧠', title:'答题宗师',    desc:'答对 50 道题',                 check:s=>s.questionsCorrect>=50,         reward:{accel:10,fert:5}},
+    {key:'q_streak_3',   tier:'银', icon:'🔥', title:'三连绝杀',    desc:'连续 3 次答题 ≥80 分',         check:s=>(s.streakBest||0)>=3,           reward:{accel:5}},
+    // 采购
+    {key:'buy_20',       tier:'银', icon:'🛍️',title:'采购达人',    desc:'累计买 20 颗种子',             check:s=>s.seedsBought>=20,              reward:{fert:5}},
+    {key:'buy_100',      tier:'金', icon:'💎', title:'金牌买家',    desc:'累计买 100 颗种子',            check:s=>s.seedsBought>=100,             reward:{gold:200,fert:10}},
+    // 工具
+    {key:'accel_10',     tier:'铜', icon:'⚡', title:'加速狂魔',    desc:'用加速器 10 次',               check:s=>(s.accelUsed||0)>=10,           reward:{fert:2}},
+    {key:'fert_10',      tier:'铜', icon:'🧪', title:'肥料大师',    desc:'用肥料 10 次',                 check:s=>(s.fertUsed||0)>=10,            reward:{gold:50}},
+    // 番茄钟（读外部 K.pomos）
+    {key:'pomo_10',      tier:'银', icon:'⏱',  title:'专注猎人',   desc:'累计 10 个番茄钟',             check:s=>{try{return(JSON.parse(localStorage.getItem('phd_pomos'))||[]).length>=10;}catch(e){return false;}}, reward:{accel:3}},
+    {key:'pomo_50',      tier:'金', icon:'🌊', title:'心流之主',   desc:'累计 50 个番茄钟',             check:s=>{try{return(JSON.parse(localStorage.getItem('phd_pomos'))||[]).length>=50;}catch(e){return false;}}, reward:{accel:10,seed:{key:'apple',n:1}}},
+    // 集邮
+    {key:'crop_5',       tier:'银', icon:'🌈', title:'品种探索者', desc:'种过 5 种不同作物',            check:s=>s.cropsPlantedSet.length>=5,    reward:{fert:3}},
+    {key:'crop_all',     tier:'金', icon:'👑', title:'集邮大师',    desc:'种过全部 11 种作物',           check:s=>s.cropsPlantedSet.length>=11,   reward:{accel:15,fert:10}},
+    // 农场布局
+    {key:'busy_farm',    tier:'银', icon:'🌴', title:'欣欣向荣',    desc:'同时拥有 12 块种植中作物',     check:s=>s.plots.filter(p=>p).length>=12, reward:{accel:3}},
+    {key:'full_farm',    tier:'金', icon:'🏝',  title:'寸土寸金',   desc:'24 块地全种满',                check:s=>s.plots.filter(p=>p).length>=24, reward:{accel:8,fert:5}},
+  ];
+
+  const TIER_COLOR={'铜':'#b87333','银':'#94a3b8','金':'#fbbf24'};
+  const TIER_BG   ={'铜':'rgba(184,115,51,0.08)','银':'rgba(148,163,184,0.08)','金':'rgba(251,191,36,0.10)'};
+
+  function unclaimedCount(){
+    return ACH.filter(a=>!S.achievements[a.key]&&a.check(S)).length;
+  }
+  function refreshAchBadge(){
+    const n=unclaimedCount();
+    const b=document.getElementById('farm-ach-badge');
+    if(!b)return;
+    if(n>0){b.style.display='block';b.textContent=n;}
+    else b.style.display='none';
+  }
+  function checkAchievements(){
+    // 自动检测达成但未领取的，弹一次性 toast（仅新达成）
+    ACH.forEach(a=>{
+      if(S.achievements[a.key])return;
+      if(a.check(S)&&!S._achNotified?.[a.key]){
+        S._achNotified=S._achNotified||{};
+        S._achNotified[a.key]=true;
+        if(typeof toast==='function')toast(`🏅 解锁成就「${a.title}」，去成就榜领取`);
+      }
+    });
+    saveFarm(S);refreshAchBadge();
+  }
+  function openAchievements(){renderAchievements();$('farm-ach-modal').style.display='flex';}
+  function closeAchievements(){$('farm-ach-modal').style.display='none';refreshAchBadge();}
+  function renderAchievements(){
+    const claimed=ACH.filter(a=>S.achievements[a.key]).length;
+    const total=ACH.length;
+    const pct=Math.round(claimed/total*100);
+    $('farm-ach-summary').innerHTML=`已获得 <b style="color:var(--primary)">${claimed}/${total}</b> 项成就（${pct}%）· 待领取 <b style="color:#ef4444">${unclaimedCount()}</b> 项`;
+    const body=$('farm-ach-body');
+    const byTier={'铜':[],'银':[],'金':[]};
+    ACH.forEach(a=>byTier[a.tier].push(a));
+    const sections=['铜','银','金'].map(t=>{
+      const items=byTier[t].map(a=>{
+        const reached=a.check(S);
+        const claimed=S.achievements[a.key];
+        let st='';
+        if(claimed)st=`<span style="font-size:11px;color:#10b981;font-weight:600;white-space:nowrap">✓ 已领取</span>`;
+        else if(reached)st=`<button class="btn btn-primary btn-sm" onclick="farm_claimAch('${a.key}')" style="white-space:nowrap">领取奖励</button>`;
+        else st=`<span style="font-size:11px;color:var(--text2);white-space:nowrap">未达成</span>`;
+        const rwd=fmtReward(a.reward);
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:${claimed?TIER_BG[t]:'var(--surface2)'};margin-bottom:6px;border:1px solid ${claimed?TIER_COLOR[t]+'40':'transparent'};${reached||claimed?'':'opacity:.55'}">
+          <div style="font-size:22px;width:34px;text-align:center;line-height:1">${a.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${a.title} <span style="font-size:10px;color:${TIER_COLOR[t]};font-weight:700;margin-left:4px">${t}</span></div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">${a.desc} · 奖励：${rwd}</div>
+          </div>
+          ${st}
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:${TIER_COLOR[t]};margin-bottom:6px;letter-spacing:0.08em">${t} 牌成就</div>
+        ${items}
+      </div>`;
+    }).join('');
+    body.innerHTML=sections;
+  }
+  function fmtReward(r){
+    if(!r)return '—';
+    const parts=[];
+    if(r.gold)parts.push(`+${r.gold} 💰`);
+    if(r.accel)parts.push(`+${r.accel} ⚡`);
+    if(r.fert)parts.push(`+${r.fert} 🧪`);
+    if(r.seed)parts.push(`+${r.seed.n} ${CROPS[r.seed.key]?.emoji||'🌱'}${CROPS[r.seed.key]?.name||r.seed.key}`);
+    return parts.join(' · ')||'—';
+  }
+  function claimAch(key){
+    const a=ACH.find(x=>x.key===key);if(!a)return;
+    if(S.achievements[key]){alert('已领取过');return;}
+    if(!a.check(S)){alert('条件未达成');return;}
+    S.achievements[key]=true;
+    const r=a.reward||{};
+    if(r.gold){S.gold+=r.gold;S.goldEarned+=r.gold;}
+    if(r.accel)S.accel+=r.accel;
+    if(r.fert)S.fert+=r.fert;
+    if(r.seed){S.ownedSeeds[r.seed.key]=(S.ownedSeeds[r.seed.key]||0)+r.seed.n;}
+    saveFarm(S);
+    render();renderAchievements();refreshAchBadge();
+    if(typeof toast==='function')toast(`🏅 已领取「${a.title}」 → ${fmtReward(r)}`);
+  }
+
+  // ══════════════════════════════════════
   //  番茄钟联动
   // ══════════════════════════════════════
   function onPomoComplete(){
     S=S||loadFarm();S.accel++;saveFarm(S);
     if(typeof toast==='function')toast('🌾 番茄钟完成 · +1 加速生长器 ⚡');
-    render();
+    render();checkAchievements();
   }
 
   // ══════════════════════════════════════
@@ -15775,9 +15924,12 @@ ${kp.slice(0,3000)}
     else if(score>=40){S.fert+=1;reward='💪 加油！奖励 +1 🧪肥料';}
     else{reward='💭 再多想想，没奖励但下次还有机会';}
     S.questionsAnswered++;if(score>=60)S.questionsCorrect++;
+    // 连续高分
+    if(score>=80){S.streakHigh=(S.streakHigh||0)+1;if(S.streakHigh>(S.streakBest||0))S.streakBest=S.streakHigh;}
+    else S.streakHigh=0;
     // 清掉问号
     const p=S.plots[curQ.idx];if(p){p.hasQ=false;}
-    saveFarm(S);render();
+    saveFarm(S);render();checkAchievements();
     $('farm-q-result').innerHTML=`<div style="padding:10px 12px;border-radius:8px;background:var(--surface2)">
       <div style="font-size:13px;font-weight:600;color:${score>=60?'#10b981':'#f59e0b'}">分数：${score}/100</div>
       <div style="font-size:12px;color:var(--text2);margin-top:4px">${esc(fb)}</div>
@@ -15790,12 +15942,11 @@ ${kp.slice(0,3000)}
   // ══════════════════════════════════════
   function init(){
     S=loadFarm();
-    render();
-    // 每秒重画（更新进度/时间/问号）
+    render();refreshAchBadge();checkAchievements();
     if(renderIv)clearInterval(renderIv);
     renderIv=setInterval(()=>{
       if(document.getElementById('intel-tab-farm')?.style.display==='none'){return;}
-      render();
+      render();refreshAchBadge();
     },1000);
   }
 
@@ -15821,6 +15972,9 @@ ${kp.slice(0,3000)}
   window.farm_closeQ=closeQ;
   window.farm_submitQ=submitQ;
   window.farm_onPomoComplete=onPomoComplete;
+  window.farm_openAchievements=openAchievements;
+  window.farm_closeAchievements=closeAchievements;
+  window.farm_claimAch=claimAch;
 })();
 </script>
 
