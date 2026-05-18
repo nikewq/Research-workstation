@@ -30,11 +30,8 @@ Page({
   },
 
   getStreak(id, h) {
-    let s = 0; const d = new Date()
-    while (s < 365) {
-      const ds = d.toISOString().slice(0, 10)
-      if (h[ds] && h[ds][id]) { s++; d.setDate(d.getDate() - 1) } else break
-    }
+    let s = 0
+    for (const ds in h) { if (h[ds] && h[ds][id]) s++ }
     return s
   },
 
