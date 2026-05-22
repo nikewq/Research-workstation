@@ -1,7 +1,7 @@
 // PhD Workstation Service Worker
 // Caches index.html for offline use and faster loads
 
-const CACHE_NAME = 'phd-workstation-v26';
+const CACHE_NAME = 'phd-workstation-v27';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -40,16 +40,15 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.pathname.endsWith('index.html') || url.pathname === '/' || url.pathname.endsWith('/')) {
-    // Stale-while-revalidate: serve cache immediately (fast), fetch update in background
+    // Network-first for index.html: 优先服务器，离线才回退缓存。
+    // 这条让数据保护修复尽快覆盖旧版客户端 — 避免"用户首次刷新仍跑旧版 bug 代码"。
     event.respondWith(
-      caches.open(CACHE_NAME).then(cache =>
-        cache.match(event.request).then(cached => {
-          const fetchPromise = fetch(event.request).then(response => {
-            cache.put(event.request, response.clone());
-            return response;
-          }).catch(()=>{});
-          return cached || fetchPromise; // instant if cached, network fallback if not
-        })
+      fetch(event.request).then(response => {
+        const respClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, respClone)).catch(()=>{});
+        return response;
+      }).catch(() =>
+        caches.match(event.request).then(cached => cached || new Response('Offline', {status:503,headers:{'Content-Type':'text/plain'}}))
       )
     );
   } else if (url.origin.includes('cdnjs.cloudflare.com') || url.origin.includes('cdn.jsdelivr.net')) {

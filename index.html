@@ -3232,19 +3232,64 @@ const K = {
 const _BAK_PREFIX  = '__bak__:';
 const _SNAP_PREFIX = '__snap__:';
 const _SNAP_MAX    = 5;
-function _safeSetItem(k, v){
+// 判断一段字符串值是否"有内容"——用于决定要不要拿来覆盖镜像备份
+function _valueHasContent(rawStr){
+  if (rawStr === null || rawStr === undefined || rawStr === '') return false;
   try {
-    const prev = localStorage.getItem(k);
-    if (prev !== null && !k.startsWith(_BAK_PREFIX) && !k.startsWith(_SNAP_PREFIX)){
-      try { localStorage.setItem(_BAK_PREFIX + k, prev); } catch(_) {}
-    }
-    localStorage.setItem(k, v);
-    return true;
-  } catch(err) {
-    console.error('[storage] setItem failed for', k, err);
-    try { if (typeof toast === 'function') toast('⚠️ 本地存储写入失败：' + (err && err.name || '未知错误') + '，请导出数据释放空间', 'error'); } catch(_) {}
-    return false;
+    const parsed = JSON.parse(rawStr);
+    if (parsed === null || parsed === undefined) return false;
+    if (Array.isArray(parsed)) return parsed.length > 0;
+    if (typeof parsed === 'object') return Object.keys(parsed).length > 0;
+    return String(parsed).length > 0;
+  } catch(_) {
+    // 解析失败仍视为"有内容"——损坏的真实字节比 null 强，应进镜像
+    return rawStr.length > 0;
   }
+}
+function _safeSetItem(k, v){
+  const isMeta = k.startsWith(_BAK_PREFIX) || k.startsWith(_SNAP_PREFIX) || k.startsWith('__corrupt__:');
+  // 镜像策略（关键防御 A）：只在"旧值有内容、新值变化"时才更新镜像。
+  // 旧值是空数组/空对象时不覆盖现存镜像 — 防止"用户已损坏状态下，空数据把唯一的有效镜像挤掉"。
+  if (!isMeta) {
+    try {
+      const prev = localStorage.getItem(k);
+      if (prev !== null && prev !== v && _valueHasContent(prev)) {
+        // 二次保险：只在新值"看起来更弱"时才不更新镜像
+        const newHasContent = _valueHasContent(v);
+        const prevSize = prev.length;
+        const newSize  = (v || '').length;
+        const newIsStronger = newHasContent && newSize >= prevSize * 0.5;
+        if (newIsStronger) {
+          try { localStorage.setItem(_BAK_PREFIX + k, prev); } catch(_) {}
+        }
+        // 否则保留更老的有效镜像，不被覆盖
+      }
+    } catch(_) {}
+  }
+  // 主写入（带 quota 自救重试）
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      localStorage.setItem(k, v);
+      return true;
+    } catch(err) {
+      const isQuota = err && (err.name === 'QuotaExceededError' || /quota/i.test(err.message || ''));
+      if (isQuota && attempt === 0) {
+        // 释放空间（关键防御 D）：优先删 __corrupt__（最不重要），再删最旧的 __snap__
+        const corrupts = Object.keys(localStorage).filter(x => x.startsWith('__corrupt__:')).sort();
+        if (corrupts.length > 0) {
+          while (corrupts.length > 0) { try { localStorage.removeItem(corrupts.shift()); } catch(_) {} }
+        } else {
+          const snaps = Object.keys(localStorage).filter(x => x.startsWith(_SNAP_PREFIX)).sort();
+          if (snaps.length > 1) { try { localStorage.removeItem(snaps[0]); } catch(_) {} }
+        }
+        continue; // 重试一次
+      }
+      console.error('[storage] setItem failed for', k, err);
+      try { if (typeof toast === 'function') toast('⚠️ 本地存储写入失败：' + (err && err.name || '未知错误') + '，请导出数据释放空间', 'error'); } catch(_) {}
+      return false;
+    }
+  }
+  return false;
 }
 function _safeGetItem(k, fallback){
   const raw = localStorage.getItem(k);
@@ -3270,16 +3315,38 @@ function _safeGetItem(k, fallback){
 }
 function _takeSnapshot(reason){
   try {
-    const stamp = new Date().toISOString().replace(/[-:T.Z]/g,'').slice(0,12);
     const snap = {};
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith(_BAK_PREFIX) || k.startsWith(_SNAP_PREFIX) || k.startsWith('__corrupt__:')) return;
       snap[k] = localStorage.getItem(k);
     });
-    if (Object.keys(snap).length === 0) return; // 空数据不打快照
-    localStorage.setItem(_SNAP_PREFIX + stamp, JSON.stringify({at: Date.now(), reason: reason || '', data: snap}));
-    const snaps = Object.keys(localStorage).filter(k => k.startsWith(_SNAP_PREFIX)).sort();
-    while (snaps.length > _SNAP_MAX) { try { localStorage.removeItem(snaps.shift()); } catch(_) {} }
+    const keys = Object.keys(snap);
+    if (keys.length === 0) return; // 空数据不打快照
+    const stamp = new Date().toISOString().replace(/[-:T.Z]/g,'').slice(0,12);
+    const payload = JSON.stringify(snap);
+    const size = payload.length;
+    try {
+      localStorage.setItem(_SNAP_PREFIX + stamp, JSON.stringify({at: Date.now(), reason: reason || '', size, keys: keys.length, data: snap}));
+    } catch(_) {
+      // 写快照失败也不影响主流程
+      return;
+    }
+    // 智能淘汰（关键防御 B）：保留 top-2 by size + top-3 by time。
+    // 防止"用户已损坏状态下连刷 5 次把最大那份真实数据快照挤掉"。
+    const allSnaps = Object.keys(localStorage)
+      .filter(k => k.startsWith(_SNAP_PREFIX))
+      .map(k => {
+        try { const obj = JSON.parse(localStorage.getItem(k)); return {key:k, at:obj.at||0, size:obj.size||0}; }
+        catch(_) { return {key:k, at:0, size:0}; }
+      });
+    if (allSnaps.length <= _SNAP_MAX) return;
+    const keepBySize = new Set([...allSnaps].sort((a,b) => b.size - a.size).slice(0, 2).map(s => s.key));
+    const keepByTime = new Set([...allSnaps].sort((a,b) => b.at - a.at).slice(0, 3).map(s => s.key));
+    allSnaps.forEach(s => {
+      if (!keepBySize.has(s.key) && !keepByTime.has(s.key)) {
+        try { localStorage.removeItem(s.key); } catch(_) {}
+      }
+    });
   } catch(err) { console.warn('[storage] snapshot skipped:', err.message); }
 }
 function _listSnapshots(){
@@ -3303,6 +3370,50 @@ function _restoreSnapshot(key){
 }
 const ld = k => _safeGetItem(k, k===K.habits?{}:[]);
 const sv = (k,v) => _safeSetItem(k, JSON.stringify(v));
+
+// 暴露给 console 的恢复工具（中文友好）—— 用户在 F12 控制台可调用：
+//   _recovery.list()              查看所有可恢复来源（快照/镜像/损坏隔离）
+//   _recovery.restoreSnapshot(k)  从某份快照恢复
+//   _recovery.restoreFromMirror() 从所有 __bak__:* 镜像批量恢复
+//   _recovery.showGuide()         强制再次显示域名迁移引导
+window._recovery = {
+  list(){
+    const snaps = _listSnapshots().map(s => ({key:s.key, at:new Date(s.at).toLocaleString(), reason:s.reason, size:s.size, keys:s.keys}));
+    const mirrors = Object.keys(localStorage).filter(k => k.startsWith(_BAK_PREFIX)).map(k => ({key:k, origKey:k.slice(_BAK_PREFIX.length), size:(localStorage.getItem(k)||'').length}));
+    const corrupts = Object.keys(localStorage).filter(k => k.startsWith('__corrupt__:')).map(k => ({key:k, size:(localStorage.getItem(k)||'').length}));
+    console.table([...snaps]);
+    console.log('📦 快照 ('+snaps.length+')   🪞 镜像 ('+mirrors.length+')   ⚠️ 损坏隔离 ('+corrupts.length+')');
+    return {snapshots:snaps, mirrors, corrupts};
+  },
+  restoreSnapshot(key){
+    if (!key) { console.error('请传入快照 key，先调 _recovery.list() 查看可选项'); return false; }
+    const ok = _restoreSnapshot(key);
+    if (ok) { console.log('✅ 已从', key, '恢复，1.5 秒后自动刷新'); setTimeout(()=>location.reload(),1500); }
+    return ok;
+  },
+  restoreFromMirror(){
+    const mirrors = Object.keys(localStorage).filter(k => k.startsWith(_BAK_PREFIX));
+    if (mirrors.length === 0) { console.warn('没有镜像备份'); return 0; }
+    _takeSnapshot('before-mirror-restore');
+    let n = 0;
+    mirrors.forEach(mk => {
+      const origKey = mk.slice(_BAK_PREFIX.length);
+      const bakVal = localStorage.getItem(mk);
+      if (bakVal !== null && _valueHasContent(bakVal)) {
+        try { localStorage.setItem(origKey, bakVal); n++; } catch(_) {}
+      }
+    });
+    console.log('✅ 已从镜像恢复', n, '条 key，1.5 秒后自动刷新');
+    setTimeout(()=>location.reload(),1500);
+    return n;
+  },
+  showGuide(){
+    localStorage.removeItem('_phd_migration_skipped');
+    localStorage.removeItem(K.cfg); // 临时移除以触发引导（已被 before-mirror-restore 备份）
+    _takeSnapshot('before-guide');
+    location.reload();
+  }
+};
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const today = () => localDate(new Date());
@@ -3593,9 +3704,10 @@ function finishSetup() {
   document.getElementById('setup-overlay').style.display = 'none';
   initApp();
   toast(`🎉 欢迎，${cfg.name}！工作台已就绪！`);
-  // 自动生成同步码并上传
+  // 自动生成同步码并上传（关键防御 C：只在云端无数据时自动推；
+  // 否则保留云端备份，由用户手动决定要不要覆盖。这条堵住了"清缓存重 setup → 空数据覆盖云端"的路径）
   _getOrCreateSyncCode();
-  setTimeout(saveProfileCloud, 5000); // delay until page is fully interactive
+  setTimeout(_autoSaveProfileIfNew, 5000);
 }
 function skipSetup() {
   const cfg = getCfg();
@@ -6291,6 +6403,24 @@ function _applySyncData(d){
     _safeSetItem(k, d['__'+k]); n++;
   });
   return n;
+}
+
+// 自动云推送守门：只在云端无该同步码记录时才推，避免空数据覆盖云端备份
+async function _autoSaveProfileIfNew(){
+  try {
+    const code = _getOrCreateSyncCode();
+    const r = await fetch(`${_SB_URL}/rest/v1/profiles?code=eq.${encodeURIComponent(code)}&select=code`, {
+      headers: { 'apikey': _SB_KEY_SYNC, 'Authorization': 'Bearer ' + _SB_KEY_SYNC }
+    });
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (rows.length === 0) {
+      // 云端无记录 → 安全自动推
+      saveProfileCloud();
+    } else {
+      console.info('[sync] 云端已有数据，跳过自动推送，请手动在设置→云同步中确认');
+    }
+  } catch(_) {}
 }
 
 async function saveProfileCloud(){
