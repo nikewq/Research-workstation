@@ -1080,13 +1080,33 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <span style="font-size:13px">📢</span>
         <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
         <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
-        <span style="font-size:10px;color:#a16207;margin-left:auto">2025年4月</span>
+        <span style="font-size:10px;color:#a16207;margin-left:auto">数据保护更新 · 2025-05-22</span>
       </div>
-      <div style="font-size:12px;color:#78350f;line-height:1.7">
-        首先，<strong>向所有用户诚挚道歉</strong>。我们近期将网站迁移至新域名 <strong style="color:#b45309">scholarclub.live</strong>，此举导致部分同学的本地数据（个人资料、项目记录等）暂时无法显示，深感抱歉。<br>
-        <span style="color:#92400e">📌 域名迁移原因：</span>原 GitHub Pages 地址稳定性有限，购买独立域名是为了给大家提供更稳定的长期访问环境。<br>
-        <span style="color:#92400e">🔍 数据找回方式：</span>在本页按 F12 → Application → Local Storage → 查找 <code style="background:#fef3c7;padding:0 3px;border-radius:3px">https://nikewq.github.io</code> 条目，若有数据请联系我们协助迁移。<br>
-        <span style="color:#92400e">✅ 郑重承诺：</span><strong>scholarclub.live 是本站唯一、长期域名，不会再次更换。</strong>近期将上线云端同步，从根本上解决数据丢失问题，敬请期待。
+      <div style="font-size:12px;color:#78350f;line-height:1.75">
+        <strong>🙏 感谢同学们的反馈，我们诚恳道歉。</strong><br>
+        前段时间收到大家反馈"刷新一次数据就丢失"的问题，是底层存储代码确实存在 bug。我们认真复盘，确认了至少 5 条会导致数据丢失的路径，深感抱歉，已全部修复并上线。<br><br>
+
+        <span style="color:#92400e">🛠 本次修复了什么：</span>
+        <ul style="margin:4px 0 4px 18px;padding:0">
+          <li>读取数据时若解析失败，<strong>不会再静默用空数据覆盖</strong>，而是先从镜像备份恢复，否则把原始字节隔离保留；</li>
+          <li>每次写入前自动镜像一份到 <code style="background:#fef3c7;padding:0 3px;border-radius:3px">__bak__:</code>，每次启动自动打一份本地快照 <code style="background:#fef3c7;padding:0 3px;border-radius:3px">__snap__:</code>（智能保留含数据最多的快照）；</li>
+          <li>云端同步从仅 3 项扩展到<strong>全量字段</strong>（任务、番茄、文献、写作、反思、打卡、采购、甘特图等全部覆盖）；</li>
+          <li>自动云推送加守门：云端已有备份时不会被空数据覆盖；</li>
+          <li>Service Worker 改为优先拉最新版，确保你尽快用上修复版而不是旧版缓存。</li>
+        </ul>
+
+        <span style="color:#92400e">💾 你现在可以这样保护自己的数据：</span>
+        <ul style="margin:4px 0 4px 18px;padding:0">
+          <li><strong>方式 1（推荐）：</strong>到「个人设置 → 云同步」获取你的<strong>同步码</strong>并妥善保存，换设备/换浏览器输入即可恢复；</li>
+          <li><strong>方式 2：</strong>定期点「导出数据」下载 JSON 备份到电脑，需要时通过「导入数据」一键还原；</li>
+          <li><strong>方式 3（已有数据丢失的同学）：</strong>按 F12 打开控制台，运行 <code style="background:#fef3c7;padding:0 3px;border-radius:3px">_recovery.list()</code> 查看本地是否有可用的镜像/快照；如有，运行 <code style="background:#fef3c7;padding:0 3px;border-radius:3px">_recovery.restoreFromMirror()</code> 一键恢复。</li>
+        </ul>
+
+        <span style="color:#92400e">⚠️ 注意：</span>如果你的页面已经打开了一段时间，请<strong>关闭所有标签页后重新打开</strong>，让新版代码生效，否则旧版缓存还在跑。<br><br>
+
+        <span style="color:#92400e">💬 我们想听到你的声音：</span>使用过程中遇到任何问题、不便、想要的功能，或哪怕只是一点小建议，<strong>欢迎在下方留言</strong>。每一条反馈我们都会认真看，工作台是和大家一起做出来的。<br><br>
+
+        <span style="color:#92400e">✅ 郑重承诺：</span><strong>scholarclub.live 是本站唯一、长期域名，不会再次更换。</strong>
       </div>
     </div>
     <div id="wall-list" style="min-height:40px"></div>
