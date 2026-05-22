@@ -3226,8 +3226,83 @@ const K = {
   aiCfg:      '_ai_cfg',
 };
 
-const ld = k => { try { return JSON.parse(localStorage.getItem(k)) || (k===K.habits?{}:[]); } catch { return k===K.habits?{}:[]; } };
-const sv = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+// ── 数据保护层（防止刷新丢数据）──
+// 写入前自动镜像备份到 __bak__:k；读取解析失败时从镜像或 __corrupt__ 隔离恢复；
+// 写入失败（quota/隐私模式）会显式提示，不再静默吞掉。
+const _BAK_PREFIX  = '__bak__:';
+const _SNAP_PREFIX = '__snap__:';
+const _SNAP_MAX    = 5;
+function _safeSetItem(k, v){
+  try {
+    const prev = localStorage.getItem(k);
+    if (prev !== null && !k.startsWith(_BAK_PREFIX) && !k.startsWith(_SNAP_PREFIX)){
+      try { localStorage.setItem(_BAK_PREFIX + k, prev); } catch(_) {}
+    }
+    localStorage.setItem(k, v);
+    return true;
+  } catch(err) {
+    console.error('[storage] setItem failed for', k, err);
+    try { if (typeof toast === 'function') toast('⚠️ 本地存储写入失败：' + (err && err.name || '未知错误') + '，请导出数据释放空间', 'error'); } catch(_) {}
+    return false;
+  }
+}
+function _safeGetItem(k, fallback){
+  const raw = localStorage.getItem(k);
+  if (raw === null) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch(err) {
+    // 优先从镜像备份恢复
+    const bak = localStorage.getItem(_BAK_PREFIX + k);
+    if (bak !== null) {
+      try {
+        const recovered = JSON.parse(bak);
+        console.warn('[storage] primary parse failed for', k, '— recovered from mirror backup');
+        return recovered;
+      } catch(_) {}
+    }
+    // 隔离损坏数据到 __corrupt__:k:timestamp，避免立刻被空数据覆盖
+    try { localStorage.setItem('__corrupt__:' + k + ':' + Date.now(), raw); } catch(_) {}
+    console.error('[storage] parse failed for', k, '— raw preserved under __corrupt__:', err);
+    try { if (typeof toast === 'function') toast('⚠️ 检测到 ' + k + ' 数据损坏，已隔离原始数据到 __corrupt__:* 备份', 'error'); } catch(_) {}
+    return fallback;
+  }
+}
+function _takeSnapshot(reason){
+  try {
+    const stamp = new Date().toISOString().replace(/[-:T.Z]/g,'').slice(0,12);
+    const snap = {};
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(_BAK_PREFIX) || k.startsWith(_SNAP_PREFIX) || k.startsWith('__corrupt__:')) return;
+      snap[k] = localStorage.getItem(k);
+    });
+    if (Object.keys(snap).length === 0) return; // 空数据不打快照
+    localStorage.setItem(_SNAP_PREFIX + stamp, JSON.stringify({at: Date.now(), reason: reason || '', data: snap}));
+    const snaps = Object.keys(localStorage).filter(k => k.startsWith(_SNAP_PREFIX)).sort();
+    while (snaps.length > _SNAP_MAX) { try { localStorage.removeItem(snaps.shift()); } catch(_) {} }
+  } catch(err) { console.warn('[storage] snapshot skipped:', err.message); }
+}
+function _listSnapshots(){
+  return Object.keys(localStorage)
+    .filter(k => k.startsWith(_SNAP_PREFIX))
+    .sort()
+    .map(k => { try { return Object.assign({key:k}, JSON.parse(localStorage.getItem(k))); } catch(_) { return null; } })
+    .filter(Boolean);
+}
+function _restoreSnapshot(key){
+  try {
+    const snap = JSON.parse(localStorage.getItem(key));
+    if (!snap || !snap.data) throw new Error('快照损坏');
+    _takeSnapshot('before-restore'); // 先备份当前
+    Object.entries(snap.data).forEach(([k, v]) => { try { localStorage.setItem(k, v); } catch(_) {} });
+    return true;
+  } catch(err) {
+    if (typeof toast === 'function') toast('恢复失败：' + err.message, 'error');
+    return false;
+  }
+}
+const ld = k => _safeGetItem(k, k===K.habits?{}:[]);
+const sv = (k,v) => _safeSetItem(k, JSON.stringify(v));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const today = () => localDate(new Date());
@@ -3335,10 +3410,10 @@ function getCfg() {
   return {
     name: '', field: '', univ: '', startDate: '',
     projects: [], areas: [], setupDone: false,
-    ...JSON.parse(localStorage.getItem(K.cfg) || '{}')
+    ..._safeGetItem(K.cfg, {})
   };
 }
-function saveCfg(c) { localStorage.setItem(K.cfg, JSON.stringify(c)); }
+function saveCfg(c) { _safeSetItem(K.cfg, JSON.stringify(c)); }
 
 // ══════════════════════════════════════
 //  SETUP WIZARD
@@ -3360,9 +3435,45 @@ let setupProjects = [];
 let setupTools = [...EXAMPLE_TOOLS];
 let currentStep = 1;
 
+function _maybeShowMigrationGuide(){
+  // 仅在 scholarclub.live 且本地无数据时显示一次
+  if (location.hostname !== 'scholarclub.live') return false;
+  if (localStorage.getItem(K.cfg)) return false;
+  if (localStorage.getItem('_phd_migration_skipped') === '1') return false;
+  const div = document.createElement('div');
+  div.id = '_migration_guide';
+  div.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:16px';
+  div.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 32px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.25)">
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px">📦 从旧域名迁移数据</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px">
+        本站已从 <code>nikewq.github.io</code> 迁移到 <code>scholarclub.live</code>。<br>
+        浏览器按域名隔离 localStorage，旧数据需手动迁移。请按你的情况选择：
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-primary" onclick="document.getElementById('_migration_guide').remove();openSyncModal()">
+          🔑 我有同步码 — 从云端恢复
+        </button>
+        <button class="btn" onclick="document.getElementById('_migration_guide').remove();document.getElementById('importFile').click()">
+          📥 我有 JSON 备份文件 — 立即导入
+        </button>
+        <button class="btn btn-ghost" onclick="localStorage.setItem('_phd_migration_skipped','1');document.getElementById('_migration_guide').remove();initSetupWizard()">
+          🆕 我是新用户 / 跳过
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:14px;line-height:1.6">
+        💡 旧域名上的数据可在 <code>https://nikewq.github.io/Research-workstation/</code> 用「导出数据」获取。
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+  return true;
+}
+
 function initSetupWizard() {
   const cfg = getCfg();
   if (cfg.setupDone) { initApp(); return; }
+  // 域名迁移：scholarclub.live 首次访问 → 先弹引导，让用户选择恢复路径
+  if (_maybeShowMigrationGuide()) return;
   document.getElementById('setup-overlay').style.display = 'flex';
   // Default start date = today
   const d = new Date();
@@ -3501,6 +3612,8 @@ function skipSetup() {
 //  APP INIT
 // ══════════════════════════════════════
 function initApp() {
+  // 每次启动打一份本地快照（保留最近 5 份），即便后续出问题也能 1 秒回滚
+  _takeSnapshot('app-init');
   const cfg = getCfg();
   document.getElementById('sidebar-field').textContent = cfg.field || (ROLE_CONFIG[cfg.role||'phd'].name.replace('生','')+'科研工作台');
   updateTodayDate();
@@ -6140,14 +6253,52 @@ function copySyncCode(){
     .catch(()=>{ toast('同步码：' + code) })
 }
 
+// 全量打包当前 localStorage：所有 K.* + _EXTRA_BACKUP_KEYS + habit_defs。
+// 与 import/export 字段集对齐，确保跨设备/跨域恢复时数据完整。
+function _collectAllSyncData(){
+  const data = {};
+  Object.entries(K).forEach(([alias, key]) => {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return;
+    try { data[alias] = JSON.parse(raw); } catch(_) {}
+  });
+  _EXTRA_BACKUP_KEYS.forEach(k => {
+    const raw = localStorage.getItem(k);
+    if (raw !== null) data['__'+k] = raw;
+  });
+  try { data.habit_defs = getHabitDefs(); } catch(_) {}
+  return data;
+}
+
+// 拉回的数据写入本地：兼容旧版（cfg/habitDefs/tools 三字段）+ 全量字段
+function _applySyncData(d){
+  if (!d || typeof d !== 'object') return 0;
+  let n = 0;
+  // 旧版兼容
+  if (d.cfg) { saveCfg({...getCfg(), ...d.cfg}); n++; }
+  if (d.habitDefs) { sv(K.habitDefs, d.habitDefs); n++; }
+  if (d.tools) { sv(K.tools, d.tools); n++; }
+  if (d.habit_defs) { try { saveHabitDefs(d.habit_defs); n++; } catch(_) {} }
+  // 全量：其余所有 K.*
+  Object.entries(K).forEach(([alias, key]) => {
+    if (alias === 'cfg' || alias === 'habitDefs' || alias === 'tools') return;
+    if (d[alias] === undefined) return;
+    _safeSetItem(key, JSON.stringify(d[alias])); n++;
+  });
+  // 额外设置键（主题/语言/同步码/AI 配置等，原始字符串）
+  _EXTRA_BACKUP_KEYS.forEach(k => {
+    if (d['__'+k] === undefined) return;
+    _safeSetItem(k, d['__'+k]); n++;
+  });
+  return n;
+}
+
 async function saveProfileCloud(){
   const code = _getOrCreateSyncCode()
   const tip = document.getElementById('sync-tip')
-  const data = {
-    cfg: getCfg(),
-    habitDefs: ld(K.habitDefs, []),
-    tools: ld(K.tools, []),
-  }
+  // 上传前先打一份本地快照（云端写挂掉也能回滚）
+  _takeSnapshot('before-cloud-push');
+  const data = _collectAllSyncData();
   try{
     const r = await fetch(`${_SB_URL}/rest/v1/profiles`, {
       method: 'POST',
@@ -6160,13 +6311,13 @@ async function saveProfileCloud(){
     })
     if(r.ok){
       toast('✅ 已同步到云端！同步码：' + code)
-      tip.textContent = '✅ 同步成功！'; tip.style.color='var(--green)'; tip.style.display='block'
+      if(tip){ tip.textContent = '✅ 同步成功！'; tip.style.color='var(--green)'; tip.style.display='block' }
     } else {
       const e = await r.json().catch(()=>({}))
-      tip.textContent = '同步失败：' + (e.message||r.status); tip.style.color='var(--red)'; tip.style.display='block'
+      if(tip){ tip.textContent = '同步失败：' + (e.message||r.status); tip.style.color='var(--red)'; tip.style.display='block' }
     }
   } catch(e){
-    tip.textContent = '网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block'
+    if(tip){ tip.textContent = '网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block' }
   }
 }
 
@@ -6181,12 +6332,11 @@ async function pullProfileCloud(){
     if(!r.ok){ tip.textContent='拉取失败 ('+r.status+')'; tip.style.color='var(--red)'; return }
     const rows = await r.json()
     if(!rows.length){ tip.textContent='云端暂无此同步码的数据，请先在主设备上推送一次'; tip.style.color='var(--text2)'; return }
-    const d = rows[0].data
-    if(d.cfg) saveCfg({...getCfg(), ...d.cfg})
-    if(d.habitDefs) sv(K.habitDefs, d.habitDefs)
-    if(d.tools) sv(K.tools, d.tools)
+    // 覆盖前先打一份本地快照，给用户后悔药
+    _takeSnapshot('before-cloud-pull');
+    const n = _applySyncData(rows[0].data)
     closeModal('syncModal')
-    toast('✅ 已拉取最新数据，正在刷新…')
+    toast(`✅ 已拉取 ${n} 项数据，正在刷新…`)
     setTimeout(()=>location.reload(), 1200)
   } catch(e){
     tip.textContent='网络错误：'+e.message; tip.style.color='var(--red)'
@@ -6212,14 +6362,13 @@ async function loadProfileCloud(){
     if(!r.ok){ tip.textContent='查询失败 ('+r.status+')'; tip.style.color='var(--red)'; tip.style.display='block'; return }
     const rows = await r.json()
     if(!rows.length){ tip.textContent='未找到该同步码，请检查是否正确'; tip.style.color='var(--red)'; tip.style.display='block'; return }
-    const d = rows[0].data
-    if(d.cfg) saveCfg({...getCfg(), ...d.cfg})
-    if(d.habitDefs) sv(K.habitDefs, d.habitDefs)
-    if(d.tools) sv(K.tools, d.tools)
+    // 覆盖前先打一份本地快照，给用户后悔药
+    _takeSnapshot('before-cloud-restore');
+    const n = _applySyncData(rows[0].data)
     // 保存该设备的同步码
-    localStorage.setItem('_sync_code', code)
+    _safeSetItem('_sync_code', code)
     closeModal('syncModal')
-    toast('✅ 数据已恢复！正在刷新…')
+    toast(`✅ 已恢复 ${n} 项数据，正在刷新…`)
     setTimeout(()=>location.reload(), 1200)
   } catch(e){
     tip.textContent='网络错误：' + e.message; tip.style.color='var(--red)'; tip.style.display='block'
