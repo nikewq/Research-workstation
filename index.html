@@ -948,6 +948,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     <div class="nav-item" data-page="habits" data-label="习惯打卡" data-label-key="nav.habits"><span class="nav-icon">🔥</span><span class="nav-label" data-i18n="nav.habits">习惯打卡</span></div>
     <div class="nav-group" data-i18n="g.research">科研</div>
     <div class="nav-item" data-page="submissions" data-label="文献 & 投稿" data-label-key="nav.papers"><span class="nav-icon">📖</span><span class="nav-label" data-i18n="nav.papers">文献 & 投稿</span></div>
+    <div class="nav-item" data-page="learning" data-label="学习驾驶舱"><span class="nav-icon">🎓</span><span class="nav-label">学习驾驶舱</span></div>
     <div class="nav-item" id="nav-lab" data-page="lab" data-label="实验进展" style="display:none"><span class="nav-icon">🔬</span><span class="nav-label">实验进展</span></div>
     <div class="nav-item" data-page="gantt" data-label="项目甘特图" data-label-key="nav.gantt"><span class="nav-icon">📅</span><span class="nav-label" data-i18n="nav.gantt">项目甘特图</span></div>
     <div class="nav-item" data-page="tools" data-label="工具面板" data-label-key="nav.tools"><span class="nav-icon">⚡</span><span class="nav-label" data-i18n="nav.tools">工具面板</span></div>
@@ -1956,6 +1957,30 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div id="ref-history" class="scrollable" style="max-height:550px"></div>
     </div>
   </div>
+</div>
+
+<!-- ── Learning Cockpit 学习驾驶舱 ── -->
+<style>
+#page-learning .ld-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+#page-learning .ld-mod{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px}
+#page-learning .ld-bar{position:relative;height:24px;background:var(--surface2);border-radius:7px;margin:10px 0 6px;overflow:hidden}
+#page-learning .ld-zone{position:absolute;top:0;bottom:0;background:rgba(35,134,54,.25);border-left:2px dashed var(--green);border-right:2px dashed var(--green)}
+#page-learning .ld-mark{position:absolute;top:-3px;bottom:-3px;width:3px;border-radius:2px}
+#page-learning .ld-kv{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.5}
+#page-learning .ld-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#page-learning .ld-num{width:56px}
+#page-learning .ld-banner{background:var(--primary-soft);border:1px solid var(--primary);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px}
+#page-learning select.btn,#page-learning input{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px}
+</style>
+<div class="page" id="page-learning">
+  <div class="page-title">🎓 学习驾驶舱</div>
+  <div class="page-subtitle">有状态的学习闭环：定目标 → 拆模块 → 练 → 按成功率校准难度（最近发展区 ZPD）→ 沉淀复习。让你"刚好被挑战"，最终离开辅助独立解决问题。</div>
+  <div class="ld-row" style="margin-bottom:12px">
+    <select id="ld-topic-sel" class="btn" onchange="learnSelectTopic(this.value)"></select>
+    <button class="btn btn-primary btn-sm" onclick="learnNewTopicModal()">➕ 新建学习目标</button>
+    <button class="btn btn-ghost btn-sm" onclick="learnFromPaper()">📖 从文献库建精读</button>
+  </div>
+  <div id="ld-body"></div>
 </div>
 
 <!-- ── Stats ── -->
@@ -3244,6 +3269,8 @@ const K = {
   wrZip:      'phd_wr_zip_v1',
   // ── AI 全局配置 ──
   aiCfg:      '_ai_cfg',
+  // ── 学习驾驶舱（独立命名空间，不与任何现有键冲突）──
+  learning:   'phd_learning',
 };
 
 // ── 数据保护层（防止刷新丢数据）──
@@ -3777,7 +3804,7 @@ function initApp() {
 // ══════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════
-const _VALID_PAGES=new Set(['overview','tasks','focus','habits','submissions','gantt','tools','reflection','stats','intel','procure','settings','lab'])
+const _VALID_PAGES=new Set(['overview','tasks','focus','habits','submissions','learning','gantt','tools','reflection','stats','intel','procure','settings','lab'])
 function switchPage(name) {
   if(!_VALID_PAGES.has(name))name='overview'
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -3791,6 +3818,7 @@ function switchPage(name) {
   if (name==='habits') renderHabits();
   if (name==='tasks') {renderTasks();_refreshNickDisplay();}
   if (name==='submissions') { renderSubmissions(); renderPapersPage(); }
+  if (name==='learning') renderLearning();
   if (name==='reflection') renderRefHistory();
   if (name==='settings') populateSettingsForm();
   if (name==='tools') renderTools();
@@ -16603,6 +16631,155 @@ ${kp.slice(0,3000)}
   window.farm_generateSkin=generateSkin;
   window.farm_resetSkin=resetSkin;
 })();
+</script>
+
+<script>
+/* ══════════════════════════════════════
+   学习驾驶舱 Learning Cockpit — 通用模块
+   数据全部存 K.learning('phd_learning')，独立命名空间；
+   只用 ld()/sv() 读写，绝不触碰其它键 → 现有用户历史数据完整保留。
+   schema 带版本号 v，未来变更只做增量迁移。
+   ══════════════════════════════════════ */
+function _learnGet(){const d=ld(K.learning);if(d&&Array.isArray(d.topics))return d;return{v:1,topics:[],cur:null};}
+function _learnSet(d){d.v=1;sv(K.learning,d);}
+function _lEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function _learnToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function _learnDateAdd(n){const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const _LEARN_TPL={
+  paper:{name:'读懂一篇论文',mods:['三遍法泛读（5min判断读不读）','结构化精读（问题/方法/公式/图表/实验/创新）','批判性评估（找漏洞/判断真伪创新）']},
+  method:{name:'学会一项方法/工具',mods:['理解原理','跟做示例','独立复现（无提示）']},
+  writing:{name:'学术写作 / rebuttal',mods:['拆解优秀范文','带框架仿写','限时独立成文']}
+};
+function _learnNewMod(name,active){return{id:uid(),name,status:active?'active':'locked',zpd:[0.70,0.85],rolling:null,attempts:0,history:[],note:''};}
+
+function renderLearning(){
+  const d=_learnGet();const sel=document.getElementById('ld-topic-sel');if(!sel)return;
+  if(!d.topics.length){sel.innerHTML='';document.getElementById('ld-body').innerHTML=_learnEmpty();return;}
+  if(!d.cur||!d.topics.find(t=>t.id===d.cur)){d.cur=d.topics[0].id;_learnSet(d);}
+  sel.innerHTML=d.topics.map(t=>`<option value="${t.id}" ${t.id===d.cur?'selected':''}>${_lEsc(t.name)}</option>`).join('');
+  document.getElementById('ld-body').innerHTML=_learnTopicHtml(d.topics.find(t=>t.id===d.cur));
+}
+function _learnEmpty(){
+  return `<div class="card"><div class="card-title">开始你的第一个学习目标</div>
+    <div class="ld-kv" style="margin-bottom:12px">选一个模板，或自定义。每个目标会被拆成模块，按"成功率"动态调难度（最近发展区 ZPD）。</div>
+    <div class="ld-row">
+      <button class="btn btn-primary btn-sm" onclick="learnTemplate('paper')">📄 读懂一篇论文</button>
+      <button class="btn btn-sm" onclick="learnTemplate('method')">🛠 学会一项方法</button>
+      <button class="btn btn-sm" onclick="learnTemplate('writing')">✍️ 学术写作/rebuttal</button>
+      <button class="btn btn-ghost btn-sm" onclick="learnNewTopicModal()">🎯 自定义</button>
+      <button class="btn btn-ghost btn-sm" onclick="learnFromPaper()">📖 从文献库建精读</button>
+    </div></div>`;
+}
+function _learnZpd(m){
+  const lo=m.zpd[0],hi=m.zpd[1],v=m.rolling;
+  if(v==null)return{col:'var(--text2)',txt:'未开始',mark:''};
+  const mk=`<div class="ld-mark" style="left:${v*100}%;background:${v<lo?'var(--red)':v>hi?'var(--blue)':'var(--green)'}"></div>`;
+  if(v<lo)return{col:'var(--red)',txt:`🔴 偏难 ${Math.round(v*100)}% · 降难度/加脚手架`,mark:mk};
+  if(v>hi)return{col:'var(--blue)',txt:`🔵 偏易 ${Math.round(v*100)}% · 升难度/限时`,mark:mk};
+  return{col:'var(--green)',txt:`🟢 ${Math.round(v*100)}% · 正处最近发展区`,mark:mk};
+}
+function _learnModHtml(t,m){
+  const lo=m.zpd[0],hi=m.zpd[1],z=_learnZpd(m);
+  const st={active:'进行中',locked:'未解锁',mastered:'已掌握'};
+  return `<div class="ld-mod">
+    <div class="ld-row" style="justify-content:space-between">
+      <strong style="font-size:14px">${_lEsc(m.name)}</strong>
+      <select class="btn btn-sm" onchange="learnSetStatus('${t.id}','${m.id}',this.value)">
+        ${['active','locked','mastered'].map(s=>`<option value="${s}" ${m.status===s?'selected':''}>${st[s]}</option>`).join('')}
+      </select></div>
+    <div class="ld-bar"><div class="ld-zone" style="left:${lo*100}%;width:${(hi-lo)*100}%"></div>${z.mark}</div>
+    <div style="font-size:12px;font-weight:600;color:${z.col}">${z.txt}</div>
+    <div class="ld-kv">练习 ${m.attempts||0} 次 · 目标区间 ${Math.round(lo*100)}–${Math.round(hi*100)}%</div>
+    ${m.note?`<div class="ld-kv">📝 ${_lEsc(m.note)}</div>`:''}
+    <div class="ld-row" style="margin-top:8px">
+      <input id="ld-c-${m.id}" class="ld-num" type="number" min="0" placeholder="对">
+      <span>/</span><input id="ld-t-${m.id}" class="ld-num" type="number" min="1" placeholder="总">
+      <input id="ld-n-${m.id}" placeholder="备注(可选)" style="flex:1;min-width:80px">
+      <button class="btn btn-primary btn-sm" onclick="learnLog('${t.id}','${m.id}')">记录</button>
+    </div></div>`;
+}
+function _learnTopicHtml(t){
+  const due=(t.srs||[]).filter(c=>!c.due||c.due<=_learnToday()).length;
+  return `<div class="ld-banner">
+    <div style="font-weight:600;margin-bottom:4px">🎯 ${_lEsc(t.name)}</div>
+    <div class="ld-kv">${_lEsc(t.goal||'(未设目标)')}</div>
+    <div class="ld-kv" style="margin-top:8px"><strong>下一步：</strong>${_lEsc(t.nextStep||'(未设)')}</div>
+    <div class="ld-row" style="margin-top:10px">
+      <button class="btn btn-sm" onclick="learnEditNext('${t.id}')">✏️ 编辑下一步</button>
+      <button class="btn btn-sm" onclick="learnNextToTask('${t.id}')">➕ 下一步→任务</button>
+      <button class="btn btn-sm" onclick="learnToReflection('${t.id}')">🌙 记入反思</button>
+      ${t.sourcePaperId?`<button class="btn btn-sm" onclick="switchPage('submissions')">📖 来源文献</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="learnDelTopic('${t.id}')">🗑 删除目标</button>
+    </div></div>
+  <div class="ld-row" style="margin-bottom:10px"><strong>学习模块</strong>
+    <button class="btn btn-sm" onclick="learnAddModule('${t.id}')">➕ 加模块</button>
+    <span class="ld-kv">绿带 = 最近发展区目标区间，竖线 = 当前成功率</span></div>
+  <div class="ld-grid">${(t.modules||[]).map(m=>_learnModHtml(t,m)).join('')||'<div class="ld-kv">还没有模块，点"加模块"。</div>'}</div>
+  <div class="card" style="margin-top:14px"><div class="card-title">🔁 复习卡 (SRS)　到期 ${due} / 共 ${(t.srs||[]).length}</div>
+    <div class="ld-row">
+      <button class="btn btn-primary btn-sm" onclick="learnSrsStart('${t.id}')" ${due?'':'disabled'}>开始复习</button>
+      <button class="btn btn-sm" onclick="learnSrsAdd('${t.id}')">➕ 加卡</button>
+    </div><div id="ld-srs-area" style="margin-top:10px"></div></div>`;
+}
+function learnTemplate(key){const tp=_LEARN_TPL[key];if(!tp)return;_learnCreate(tp.name,'',tp.mods);}
+function learnNewTopicModal(){const name=prompt('学习目标名称：');if(!name)return;const goal=prompt('一句话目标（学会什么 / 达到什么可验收标准）：')||'';_learnCreate(name.trim(),goal.trim(),['入门']);}
+function _learnCreate(name,goal,mods,paperId){
+  const d=_learnGet();const id=uid();
+  d.topics.push({id,name,goal,created:_learnToday(),updated:_learnToday(),nextStep:'',sourcePaperId:paperId||null,
+    modules:mods.map((mn,i)=>_learnNewMod(mn,i===0)),srs:[]});
+  d.cur=id;_learnSet(d);renderLearning();toast('✅ 学习目标已创建');
+}
+function learnSelectTopic(id){const d=_learnGet();d.cur=id;_learnSet(d);renderLearning();}
+function learnDelTopic(id){if(!confirm('删除这个学习目标及其进度？仅影响本目标，不动其它数据。'))return;const d=_learnGet();d.topics=d.topics.filter(t=>t.id!==id);if(d.cur===id)d.cur=(d.topics[0]&&d.topics[0].id)||null;_learnSet(d);renderLearning();toast('已删除');}
+function _learnFind(d,tid,mid){const t=d.topics.find(x=>x.id===tid);return[t,t&&t.modules.find(m=>m.id===mid)];}
+function learnLog(tid,mid){
+  const cE=document.getElementById('ld-c-'+mid),tE=document.getElementById('ld-t-'+mid),nE=document.getElementById('ld-n-'+mid);
+  const c=+cE.value,tot=+tE.value,note=nE.value.trim();
+  if(!tot||c<0||c>tot){toast('请填有效的 对/总','error');return;}
+  const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m)return;
+  m.history=m.history||[];m.history.push({date:_learnToday(),correct:c,total:tot,note});
+  const last=m.history.slice(-10);m.rolling=last.reduce((s,h)=>s+h.correct/h.total,0)/last.length;
+  m.attempts=m.history.length;if(note)m.note=note;if(m.status==='locked')m.status='active';
+  t.updated=_learnToday();_learnSet(d);renderLearning();toast('已记录 · '+_learnZpd(m).txt);
+}
+function learnSetStatus(tid,mid,st){const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m)return;m.status=st;t.updated=_learnToday();_learnSet(d);renderLearning();}
+function learnAddModule(tid){const name=prompt('模块名称：');if(!name)return;const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;t.modules.push(_learnNewMod(name.trim(),true));_learnSet(d);renderLearning();}
+function learnEditNext(tid){const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;const v=prompt('下一步该做什么（具体到模块 + 动作）：',t.nextStep||'');if(v==null)return;t.nextStep=v.trim();t.updated=_learnToday();_learnSet(d);renderLearning();}
+function learnNextToTask(tid){const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t||!t.nextStep){toast('先设置下一步','error');return;}
+  const tasks=ld(K.tasks);tasks.push({id:uid(),title:'[学习] '+t.nextStep,proj:'',prio:'med',due:'',status:'todo',created:today(),done:null,pomos:0});sv(K.tasks,tasks);toast('✅ 已加入任务管理');}
+function learnToReflection(tid){const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;const v=prompt('今天在「'+t.name+'」学到 / 做成了什么？（记入反思日记的「今日亮点」）');if(!v)return;
+  const refs=ld(K.refs);refs.unshift({id:uid(),date:today(),mood:'🤩',wins:'[学习] '+v.trim(),struggles:'',tomorrow:'',gratitude:'',ts:new Date().toLocaleString('zh-CN')});sv(K.refs,refs);toast('✅ 已记入反思日记');}
+function learnFromPaper(){
+  const papers=ld(K.papers);if(!papers||!papers.length){toast('文献库为空，先去「文献 & 投稿」添加','error');return;}
+  const list=papers.slice(0,30).map((p,i)=>`${i+1}. ${(p.title||'(无标题)').slice(0,60)}`).join('\n');
+  const n=prompt('选一篇建精读（输入序号）：\n'+list);if(!n)return;const idx=parseInt(n,10)-1;if(isNaN(idx)||!papers[idx]){toast('序号无效','error');return;}
+  const p=papers[idx];_learnCreate('精读: '+(p.title||'论文').slice(0,40),'读懂这篇并能独立批判其方法',_LEARN_TPL.paper.mods,p.id);
+}
+/* ── SRS 间隔重复（SM-2 简化）── */
+let _learnSrs={tid:null,queue:[],idx:0,flip:false};
+function learnSrsStart(tid){const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;
+  _learnSrs={tid,queue:(t.srs||[]).filter(c=>!c.due||c.due<=_learnToday()),idx:0,flip:false};
+  if(!_learnSrs.queue.length){toast('没有到期卡片');return;}_learnSrsRender();}
+function _learnSrsRender(){
+  const a=document.getElementById('ld-srs-area');if(!a)return;const s=_learnSrs;
+  if(!s.queue.length||s.idx>=s.queue.length){a.innerHTML='<div class="ld-kv">本轮复习完成 ✅</div>';return;}
+  const c=s.queue[s.idx];
+  a.innerHTML=`<div class="ld-mod" style="text-align:center"><div class="ld-kv">第 ${s.idx+1}/${s.queue.length}</div>
+    <div style="font-size:15px;margin:8px 0">${_lEsc(c.q)}</div>
+    ${s.flip?`<div style="color:var(--primary);margin-bottom:10px">${_lEsc(c.a)}</div>
+      <div class="ld-row" style="justify-content:center"><button class="btn btn-sm" onclick="learnSrsGrade(false)">❌ 没记住</button><button class="btn btn-primary btn-sm" onclick="learnSrsGrade(true)">✅ 记住了</button></div>`
+    :`<button class="btn btn-sm" onclick="learnSrsFlip()">翻面看答案</button>`}</div>`;
+}
+function learnSrsFlip(){_learnSrs.flip=true;_learnSrsRender();}
+function learnSrsGrade(ok){const s=_learnSrs;const d=_learnGet();const t=d.topics.find(x=>x.id===s.tid);if(!t){return;}
+  const qc=s.queue[s.idx];const card=(t.srs||[]).find(c=>c.id===qc.id);if(card){
+    if(ok){card.interval=Math.max(1,Math.round((card.interval||1)*(card.ease||2.3)));card.ease=Math.min(2.8,(card.ease||2.3)+0.1);}
+    else{card.interval=1;card.ease=Math.max(1.3,(card.ease||2.3)-0.2);}
+    card.last=_learnToday();card.due=_learnDateAdd(card.interval);_learnSet(d);}
+  s.flip=false;s.idx++;_learnSrsRender();if(s.idx>=s.queue.length)renderLearning();
+}
+function learnSrsAdd(tid){const q=prompt('卡片正面（问）：');if(!q)return;const a=prompt('卡片背面（答）：');if(!a)return;
+  const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;t.srs=t.srs||[];t.srs.push({id:uid(),q:q.trim(),a:a.trim(),ease:2.3,interval:0,due:_learnToday(),last:null});_learnSet(d);renderLearning();toast('✅ 已加卡');}
 </script>
 
 </body>
