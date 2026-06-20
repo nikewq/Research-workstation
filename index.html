@@ -1980,6 +1980,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     <button class="btn btn-primary btn-sm" onclick="learnNewTopicModal()">➕ 新建学习目标</button>
     <button class="btn btn-ghost btn-sm" onclick="learnTemplate('morning')">🌅 晨间管理模板</button>
     <button class="btn btn-ghost btn-sm" onclick="learnFromPaper()">📖 从文献库建精读</button>
+    <button class="btn btn-ghost btn-sm" onclick="learnFromZotero()">📥 从 Zotero 建精读</button>
   </div>
   <div id="ld-body"></div>
 </div>
@@ -16760,6 +16761,8 @@ function _learnTopicHtml(t){
       <button class="btn btn-sm" onclick="learnEditNext('${t.id}')">✏️ 编辑下一步</button>
       <button class="btn btn-sm" onclick="learnNextToTask('${t.id}')">➕ 下一步→任务</button>
       <button class="btn btn-sm" onclick="learnToReflection('${t.id}')">🌙 记入反思</button>
+      <button class="btn btn-sm" onclick="learnExportNotes('${t.id}')">📝 导出.md</button>
+      <button class="btn btn-sm" onclick="learnNoteToZotero('${t.id}')">💾 笔记→Zotero</button>
       ${t.habitId?`<button class="btn btn-sm" onclick="switchPage('habits')">🔥 习惯打卡页</button>`:''}
       ${t.sourcePaperId?`<button class="btn btn-sm" onclick="switchPage('submissions')">📖 来源文献</button>`:''}
       <button class="btn btn-ghost btn-sm" onclick="learnDelTopic('${t.id}')">🗑 删除目标</button>
@@ -16799,12 +16802,81 @@ function learnCheckin(tid){
     }
   }
 }
+/* ── 笔记导出：本地 Markdown ── */
+function _learnToMarkdown(t){
+  let s='# '+t.name+'\n\n';
+  if(t.goal)s+='**目标**: '+t.goal+'\n\n';
+  if(t.nextStep)s+='**下一步**: '+t.nextStep+'\n\n';
+  s+='## 学习模块\n\n';
+  (t.modules||[]).forEach(m=>{const r=m.rolling==null?'未开始':Math.round(m.rolling*100)+'%';
+    s+='### '+m.name+'  ('+r+' · '+m.status+')\n';if(m.note)s+=m.note+'\n';s+='\n';});
+  if((t.srs||[]).length){s+='## 复习卡 (SRS)\n\n';t.srs.forEach(c=>{s+='- **Q**: '+c.q+'  \n  **A**: '+c.a+'\n';});}
+  return s;
+}
+function _learnToHtml(t){
+  let s='<h1>'+_lEsc(t.name)+'</h1>';
+  if(t.goal)s+='<p><b>目标:</b> '+_lEsc(t.goal)+'</p>';
+  if(t.nextStep)s+='<p><b>下一步:</b> '+_lEsc(t.nextStep)+'</p>';
+  (t.modules||[]).forEach(m=>{const r=m.rolling==null?'未开始':Math.round(m.rolling*100)+'%';
+    s+='<h3>'+_lEsc(m.name)+' ('+r+')</h3>';if(m.note)s+='<p>'+_lEsc(m.note)+'</p>';});
+  if((t.srs||[]).length){s+='<h2>复习卡</h2><ul>';t.srs.forEach(c=>{s+='<li><b>Q:</b> '+_lEsc(c.q)+'<br><b>A:</b> '+_lEsc(c.a)+'</li>';});s+='</ul>';}
+  return s+'<p><i>— 由 学习驾驶舱 导出</i></p>';
+}
+function learnExportNotes(tid){
+  const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;
+  const blob=new Blob([_learnToMarkdown(t)],{type:'text/markdown;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(t.name||'学习笔记').replace(/[\\/:*?"<>|]/g,'_')+'.md';
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
+  toast('📝 已导出 Markdown，可存本地或拖进 Zotero/Obsidian');
+}
+/* ── Zotero Web API 联动（key 仅存本地，不进同步/广播）── */
+function _zoteroCfg(){try{return JSON.parse(localStorage.getItem('_zotero_cfg'))}catch(e){return null}}
+function learnZoteroConnect(){
+  const cur=_zoteroCfg()||{};
+  const uid=prompt('Zotero userID（数字，见 zotero.org/settings/keys 顶部 "Your userID for use in API calls"）：',cur.uid||'');
+  if(!uid)return null;
+  const key=prompt('Zotero API Key（需勾 write 权限，在 zotero.org/settings/keys 新建）：',cur.key||'');
+  if(!key)return null;
+  const cfg={uid:uid.trim(),key:key.trim()};localStorage.setItem('_zotero_cfg',JSON.stringify(cfg));
+  toast('✅ 已连接 Zotero（仅存本地浏览器）');return cfg;
+}
+async function _zoteroGet(cfg,path){
+  const r=await fetch('https://api.zotero.org/users/'+cfg.uid+path,{headers:{'Zotero-API-Key':cfg.key,'Zotero-API-Version':'3'}});
+  if(!r.ok)throw new Error('Zotero API '+r.status);return r.json();
+}
+async function _zoteroPick(cfg){
+  const q=prompt('搜索 Zotero 文献（标题/作者/年）：');if(!q)return null;
+  let items;try{items=await _zoteroGet(cfg,'/items/top?q='+encodeURIComponent(q)+'&qmode=titleCreatorYear&limit=20');}catch(e){toast('搜索失败:'+e.message,'error');return null;}
+  if(!items.length){toast('没搜到');return null;}
+  const list=items.map((it,i)=>(i+1)+'. '+(((it.data&&it.data.title)||'(无标题)').slice(0,60))).join('\n');
+  const n=prompt('选一篇（序号）：\n'+list);if(!n)return null;const idx=parseInt(n,10)-1;if(isNaN(idx)||!items[idx])return null;
+  return {key:items[idx].key,title:(items[idx].data&&items[idx].data.title)||'论文'};
+}
+async function learnNoteToZotero(tid){
+  const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;
+  let cfg=_zoteroCfg();if(!cfg){cfg=learnZoteroConnect();if(!cfg)return;}
+  if(!t.zoteroKey){const p=await _zoteroPick(cfg);if(!p)return;t.zoteroKey=p.key;_learnSet(d);renderLearning();}
+  try{
+    const r=await fetch('https://api.zotero.org/users/'+cfg.uid+'/items',{method:'POST',
+      headers:{'Zotero-API-Key':cfg.key,'Zotero-API-Version':'3','Content-Type':'application/json'},
+      body:JSON.stringify([{itemType:'note',parentItem:t.zoteroKey,note:_learnToHtml(t)}])});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok && j.successful && Object.keys(j.successful).length){toast('💾 已写入 Zotero 对应文献的子笔记');}
+    else{toast('写入失败 '+r.status+' '+JSON.stringify(j.failed||j).slice(0,80),'error');}
+  }catch(e){toast('写入失败(可能CORS/网络/key权限)：'+e.message+'，可改用本地导出','error');}
+}
+async function learnFromZotero(){
+  let cfg=_zoteroCfg();if(!cfg){cfg=learnZoteroConnect();if(!cfg)return;}
+  const p=await _zoteroPick(cfg);if(!p)return;
+  _learnCreate('精读: '+p.title.slice(0,40),'读懂这篇并能独立批判其方法',_LEARN_TPL.paper.mods,null,{nextStep:_LEARN_TPL.paper.next,srs:_LEARN_TPL.paper.srs,zoteroKey:p.key});
+}
 function learnTemplate(key){const tp=_LEARN_TPL[key];if(!tp)return;_learnCreate(tp.name,tp.goal||'',tp.mods,null,{nextStep:tp.next,srs:tp.srs,kind:tp.kind});}
 function learnNewTopicModal(){const name=prompt('学习目标名称：');if(!name)return;const goal=prompt('一句话目标（学会什么 / 达到什么可验收标准）：')||'';_learnCreate(name.trim(),goal.trim(),['入门']);}
 function _learnCreate(name,goal,mods,paperId,opts){
   opts=opts||{};const d=_learnGet();const id=uid();
   const srs=(opts.srs||[]).map(c=>({id:uid(),q:c.q,a:c.a,ease:2.3,interval:0,due:_learnToday(),last:null}));
-  d.topics.push({id,name,goal:goal||'',created:_learnToday(),updated:_learnToday(),nextStep:opts.nextStep||'',sourcePaperId:paperId||null,kind:opts.kind||null,
+  d.topics.push({id,name,goal:goal||'',created:_learnToday(),updated:_learnToday(),nextStep:opts.nextStep||'',sourcePaperId:paperId||null,kind:opts.kind||null,zoteroKey:opts.zoteroKey||null,
     modules:mods.map((m,i)=>{const a=Array.isArray(m)?m:[m];return _learnNewMod(a[0],i===0,a[1],a[2]);}),srs});
   d.cur=id;_learnSet(d);renderLearning();toast('✅ 学习目标已创建');
 }
