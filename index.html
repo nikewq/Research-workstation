@@ -6418,6 +6418,7 @@ function copySyncCode(){
 function _collectAllSyncData(){
   const data = {};
   Object.entries(K).forEach(([alias, key]) => {
+    if (alias === 'learning') return; // 学习驾驶舱数据(可能含机密笔记)不进云端同步/广播；仅随本地导出备份
     const raw = localStorage.getItem(key);
     if (raw === null) return;
     try { data[alias] = JSON.parse(raw); } catch(_) {}
