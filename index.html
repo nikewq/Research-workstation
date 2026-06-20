@@ -16653,6 +16653,7 @@ const _LEARN_TPL={
   writing:{name:'学术写作 / rebuttal',mods:['拆解优秀范文','带框架仿写','限时独立成文']},
   // 共有模块：晨间管理。模块为菜单，可自由删减(自主性↑)；记录=当段「完成天数/计划天数」。
   morning:{
+    kind:'morning',
     name:'🌅 晨间管理 · 用 Morning Routine 掌控一天',
     goal:'建立可持续的晨间例程：第一小时高质量启动 + 四象限规划当天，让每天以成就感开始。早起是手段不是目的——重点是醒来有值得做的事。下面模块是菜单，留你需要的、删其余。',
     next:'今天只做一件事：选 1 个「锚点+微行动」(例:刷牙后→写下明天最重要的1件事)，明早执行。之后每天回来在对应模块记「完成天数/计划天数」。先把 1–2 个模块跑顺再加。',
@@ -16762,14 +16763,27 @@ function learnCheckin(tid){
   toggleHabit(hid); // 复用原生打卡：写 phd_habits[今日]，并刷新 习惯/概览/统计
   renderLearning();
   const h=ld(K.habits),td=today();
-  toast(h[td]&&h[td][hid]?'🔥 今日已打卡，已同步习惯打卡':'已取消今日打卡');
+  const on=!!(h[td]&&h[td][hid]);
+  toast(on?'🔥 今日已打卡，已同步习惯打卡':'已取消今日打卡');
+  // 晨间模板：打卡(开启)时把当天计划写进反思日记的「明日计划」
+  if(on && (t.kind==='morning' || /晨间|Morning Routine/.test(t.name||''))){
+    const refs=ld(K.refs);const cur=refs.find(r=>r.date===td);
+    const plan=prompt('📋 今天计划做哪些事？(将写入反思日记「明日计划」栏；留空跳过)', (cur&&cur.tomorrow)||'');
+    if(plan!=null && plan.trim()!==''){
+      if(cur){cur.tomorrow=plan.trim();}
+      else{refs.unshift({id:uid(),date:td,mood:'🌅',wins:'',struggles:'',tomorrow:plan.trim(),gratitude:'',ts:new Date().toLocaleString('zh-CN')});}
+      sv(K.refs,refs);
+      if(typeof renderRefHistory==='function'){try{renderRefHistory();}catch(e){}}
+      toast('📋 计划已写入反思日记');
+    }
+  }
 }
-function learnTemplate(key){const tp=_LEARN_TPL[key];if(!tp)return;_learnCreate(tp.name,tp.goal||'',tp.mods,null,{nextStep:tp.next,srs:tp.srs});}
+function learnTemplate(key){const tp=_LEARN_TPL[key];if(!tp)return;_learnCreate(tp.name,tp.goal||'',tp.mods,null,{nextStep:tp.next,srs:tp.srs,kind:tp.kind});}
 function learnNewTopicModal(){const name=prompt('学习目标名称：');if(!name)return;const goal=prompt('一句话目标（学会什么 / 达到什么可验收标准）：')||'';_learnCreate(name.trim(),goal.trim(),['入门']);}
 function _learnCreate(name,goal,mods,paperId,opts){
   opts=opts||{};const d=_learnGet();const id=uid();
   const srs=(opts.srs||[]).map(c=>({id:uid(),q:c.q,a:c.a,ease:2.3,interval:0,due:_learnToday(),last:null}));
-  d.topics.push({id,name,goal:goal||'',created:_learnToday(),updated:_learnToday(),nextStep:opts.nextStep||'',sourcePaperId:paperId||null,
+  d.topics.push({id,name,goal:goal||'',created:_learnToday(),updated:_learnToday(),nextStep:opts.nextStep||'',sourcePaperId:paperId||null,kind:opts.kind||null,
     modules:mods.map((m,i)=>{const a=Array.isArray(m)?m:[m];return _learnNewMod(a[0],i===0,a[1],a[2]);}),srs});
   d.cur=id;_learnSet(d);renderLearning();toast('✅ 学习目标已创建');
 }
