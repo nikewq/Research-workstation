@@ -1978,6 +1978,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
   <div class="ld-row" style="margin-bottom:12px">
     <select id="ld-topic-sel" class="btn" onchange="learnSelectTopic(this.value)"></select>
     <button class="btn btn-primary btn-sm" onclick="learnNewTopicModal()">➕ 新建学习目标</button>
+    <button class="btn btn-ghost btn-sm" onclick="learnTemplate('morning')">🌅 晨间管理模板</button>
     <button class="btn btn-ghost btn-sm" onclick="learnFromPaper()">📖 从文献库建精读</button>
   </div>
   <div id="ld-body"></div>
@@ -16649,9 +16650,33 @@ function _learnDateAdd(n){const d=new Date();d.setDate(d.getDate()+n);return d.g
 const _LEARN_TPL={
   paper:{name:'读懂一篇论文',mods:['三遍法泛读（5min判断读不读）','结构化精读（问题/方法/公式/图表/实验/创新）','批判性评估（找漏洞/判断真伪创新）']},
   method:{name:'学会一项方法/工具',mods:['理解原理','跟做示例','独立复现（无提示）']},
-  writing:{name:'学术写作 / rebuttal',mods:['拆解优秀范文','带框架仿写','限时独立成文']}
+  writing:{name:'学术写作 / rebuttal',mods:['拆解优秀范文','带框架仿写','限时独立成文']},
+  // 共有模块：晨间管理。模块为菜单，可自由删减(自主性↑)；记录=当段「完成天数/计划天数」。
+  morning:{
+    name:'🌅 晨间管理 · 用 Morning Routine 掌控一天',
+    goal:'建立可持续的晨间例程：第一小时高质量启动 + 四象限规划当天，让每天以成就感开始。早起是手段不是目的——重点是醒来有值得做的事。下面模块是菜单，留你需要的、删其余。',
+    next:'今天只做一件事：选 1 个「锚点+微行动」(例:刷牙后→写下明天最重要的1件事)，明早执行。之后每天回来在对应模块记「完成天数/计划天数」。先把 1–2 个模块跑顺再加。',
+    mods:[
+      ['锚点 + 微习惯（先让它发生）',[0.80,0.95],'BJ Fogg《Tiny Habits》：把新行为锚在一个已有动作后(起床/刷牙/喝水)，且小到不可能失败。先建立"做了"的连胜，再慢慢长大。'],
+      ['黄金第一小时 · 要事优先',[0.70,0.90],'一夜休息后大脑最清醒、意志与决策资源未被消耗，是认知高峰，适合做1件"重要"的深度任务(Deep Work)。第一小时完成它→成就感带动全天。'],
+      ['晨间规划 · 四象限',[0.75,0.90],'花~30min列待办，用 Eisenhower 四象限定优先级；再用实现意图(Gollwitzer if-then:"到办公室就先做X")锁定执行，比"我要做X"有效得多。'],
+      ['抗干扰 · 远离网络',[0.65,0.85],'第一小时不碰手机/网络。环境设计(Atomic Habits)：手机放别屋/灰度/勿扰，减少决策疲劳与多巴胺劫持。'],
+      ['光照与节律启动',[0.75,0.95],'醒后尽快接触日光10–30min：触发皮质醇觉醒反应、抑制褪黑素，锚定昼夜节律，提升白天清醒度并改善夜间入睡。'],
+      ['深度启动 · 读 / 思 / 动',[0.70,0.90],'用30min深读/思考/运动激发灵感并"立即行动"。晚上想到的事第二天易忘，所以把产出放在晨间。'],
+      ['复盘与个性化',[0.70,0.90],'每周复盘执行率与感受，删减不合适的；建立身份认同("我是早晨高效的人")。SDT：自主选择→动机更强，别照搬他人routine；有通勤可在路上完成。']
+    ],
+    srs:[
+      {q:'习惯如何起步最容易？',a:'BJ Fogg Tiny Habits：锚点(已有行为)+微行动(小到不会失败)+即时庆祝。先让行为发生，再让它长大。'},
+      {q:'为什么晨间适合做要事？',a:'一夜休息后大脑最清醒有序、处于认知高峰，且意志/决策资源尚未消耗，适合"重要(且紧急)"的深度任务。'},
+      {q:'什么是实现意图(implementation intention)？',a:'Gollwitzer 的"if-then"计划："如果到X情境，我就做Y"，显著提高执行率，远胜单纯"我要做Y"。'},
+      {q:'晨间光照为什么重要？',a:'醒后日光锚定昼夜节律——触发皮质醇觉醒反应、抑制褪黑素，提升白天清醒度并改善当晚入睡。'},
+      {q:'Eisenhower 四象限怎么分？',a:'重要&紧急→马上做；重要&不紧急→排程(成长区)；紧急&不重要→委托/快速清；都不→删。'},
+      {q:'"早起是目的还是手段"？',a:'手段。重点是醒来有值得做的事(意义/产出)，而非早起本身；否则不可持续。'},
+      {q:'怎样让晨间例程长期坚持？',a:'身份认同+环境设计+每周复盘删减+自主选择(SDT autonomy)，而非靠意志硬扛。'}
+    ]
+  }
 };
-function _learnNewMod(name,active){return{id:uid(),name,status:active?'active':'locked',zpd:[0.70,0.85],rolling:null,attempts:0,history:[],note:''};}
+function _learnNewMod(name,active,zpd,note){return{id:uid(),name,status:active?'active':'locked',zpd:zpd||[0.70,0.85],rolling:null,attempts:0,history:[],note:note||''};}
 
 function renderLearning(){
   const d=_learnGet();const sel=document.getElementById('ld-topic-sel');if(!sel)return;
@@ -16667,6 +16692,7 @@ function _learnEmpty(){
       <button class="btn btn-primary btn-sm" onclick="learnTemplate('paper')">📄 读懂一篇论文</button>
       <button class="btn btn-sm" onclick="learnTemplate('method')">🛠 学会一项方法</button>
       <button class="btn btn-sm" onclick="learnTemplate('writing')">✍️ 学术写作/rebuttal</button>
+      <button class="btn btn-sm" onclick="learnTemplate('morning')">🌅 晨间管理一天</button>
       <button class="btn btn-ghost btn-sm" onclick="learnNewTopicModal()">🎯 自定义</button>
       <button class="btn btn-ghost btn-sm" onclick="learnFromPaper()">📖 从文献库建精读</button>
     </div></div>`;
@@ -16722,12 +16748,13 @@ function _learnTopicHtml(t){
       <button class="btn btn-sm" onclick="learnSrsAdd('${t.id}')">➕ 加卡</button>
     </div><div id="ld-srs-area" style="margin-top:10px"></div></div>`;
 }
-function learnTemplate(key){const tp=_LEARN_TPL[key];if(!tp)return;_learnCreate(tp.name,'',tp.mods);}
+function learnTemplate(key){const tp=_LEARN_TPL[key];if(!tp)return;_learnCreate(tp.name,tp.goal||'',tp.mods,null,{nextStep:tp.next,srs:tp.srs});}
 function learnNewTopicModal(){const name=prompt('学习目标名称：');if(!name)return;const goal=prompt('一句话目标（学会什么 / 达到什么可验收标准）：')||'';_learnCreate(name.trim(),goal.trim(),['入门']);}
-function _learnCreate(name,goal,mods,paperId){
-  const d=_learnGet();const id=uid();
-  d.topics.push({id,name,goal,created:_learnToday(),updated:_learnToday(),nextStep:'',sourcePaperId:paperId||null,
-    modules:mods.map((mn,i)=>_learnNewMod(mn,i===0)),srs:[]});
+function _learnCreate(name,goal,mods,paperId,opts){
+  opts=opts||{};const d=_learnGet();const id=uid();
+  const srs=(opts.srs||[]).map(c=>({id:uid(),q:c.q,a:c.a,ease:2.3,interval:0,due:_learnToday(),last:null}));
+  d.topics.push({id,name,goal:goal||'',created:_learnToday(),updated:_learnToday(),nextStep:opts.nextStep||'',sourcePaperId:paperId||null,
+    modules:mods.map((m,i)=>{const a=Array.isArray(m)?m:[m];return _learnNewMod(a[0],i===0,a[1],a[2]);}),srs});
   d.cur=id;_learnSet(d);renderLearning();toast('✅ 学习目标已创建');
 }
 function learnSelectTopic(id){const d=_learnGet();d.cur=id;_learnSet(d);renderLearning();}
