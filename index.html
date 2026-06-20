@@ -16727,14 +16727,18 @@ function _learnModHtml(t,m){
 }
 function _learnTopicHtml(t){
   const due=(t.srs||[]).filter(c=>!c.due||c.due<=_learnToday()).length;
+  let ckDone=false, ckDays=0;
+  if(t.habitId){const h=ld(K.habits);ckDays=Object.keys(h).filter(ds=>h[ds]&&h[ds][t.habitId]).length;ckDone=!!(h[today()]&&h[today()][t.habitId]);}
   return `<div class="ld-banner">
     <div style="font-weight:600;margin-bottom:4px">🎯 ${_lEsc(t.name)}</div>
     <div class="ld-kv">${_lEsc(t.goal||'(未设目标)')}</div>
     <div class="ld-kv" style="margin-top:8px"><strong>下一步：</strong>${_lEsc(t.nextStep||'(未设)')}</div>
     <div class="ld-row" style="margin-top:10px">
+      <button class="btn ${ckDone?'':'btn-primary'} btn-sm" onclick="learnCheckin('${t.id}')">${ckDone?'✅ 今日已打卡':'🔥 今日打卡'}${ckDays?` · 累计${ckDays}天`:''}</button>
       <button class="btn btn-sm" onclick="learnEditNext('${t.id}')">✏️ 编辑下一步</button>
       <button class="btn btn-sm" onclick="learnNextToTask('${t.id}')">➕ 下一步→任务</button>
       <button class="btn btn-sm" onclick="learnToReflection('${t.id}')">🌙 记入反思</button>
+      ${t.habitId?`<button class="btn btn-sm" onclick="switchPage('habits')">🔥 习惯打卡页</button>`:''}
       ${t.sourcePaperId?`<button class="btn btn-sm" onclick="switchPage('submissions')">📖 来源文献</button>`:''}
       <button class="btn btn-ghost btn-sm" onclick="learnDelTopic('${t.id}')">🗑 删除目标</button>
     </div></div>
@@ -16747,6 +16751,18 @@ function _learnTopicHtml(t){
       <button class="btn btn-primary btn-sm" onclick="learnSrsStart('${t.id}')" ${due?'':'disabled'}>开始复习</button>
       <button class="btn btn-sm" onclick="learnSrsAdd('${t.id}')">➕ 加卡</button>
     </div><div id="ld-srs-area" style="margin-top:10px"></div></div>`;
+}
+/* ── 与「🔥习惯打卡」模块联动：今日打卡写入 phd_habits，连胜/统计原生可见 ── */
+function learnCheckin(tid){
+  const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;
+  const hid='learn_'+t.id;
+  const defs=getHabitDefs();
+  if(!defs.find(h=>h.id===hid)){ saveHabitDefs(defs.concat([{id:hid,name:(t.name||'学习').slice(0,20),emoji:'🎓'}])); }
+  if(t.habitId!==hid){ t.habitId=hid; _learnSet(d); }
+  toggleHabit(hid); // 复用原生打卡：写 phd_habits[今日]，并刷新 习惯/概览/统计
+  renderLearning();
+  const h=ld(K.habits),td=today();
+  toast(h[td]&&h[td][hid]?'🔥 今日已打卡，已同步习惯打卡':'已取消今日打卡');
 }
 function learnTemplate(key){const tp=_LEARN_TPL[key];if(!tp)return;_learnCreate(tp.name,tp.goal||'',tp.mods,null,{nextStep:tp.next,srs:tp.srs});}
 function learnNewTopicModal(){const name=prompt('学习目标名称：');if(!name)return;const goal=prompt('一句话目标（学会什么 / 达到什么可验收标准）：')||'';_learnCreate(name.trim(),goal.trim(),['入门']);}
