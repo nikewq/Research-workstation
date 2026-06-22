@@ -16643,8 +16643,13 @@ ${kp.slice(0,3000)}
    只用 ld()/sv() 读写，绝不触碰其它键 → 现有用户历史数据完整保留。
    schema 带版本号 v，未来变更只做增量迁移。
    ══════════════════════════════════════ */
-function _learnGet(){const d=ld(K.learning);if(d&&Array.isArray(d.topics))return d;return{v:1,topics:[],cur:null};}
-function _learnSet(d){d.v=1;sv(K.learning,d);}
+function _learnGet(){const d=ld(K.learning);if(d&&Array.isArray(d.topics)){
+    let mig=false;
+    d.topics.forEach(t=>(t.modules||[]).forEach(m=>{if(!Array.isArray(m.guides)){const tpl=_learnGuideTpl(m.name);if(m.coach==null)m.coach=tpl.coach;m.guides=_learnMkGuides(tpl.guides);mig=true;}}));
+    if(mig){d.v=2;sv(K.learning,d);}
+    return d;}
+  return{v:2,topics:[],cur:null};}
+function _learnSet(d){d.v=2;sv(K.learning,d);}
 function _lEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function _learnToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function _learnDateAdd(n){const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -16699,7 +16704,31 @@ const _LEARN_TPL={
     ]
   }
 };
-function _learnNewMod(name,active,zpd,note){return{id:uid(),name,status:active?'active':'locked',zpd:zpd||[0.70,0.85],rolling:null,attempts:0,history:[],note:note||''};}
+/* ── 学习引导/笔记模板：给每个模块一组「小习惯+逐步引导」(coach) 与可编辑的引导问题(guides) ── */
+const _LEARN_GENERIC_GUIDE={
+  coach:'微习惯：每次练完花 2 分钟回答下面的问题，把"做过"变成"学到"。问题都可编辑/增删，按你的技能改写。',
+  guides:['这次我具体做了什么？','哪里卡住 / 哪里还不熟？','下次的一个可执行小改进？']
+};
+const _LEARN_PAPER_GUIDES={
+  '步骤1':{coach:'微习惯：打开任何论文前，先用 1 分钟在这里写下"为什么读"再看正文——带问题读=主动阅读，留存率翻倍。逐步：①一句话写动机 ②把它挂到已知研究线上 ③列 1–3 个想得到答案的具体问题。',
+    guides:['我为什么读这篇？(找方法/找证据/写综述/审稿/对比 baseline)','它属于哪个领域、接在哪条研究线后面？(上游是谁)','读完我想回答的 1–3 个具体问题是？']},
+  '步骤2':{coach:'微习惯：计时 5–10 分钟，只扫不抠细节，时间一到就停。逐步：标题/摘要/引言→各节标题搭骨架→结论→瞄图表公式→扫参考认熟人。产出=要不要读第二遍 + 三句话讲清问题/方法/贡献。',
+    guides:['三句话：它解决什么问题？用什么方法？核心贡献？','值得读第二遍吗？为什么？','哪些节/图我现在完全看不懂、需要第二遍重点攻？']},
+  '步骤3':{coach:'微习惯：每读懂一张图就用一句话写出它在讲什么；读不动先标记别死磕。逐步：抽满下面 6 字段，能合上论文用自己的话复述=过。',
+    guides:['研究问题 & 动机(针对前人什么不足？)','方法核心 & 关键公式(一句话+符号含义)','关键图表分别说明了什么？','实验设置(数据/baseline/指标)与主要结论','创新点 & 局限','不懂的点 / 要追的引用']},
+  '步骤4':{coach:'微习惯：读到任何"我们提出/我们的"先停一下，问这是前提还是新东西。逐步：①列 setup(输入/假设/约束) ②列 claimed contribution ③一句话写"去掉它就没有的那个新东西"。',
+    guides:['它的 problem setup(输入/假设/约束前提)是？','它声称的 contribution(新范式/新定理/新方法)是？','一句话：它到底贡献了什么真正的新东西？']},
+  '步骤5':{coach:'微习惯：每个核心 claim 都追问一句"凭哪个数？"。逐步：脑中重做这篇→挑战每个假设→把怀疑落到 哪个数→哪张表/图→违反哪个 claim 才算可证伪。',
+    guides:['核心 claim 是什么？哪张表/图支撑它？','消融是否证明增益来自新组件本身(而非调参/更大模型/更多数据)？','baseline 公平吗？在旗舰/真实数据上还赢吗？','理论是承重还是装饰？(删除测试：不成立方法还 work 吗)','我最有把握的一个可证伪质疑是？']},
+  '步骤6':{coach:'微习惯：读完合上论文，凭记忆默写核心算法伪代码——卡住处就是没真懂处。逐步：①写最小可复现核心 ②画 A→B→C 方法谱系 ③标出研究空白。',
+    guides:['最小可复现核心(伪代码/关键步骤)？','方法谱系 A→B→C：前人→它的改动→结果？','它没解决/留下的研究空白是？','我能基于它做的一个新 idea？']}
+};
+function _learnGuideTpl(name){name=String(name||'');for(const k in _LEARN_PAPER_GUIDES){if(name.indexOf(k)>=0)return _LEARN_PAPER_GUIDES[k];}return _LEARN_GENERIC_GUIDE;}
+function _learnMkGuides(arr){return (arr||[]).map(q=>typeof q==='string'?{id:uid(),q,a:''}:{id:uid(),q:q.q,a:q.a||''});}
+function _learnNewMod(name,active,zpd,note,extra){extra=extra||{};const tpl=_learnGuideTpl(name);
+  return{id:uid(),name,status:active?'active':'locked',zpd:zpd||[0.70,0.85],rolling:null,attempts:0,history:[],note:note||'',
+    coach:extra.coach!=null?extra.coach:tpl.coach,guides:_learnMkGuides(extra.guides!=null?extra.guides:tpl.guides)};}
+const _learnOpenGuides=new Set();
 
 function renderLearning(){
   const d=_learnGet();const sel=document.getElementById('ld-topic-sel');if(!sel)return;
@@ -16746,7 +16775,36 @@ function _learnModHtml(t,m){
       <span>/</span><input id="ld-t-${m.id}" class="ld-num" type="number" min="1" placeholder="总">
       <input id="ld-n-${m.id}" placeholder="备注(可选)" style="flex:1;min-width:80px">
       <button class="btn btn-primary btn-sm" onclick="learnLog('${t.id}','${m.id}')">记录</button>
-    </div></div>`;
+    </div>
+    ${_learnGuideHtml(t,m)}
+  </div>`;
+}
+function _learnGuideHtml(t,m){
+  const open=_learnOpenGuides.has(m.id);
+  const gs=m.guides||[];
+  const ans=gs.filter(g=>g.a&&g.a.trim()).length;
+  const head=`<div style="margin-top:8px">
+    <button class="btn btn-ghost btn-sm" onclick="learnToggleGuide('${m.id}')">📓 ${open?'收起 笔记/引导':'笔记 / 学习引导'}${ans?` · 已填 ${ans}/${gs.length}`:(gs.length?` · ${gs.length} 问`:'')}</button>
+  </div>`;
+  if(!open)return head;
+  const body=`<div style="margin-top:6px;padding:10px;border:1px dashed var(--border,#e3d4cf);border-radius:8px;background:rgba(0,0,0,0.015)">
+    <div class="ld-row" style="justify-content:space-between;align-items:flex-start;gap:6px">
+      <div class="ld-kv" style="flex:1;line-height:1.55">🧭 ${_lEsc(m.coach||'')}</div>
+      <button class="btn btn-ghost btn-sm" title="编辑这步的学习引导" onclick="learnEditCoach('${t.id}','${m.id}')">✏️</button>
+    </div>
+    ${gs.map(g=>`<div style="margin-top:10px">
+      <div class="ld-row" style="justify-content:space-between;align-items:flex-start;gap:6px">
+        <span style="font-size:12px;font-weight:600;flex:1;line-height:1.5">Q：${_lEsc(g.q)}</span>
+        <span style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" title="编辑问题" onclick="learnGuideEditQ('${t.id}','${m.id}','${g.id}')">✏️</button>
+          <button class="btn btn-ghost btn-sm" title="删除问题" onclick="learnGuideDel('${t.id}','${m.id}','${g.id}')">🗑</button>
+        </span>
+      </div>
+      <textarea oninput="learnGuideSave('${t.id}','${m.id}','${g.id}',this.value)" placeholder="在这里填写你的答案…" style="width:100%;box-sizing:border-box;min-height:48px;margin-top:4px;padding:6px 8px;border:1px solid var(--border,#e3d4cf);border-radius:6px;font:inherit;font-size:12px;resize:vertical">${_lEsc(g.a||'')}</textarea>
+    </div>`).join('')}
+    <div style="margin-top:10px"><button class="btn btn-sm" onclick="learnGuideAdd('${t.id}','${m.id}')">➕ 加引导问题</button></div>
+  </div>`;
+  return head+body;
 }
 function _learnTopicHtml(t){
   const due=(t.srs||[]).filter(c=>!c.due||c.due<=_learnToday()).length;
@@ -16809,7 +16867,10 @@ function _learnToMarkdown(t){
   if(t.nextStep)s+='**下一步**: '+t.nextStep+'\n\n';
   s+='## 学习模块\n\n';
   (t.modules||[]).forEach(m=>{const r=m.rolling==null?'未开始':Math.round(m.rolling*100)+'%';
-    s+='### '+m.name+'  ('+r+' · '+m.status+')\n';if(m.note)s+=m.note+'\n';s+='\n';});
+    s+='### '+m.name+'  ('+r+' · '+m.status+')\n';if(m.note)s+=m.note+'\n';
+    if(m.coach)s+='> 🧭 '+m.coach+'\n';
+    (m.guides||[]).filter(g=>g.a&&g.a.trim()).forEach(g=>{s+='- **'+g.q+'**  \n  '+g.a.trim().replace(/\n/g,'\n  ')+'\n';});
+    s+='\n';});
   if((t.srs||[]).length){s+='## 复习卡 (SRS)\n\n';t.srs.forEach(c=>{s+='- **Q**: '+c.q+'  \n  **A**: '+c.a+'\n';});}
   return s;
 }
@@ -16818,7 +16879,9 @@ function _learnToHtml(t){
   if(t.goal)s+='<p><b>目标:</b> '+_lEsc(t.goal)+'</p>';
   if(t.nextStep)s+='<p><b>下一步:</b> '+_lEsc(t.nextStep)+'</p>';
   (t.modules||[]).forEach(m=>{const r=m.rolling==null?'未开始':Math.round(m.rolling*100)+'%';
-    s+='<h3>'+_lEsc(m.name)+' ('+r+')</h3>';if(m.note)s+='<p>'+_lEsc(m.note)+'</p>';});
+    s+='<h3>'+_lEsc(m.name)+' ('+r+')</h3>';if(m.note)s+='<p>'+_lEsc(m.note)+'</p>';
+    const ag=(m.guides||[]).filter(g=>g.a&&g.a.trim());
+    if(ag.length){s+='<ul>';ag.forEach(g=>{s+='<li><b>'+_lEsc(g.q)+'</b><br>'+_lEsc(g.a)+'</li>';});s+='</ul>';}});
   if((t.srs||[]).length){s+='<h2>复习卡</h2><ul>';t.srs.forEach(c=>{s+='<li><b>Q:</b> '+_lEsc(c.q)+'<br><b>A:</b> '+_lEsc(c.a)+'</li>';});s+='</ul>';}
   return s+'<p><i>— 由 学习驾驶舱 导出</i></p>';
 }
@@ -16895,6 +16958,13 @@ function learnLog(tid,mid){
 }
 function learnSetStatus(tid,mid,st){const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m)return;m.status=st;t.updated=_learnToday();_learnSet(d);renderLearning();}
 function learnAddModule(tid){const name=prompt('模块名称：');if(!name)return;const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;t.modules.push(_learnNewMod(name.trim(),true));_learnSet(d);renderLearning();}
+/* ── 学习引导/笔记：可编辑引导问题 + 逐题填写（答案输入即存，不重渲染以保焦点）── */
+function learnToggleGuide(mid){if(_learnOpenGuides.has(mid))_learnOpenGuides.delete(mid);else _learnOpenGuides.add(mid);renderLearning();}
+function learnGuideSave(tid,mid,gid,val){const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m||!m.guides)return;const g=m.guides.find(x=>x.id===gid);if(!g)return;g.a=val;t.updated=_learnToday();_learnSet(d);}
+function learnGuideEditQ(tid,mid,gid){const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m||!m.guides)return;const g=m.guides.find(x=>x.id===gid);if(!g)return;const v=prompt('编辑引导问题：',g.q);if(v==null)return;g.q=v.trim();t.updated=_learnToday();_learnSet(d);renderLearning();}
+function learnGuideDel(tid,mid,gid){if(!confirm('删除这个引导问题及已填内容？'))return;const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m)return;m.guides=(m.guides||[]).filter(x=>x.id!==gid);t.updated=_learnToday();_learnSet(d);renderLearning();}
+function learnGuideAdd(tid,mid){const v=prompt('新的引导问题：');if(!v)return;const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m)return;m.guides=m.guides||[];m.guides.push({id:uid(),q:v.trim(),a:''});t.updated=_learnToday();_learnOpenGuides.add(mid);_learnSet(d);renderLearning();}
+function learnEditCoach(tid,mid){const d=_learnGet();const[t,m]=_learnFind(d,tid,mid);if(!m)return;const v=prompt('编辑「如何学这步：小习惯 + 逐步引导」：',m.coach||'');if(v==null)return;m.coach=v.trim();t.updated=_learnToday();_learnSet(d);renderLearning();}
 function learnEditNext(tid){const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;const v=prompt('下一步该做什么（具体到模块 + 动作）：',t.nextStep||'');if(v==null)return;t.nextStep=v.trim();t.updated=_learnToday();_learnSet(d);renderLearning();}
 function learnNextToTask(tid){const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t||!t.nextStep){toast('先设置下一步','error');return;}
   const tasks=ld(K.tasks);tasks.push({id:uid(),title:'[学习] '+t.nextStep,proj:'',prio:'med',due:'',status:'todo',created:today(),done:null,pomos:0});sv(K.tasks,tasks);toast('✅ 已加入任务管理');}
