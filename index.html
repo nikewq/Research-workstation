@@ -318,6 +318,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .wall-pager-btn:hover{border-color:var(--primary);color:var(--primary)}
 .wall-pager-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:600}
 .wall-pager-ellipsis{color:var(--text2);font-size:11px;padding:0 2px;user-select:none}
+details.dev-ann{margin-bottom:12px}
+details.dev-ann>summary{list-style:none;cursor:pointer}
+details.dev-ann>summary::-webkit-details-marker{display:none}
+details.dev-ann>summary::marker{content:""}
+.dev-chev{display:inline-block;transition:transform .2s;font-size:10px}
+details.dev-ann[open]>summary .dev-chev{transform:rotate(90deg)}
+details.dev-ann:not([open])>summary{margin-bottom:0!important}
 .ai-reply{background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(99,102,241,.05));border-left:2px solid #10b981;border-radius:0 6px 6px 0;padding:8px 10px;margin-top:7px;font-size:12px;line-height:1.65;color:var(--text)}
 .ai-reply-hd{font-size:10px;color:#10b981;font-weight:700;letter-spacing:.3px;margin-bottom:3px;display:flex;align-items:center;gap:4px}
 .ai-reply-hd span{opacity:.7;font-weight:400}
@@ -1076,13 +1083,14 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
     <!-- 开发者置顶公告：新功能 学习驾驶舱 -->
-    <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-left:4px solid #10b981;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+    <details class="dev-ann" open style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-left:4px solid #10b981;border-radius:8px;padding:12px 14px">
+      <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="dev-chev" style="color:#059669">▶</span>
         <span style="font-size:13px">🎓</span>
         <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 新功能上线</span>
         <span style="font-size:10px;color:#047857;background:#a7f3d0;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
         <span style="font-size:10px;color:#059669;margin-left:auto">学习驾驶舱 · 2026-06-22</span>
-      </div>
+      </summary>
       <div style="font-size:12px;color:#064e3b;line-height:1.75">
         <strong>🎓 全新「学习驾驶舱」上线啦！</strong><br>
         在左侧菜单点 <strong>🎓 学习驾驶舱</strong> 即可进入。它把"想学会的东西"拆成模块，按你的<strong>成功率动态调难度</strong>（最近发展区 ZPD：太难就降难度/加脚手架，太易就升难度），配复习卡（SRS）和每日打卡，像有个教练陪你练。<br><br>
@@ -1105,16 +1113,17 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 
         <span style="color:#065f46">💬</span> 用着不顺手、想要别的模板或功能，欢迎在下方留言，我们都会认真看。
       </div>
-    </div>
+    </details>
 
-    <!-- 开发者置顶公告 -->
-    <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+    <!-- 历史开发者公告（折叠，仅显示标题+日期） -->
+    <details class="dev-ann" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px">
+      <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="dev-chev" style="color:#a16207">▶</span>
         <span style="font-size:13px">📢</span>
         <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
-        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
+        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">历史</span>
         <span style="font-size:10px;color:#a16207;margin-left:auto">数据保护更新 · 2025-05-22</span>
-      </div>
+      </summary>
       <div style="font-size:12px;color:#78350f;line-height:1.75">
         <strong>🙏 感谢同学们的反馈，我们诚恳道歉。</strong><br>
         前段时间收到大家反馈"刷新一次数据就丢失"的问题，是底层存储代码确实存在 bug。我们认真复盘，确认了至少 5 条会导致数据丢失的路径，深感抱歉，已全部修复并上线。<br><br>
@@ -1141,7 +1150,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 
         <span style="color:#92400e">✅ 郑重承诺：</span><strong>scholarclub.live 是本站唯一、长期域名，不会再次更换。</strong>
       </div>
-    </div>
+    </details>
     <div id="wall-list" style="min-height:40px"></div>
   </div>
 </div>
