@@ -1,0 +1,20 @@
+{
+  "updated": "2026-07-07",
+  "headline": "窗口在 2026年9–11月秋招：南科大「培优计划」是全深圳唯一面向应届博士的行政管理岗通道（9–10月发布，最高优先）。校招行政岗基本聘任制/员额制，要事业编走市统考（11月公告）/省统考（次年1–2月）。",
+  "report": "https://claude.ai/code/artifact/5adbe59f-f71f-485d-a9f3-aeb74eaf8d5b",
+  "jobs": [
+    {"school": "深圳北理莫斯科大学", "title": "学术事务部·学术事务岗", "req": "硕士+，中俄/中英双语材料", "due": "2026-07-16", "status": "urgent", "statusText": "即将截止", "link": "https://www.smbu.edu.cn/info/4561/133511.htm"},
+    {"school": "北大深研院", "title": "学生工作处·就业专员", "req": "硕士+，专业不限，英文流利", "due": "招到为止", "status": "open", "statusText": "长期有效", "link": "https://www.pkusz.edu.cn/info/1056/6735.htm"},
+    {"school": "中山大学(含深圳校区)", "title": "管理人才蓄水池·党政管理", "req": "博士≤40，党员优先，工作地穗/珠/深", "due": "长期报名", "status": "open", "statusText": "长期有效", "link": "http://uems.sysu.edu.cn/hrrecruit"},
+    {"school": "深圳大学", "title": "2026选聘聘任制人员(行政教辅)", "req": "按岗位表，偏有经验者", "due": "招满即止", "status": "rolling", "statusText": "滚动", "link": "https://hr.szu.edu.cn/info/1014/23441.htm"},
+    {"school": "深圳职业技术大学", "title": "行政教辅(本部5+深汕41)·辅导员26", "req": "硕士+，聘任制，接受应届", "due": "滚动招聘", "status": "rolling", "statusText": "滚动", "link": "https://www.szpu.edu.cn/info/1046/22980.htm"},
+    {"school": "港中大(深圳)", "title": "Executive Officer/Assistant 多岗", "req": "各岗不同，常年滚动", "due": "招满即止", "status": "check", "statusText": "需核实", "link": "https://job.cuhk.edu.cn/"},
+    {"school": "清华SIGS", "title": "培训学院·人事专员", "req": "往年本科/硕士，投 hr.pxxy@sz.tsinghua.edu.cn", "due": "未注明", "status": "check", "statusText": "需核实", "link": "https://talent.sigs.tsinghua.edu.cn/recruit-fg?locale=zh_CN"}
+  ],
+  "timeline": [
+    {"when": "2026-09~10", "what": "🔴 南科大培优计划 2027届批次（应届博士·行政管理储备干部）→ talent.sustech.edu.cn"},
+    {"when": "2026-09~10", "what": "清华SIGS / 深理工 / 哈工大(深圳) 应届批次"},
+    {"when": "2026-11", "what": "深圳市事业单位统考公告（12月笔试，事业编）→ hrss.sz.gov.cn/gzryzk"},
+    {"when": "2027-01~02", "what": "广东省事业单位统考公告（3月笔试）"}
+  ]
+}

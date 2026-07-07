@@ -1862,6 +1862,20 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         </div>
       </div>
     </div>
+    <!-- 💼 求职追踪 (weekly auto-update, data/job_tracker.json) -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">💼 求职追踪 · 深圳高校行政岗</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="jt-updated" style="font-size:11px;color:var(--text2)"></span>
+          <button class="btn btn-sm" onclick="fetchJobTracker(true)">刷新</button>
+        </div>
+      </div>
+      <div id="jt-headline" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
+      <div id="jt-jobs" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="jt-timeline" style="margin-top:10px;display:flex;flex-direction:column;gap:4px"></div>
+      <div style="margin-top:10px;font-size:11px"><a id="jt-link" href="#" target="_blank" rel="noopener" style="color:var(--primary)">📄 完整 HTML 简报 →</a></div>
+    </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">📝 最近 GitHub 提交</div>
@@ -3951,8 +3965,33 @@ function renderLabDash(){
     document.getElementById('lab-deadline').textContent=days>0?days+'d':'已过';
   }
   renderLabProjects();
+  fetchJobTracker();
   const tok=localStorage.getItem('phd_gh_token');
   if(tok){document.getElementById('lab-token-input').value=tok;fetchLabCommits();fetchLabStatus();}
+}
+
+async function fetchJobTracker(manual){
+  const box=document.getElementById('jt-jobs'); if(!box) return;
+  try{
+    const r=await fetch('data/job_tracker.json?t='+Date.now());
+    if(!r.ok) throw new Error(r.status);
+    const d=await r.json();
+    document.getElementById('jt-updated').textContent=d.updated?('更新: '+d.updated):'';
+    document.getElementById('jt-headline').textContent=d.headline||'';
+    const stC={urgent:['rgba(239,68,68,.15)','#ef4444'],open:['rgba(5,150,105,.15)','#059669'],rolling:['rgba(107,114,128,.15)','#6b7280'],check:['rgba(245,158,11,.15)','#f59e0b']};
+    box.innerHTML=(d.jobs||[]).map(j=>{
+      const c=stC[j.status]||stC.rolling;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px;gap:10px">
+        <div style="min-width:0"><div style="font-size:13px;font-weight:600">${j.school} · ${j.title}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">${j.req} ｜ 截止: ${j.due}${j.link?` ｜ <a href="${j.link}" target="_blank" rel="noopener" style="color:var(--primary)">公告</a>`:''}</div></div>
+        <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;background:${c[0]};color:${c[1]}">${j.statusText||''}</span></div>`;
+    }).join('')||'<div style="color:var(--text2);font-size:12px">暂无在招岗位</div>';
+    document.getElementById('jt-timeline').innerHTML=(d.timeline||[]).map(t=>`<div style="font-size:11px;color:var(--text2)">🗓 <b style="color:var(--text)">${t.when}</b> ${t.what}</div>`).join('');
+    if(d.report) document.getElementById('jt-link').href=d.report;
+    if(manual) toast('求职追踪已刷新');
+  }catch(e){
+    box.innerHTML='<div style="color:var(--text2);font-size:12px">数据加载失败（data/job_tracker.json）</div>';
+  }
 }
 function renderLabProjects(){
   const ps=getLabProjects();
