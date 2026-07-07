@@ -1874,6 +1874,8 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div id="jt-headline" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
       <div id="jt-jobs" style="display:flex;flex-direction:column;gap:8px"></div>
       <div id="jt-timeline" style="margin-top:10px;display:flex;flex-direction:column;gap:4px"></div>
+      <div id="jt-gov-title" style="display:none;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🏛 考公 · 事业单位（深圳）</div>
+      <div id="jt-gov" style="display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:10px;font-size:11px"><a id="jt-link" href="#" target="_blank" rel="noopener" style="color:var(--primary)">📄 完整 HTML 简报 →</a></div>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
@@ -3987,6 +3989,16 @@ async function fetchJobTracker(manual){
         <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;background:${c[0]};color:${c[1]}">${j.statusText||''}</span></div>`;
     }).join('')||'<div style="color:var(--text2);font-size:12px">暂无在招岗位</div>';
     document.getElementById('jt-timeline').innerHTML=(d.timeline||[]).map(t=>`<div style="font-size:11px;color:var(--text2)">🗓 <b style="color:var(--text)">${t.when}</b> ${t.what}</div>`).join('');
+    const govC={hot:['rgba(239,68,68,.15)','#ef4444','重点'],wait:['rgba(59,130,246,.15)','#3b82f6','待公告'],rolling:['rgba(107,114,128,.15)','#6b7280','滚动'],open:['rgba(5,150,105,.15)','#059669','报名中']};
+    const gov=d.gov||[];
+    document.getElementById('jt-gov-title').style.display=gov.length?'block':'none';
+    document.getElementById('jt-gov').innerHTML=gov.map(g=>{
+      const c=govC[g.status]||govC.wait;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:8px;gap:10px">
+        <div style="min-width:0"><div style="font-size:13px;font-weight:600">${g.name} <span style="font-weight:400;font-size:11px;color:var(--text2)">${g.when}</span></div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">${g.note}${g.link?` ｜ <a href="${g.link}" target="_blank" rel="noopener" style="color:var(--primary)">入口</a>`:''}</div></div>
+        <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;background:${c[0]};color:${c[1]}">${g.statusText||c[2]}</span></div>`;
+    }).join('');
     if(d.report) document.getElementById('jt-link').href=d.report;
     if(manual) toast('求职追踪已刷新');
   }catch(e){
