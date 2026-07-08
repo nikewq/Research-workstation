@@ -154,9 +154,28 @@
 }
 /* ── Light Mode Overrides ── */
 /* 默认主题 浅色 */
+:root[data-theme="pro"]{
+  --bg:#111113;--surface:#18181b;--surface2:#212124;--border:rgba(255,255,255,.10);
+  --text:#f4f4f5;--text2:#a1a1aa;
+  --primary:#fb923c;--primary-soft:rgba(251,146,60,.16);--primary-bg:rgba(251,146,60,.09);
+  --green:#34d399;--green-soft:rgba(52,211,153,.14);
+  --orange:#fbbf24;--orange-soft:rgba(251,191,36,.14);
+  --red:#f87171;--red-soft:rgba(248,113,113,.14);
+  --blue:#60a5fa;--blue-soft:rgba(96,165,250,.14);
+}
 :root[data-mode="light"]{
   --bg:#f8f6ff;--surface:#ffffff;--surface2:#f1ecff;--border:#ddd4ff;
   --text:#1a0a30;--text2:#6040a0;
+}
+/* pro 浅色 */
+:root[data-mode="light"][data-theme="pro"]{
+  --bg:#fafafa;--surface:#ffffff;--surface2:#f4f4f5;--border:#e4e4e7;
+  --text:#18181b;--text2:#52525b;
+  --primary:#ea580c;--primary-soft:rgba(234,88,12,.12);--primary-bg:rgba(234,88,12,.07);
+  --green:#059669;--green-soft:rgba(5,150,105,.12);
+  --orange:#d97706;--orange-soft:rgba(217,119,6,.12);
+  --red:#dc2626;--red-soft:rgba(220,38,38,.12);
+  --blue:#2563eb;--blue-soft:rgba(37,99,235,.12);
 }
 /* wuxia 浅色 */
 :root[data-mode="light"][data-theme="wuxia"]{
@@ -246,7 +265,15 @@
 .mode-toggle-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 :root[data-mode="light"] .mode-toggle-thumb{transform:translateX(12px)}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Inter","PingFang SC","Helvetica Neue","Segoe UI",sans-serif;font-size:14px;min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* 视觉升级 tokens：非主题变量，全部主题（含自定义）通用，不进 _CSS_VARS */
+:root{
+  --shadow-xs:0 1px 2px 0 rgba(0,0,0,.05);
+  --shadow-sm:0 1px 3px 0 rgba(0,0,0,.08),0 1px 2px -1px rgba(0,0,0,.08);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.12),0 4px 6px -4px rgba(0,0,0,.12);
+  --radius-sm:6px;
+  --border-strong:color-mix(in srgb,var(--border) 60%,var(--text2));
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter","PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei UI","Microsoft YaHei","Noto Sans SC","Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;font-weight:400;line-height:1.6;font-variant-numeric:tabular-nums;min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
 /* Sidebar */
 #sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);padding:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:width .22s ease}
@@ -259,13 +286,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .logo .subtitle{font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap;letter-spacing:0.04em;opacity:.8}
 #sidebar-toggle{background:none;border:none;cursor:pointer;color:var(--text2);padding:3px 5px;border-radius:6px;font-size:15px;flex-shrink:0;margin-top:2px;line-height:1;transition:background .15s,color .15s}
 #sidebar-toggle:hover{background:var(--surface2);color:var(--primary)}
-.nav-item{display:flex;align-items:center;gap:12px;padding:9px 14px;margin:1px 8px;border-radius:8px;cursor:pointer;color:var(--text2);transition:background .18s ease,color .18s ease,transform .18s ease;font-size:14px;font-weight:450;letter-spacing:0.02em;line-height:1.4;white-space:nowrap;overflow:hidden}
-.nav-item:hover{background:var(--surface2);color:var(--text);transform:translateX(2px)}
-.nav-item.active{background:var(--primary-bg);color:var(--primary);font-weight:600;letter-spacing:0.01em;transform:translateX(0);box-shadow:0 1px 2px rgba(0,0,0,0.04) inset}
-.nav-item.active:hover{transform:translateX(0)}
-.nav-icon{font-size:17px;width:22px;text-align:center;flex-shrink:0;opacity:.88;line-height:1;transition:transform .2s ease}
-.nav-item:hover .nav-icon{transform:scale(1.08)}
-.nav-item.active .nav-icon{opacity:1;transform:scale(1.05)}
+.nav-item{display:flex;align-items:center;gap:12px;padding:9px 14px;margin:1px 8px;border-radius:8px;cursor:pointer;color:var(--text2);transition:background .15s ease,color .15s ease;font-size:13.5px;font-weight:500;letter-spacing:0;line-height:1.5;white-space:nowrap;overflow:hidden}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--primary-bg);color:var(--primary);font-weight:600;letter-spacing:0}
+.nav-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;line-height:1;filter:grayscale(1);opacity:.72;transition:filter .15s ease,opacity .15s ease}
+.nav-item:hover .nav-icon{filter:none;opacity:.95}
+.nav-item.active .nav-icon{filter:none;opacity:1}
 .nav-label{overflow:hidden;transition:opacity .15s,max-width .22s ease;max-width:160px;opacity:1}
 .nav-group{padding:16px 22px 6px;font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text2);opacity:.5;white-space:nowrap;overflow:hidden;transition:opacity .15s;text-transform:uppercase}
 .sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);overflow:hidden}
@@ -340,16 +366,18 @@ details.dev-ann:not([open])>summary{margin-bottom:0!important}
 .page-subtitle{color:var(--text2);font-size:13px;margin-bottom:20px}
 
 /* Cards */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
-.card-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-xs);transition:border-color .15s ease,box-shadow .15s ease}
+.card:hover{border-color:var(--border-strong)}
+.card-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .mb-16{margin-bottom:16px}.mt-16{margin-top:16px}
 
 /* Buttons */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;font-family:inherit}
-.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{opacity:.85}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:none;cursor:pointer;font-size:13px;font-weight:500;transition:background-color .12s ease,border-color .12s ease,box-shadow .12s ease,color .12s ease,opacity .12s ease;font-family:inherit}
+.btn:active{transform:translateY(0.5px)}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:var(--shadow-xs)}.btn-primary:hover{opacity:.9;box-shadow:var(--shadow-sm)}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--surface2);color:var(--text)}
 .btn-danger{background:var(--red-soft);color:var(--red);border:1px solid transparent}.btn-danger:hover{border-color:var(--red)}
 .btn-sm{padding:4px 10px;font-size:12px}
@@ -369,8 +397,8 @@ details.dev-ann:not([open])>summary{margin-bottom:0!important}
 .status-withdrawn{background:rgba(139,148,158,.15);color:var(--text2)}
 
 /* Forms */
-input,textarea,select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px 12px;font-size:13px;width:100%;outline:none;font-family:inherit;transition:border-color .15s}
-input:focus,textarea:focus,select:focus{border-color:var(--primary)}
+input,textarea,select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px 12px;font-size:13px;width:100%;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-bg)}
 textarea{resize:vertical;min-height:80px}
 label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .form-row{display:grid;gap:10px;margin-bottom:12px}
@@ -790,6 +818,15 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 #ldm-content li{margin:3px 0}
 #ldm-content a{color:var(--primary);text-decoration:none}
 #ldm-content a:hover{text-decoration:underline}
+
+/* ── 视觉升级：全局细节（焦点环/滚动条/数字对齐）── */
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+:focus:not(:focus-visible){outline:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(128,128,128,.35);border-radius:4px;background-clip:padding-box;border:2px solid transparent}
+::-webkit-scrollbar-thumb:hover{background-color:rgba(128,128,128,.55)}
+.stat-value{font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 </head>
@@ -8830,6 +8867,7 @@ const THEMES=[
   {id:'neutral', name:'铸铁·极简',  desc:'清爽中性', bg:'#f4f6f8', primary:'#0d9488'},
   {id:'queen',   name:'女王·黑金',  desc:'权杖加冕', bg:'#0c0814', primary:'#d4af37'},
   {id:'aurora',  name:'极光·冰蓝',  desc:'极地星空', bg:'#030d18', primary:'#06b6d4'},
+  {id:'pro',     name:'磐石·专业',  desc:'中性灰·精准橙', bg:'#111113', primary:'#ea580c'},
   {id:'pku',     name:'燕园·燕红',  desc:'北京大学', bg:'#0a0406', primary:'#8b0012'},
   {id:'thu',     name:'清华·清紫',  desc:'清华大学', bg:'#060210', primary:'#660874'},
   {id:'fdu',     name:'复旦·学海',  desc:'复旦大学', bg:'#020b1c', primary:'#0e419c'},
@@ -8948,8 +8986,8 @@ function renderThemePicker(){
     const sparkle=isCustom&&!act?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.4;pointer-events:none">✦</div>`:'';
     return `<div class="theme-card${act?' active':''}${isCustom?' theme-card-custom':''}" data-theme="${id}" onclick="${onclick}"><div class="theme-swatch-banner" style="background:${bg}"><div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${primary};opacity:.9"></div><div style="position:absolute;bottom:10px;right:11px;width:13px;height:13px;border-radius:50%;background:${primary};box-shadow:0 0 8px ${primary}99"></div>${sparkle}</div><div class="theme-card-info"><div class="theme-card-name">${name}</div><div class="theme-card-desc">${desc}</div></div>${act?'<div class="theme-check">✓</div>':''}</div>`;
   };
-  const personal=THEMES.filter(t=>['default','wuxia','kawaii','neutral','queen','aurora'].includes(t.id));
-  const unis=THEMES.filter(t=>!['default','wuxia','kawaii','neutral','queen','aurora'].includes(t.id));
+  const personal=THEMES.filter(t=>['default','wuxia','kawaii','neutral','queen','aurora','pro'].includes(t.id));
+  const unis=THEMES.filter(t=>!['default','wuxia','kawaii','neutral','queen','aurora','pro'].includes(t.id));
   const customCard=mkCard('custom',cd.schoolName||'其他学校',cur==='custom'?'当前主题':'AI 生成配色',cb,cp,true);
   el.innerHTML=`<div class="theme-section-label">个性主题</div><div class="theme-grid">${personal.map(t=>mkCard(t.id,t.name,t.desc,t.bg,t.primary)).join('')}</div><div class="theme-section-label" style="margin-top:18px">高校配色</div><div class="theme-grid">${unis.map(t=>mkCard(t.id,t.name,t.desc,t.bg,t.primary)).join('')}${customCard}</div>`;
 }
