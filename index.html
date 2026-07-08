@@ -827,6 +827,67 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 ::-webkit-scrollbar-thumb{background:rgba(128,128,128,.35);border-radius:4px;background-clip:padding-box;border:2px solid transparent}
 ::-webkit-scrollbar-thumb:hover{background-color:rgba(128,128,128,.55)}
 .stat-value{font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+
+/* ── 墨墨 · 悬浮情绪小猫（黑白简笔，stroke 跟随主题文字色）── */
+#pet-root{position:fixed;right:20px;bottom:24px;z-index:9800;color:var(--text);user-select:none}
+#pet{width:64px;height:64px;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:transform .15s ease}
+#pet:hover{transform:translateY(-2px)}
+#pet.pet-bounce{animation:pet-bounce .45s ease}
+@keyframes pet-bounce{0%{transform:translateY(0)}35%{transform:translateY(-10px)}60%{transform:translateY(0)}80%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+#pet.pet-pat{animation:pet-pat .5s ease}
+@keyframes pet-pat{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}70%{transform:rotate(6deg)}}
+#pet-close{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--text2);font-size:10px;line-height:16px;text-align:center;cursor:pointer;display:none;z-index:2}
+#pet-root:hover #pet-close{display:block}
+#pet-bubble{position:absolute;bottom:72px;right:0;max-width:240px;min-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 4px 12px;padding:9px 12px;font-size:12.5px;line-height:1.6;color:var(--text);box-shadow:var(--shadow-lg);display:none}
+#pet-bubble.show{display:block;animation:pet-pop .18s ease}
+#pet-bubble .pb-chat{margin-top:6px;font-size:11px;color:var(--primary);cursor:pointer;font-weight:600}
+@keyframes pet-pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+#pet-handle{position:fixed;right:-5px;bottom:60px;width:17px;height:46px;border-radius:9px 0 0 9px;background:var(--surface);border:1px solid var(--border);border-right:none;z-index:9800;cursor:pointer;display:none;align-items:center;justify-content:center;color:var(--text2);font-size:11px;box-shadow:var(--shadow-sm);transition:right .15s,color .15s}
+#pet-handle:hover{right:0;color:var(--primary)}
+#pet-panel{position:fixed;right:20px;bottom:100px;width:320px;height:min(440px,70vh);background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);z-index:9850;display:none;flex-direction:column;overflow:hidden;transform-origin:bottom right}
+#pet-panel.show{display:flex;animation:pet-panel-in .18s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pet-panel-in{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.pp-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;flex-shrink:0}
+.pp-head .pp-act{margin-left:auto;display:flex;gap:2px}
+.pp-head .pp-act button{background:none;border:none;cursor:pointer;color:var(--text2);font-size:13px;padding:2px 6px;border-radius:6px}
+.pp-head .pp-act button:hover{background:var(--surface2);color:var(--text)}
+#pp-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pp-msg{max-width:85%;padding:7px 11px;border-radius:12px;font-size:12.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.pp-msg.user{align-self:flex-end;background:var(--primary-soft);border-radius:12px 12px 4px 12px}
+.pp-msg.cat{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-radius:12px 12px 12px 4px}
+.pp-msg.pending span{display:inline-block;animation:pp-dot 1s infinite}
+.pp-msg.pending span:nth-child(2){animation-delay:.2s}
+.pp-msg.pending span:nth-child(3){animation-delay:.4s}
+@keyframes pp-dot{0%,100%{opacity:.25}50%{opacity:1}}
+.pp-input{display:flex;gap:6px;padding:10px;border-top:1px solid var(--border);flex-shrink:0}
+.pp-input textarea{flex:1;resize:none;min-height:34px;max-height:90px;font-size:12.5px;padding:7px 10px}
+/* 情绪部件显隐 */
+#pet .eyes-happy,#pet .eyes-sleep,#pet .tail-curl,#pet .mouth-grin,#pet .mouth-o,#pet #pq,#pet #pzzz{display:none}
+#pet[data-state="idle"] .eyes-open{animation:pet-blink 4s infinite;transform-origin:32px 30px}
+@keyframes pet-blink{0%,92%,100%{transform:scaleY(1)}95%,97%{transform:scaleY(.08)}}
+#pet[data-state="happy"] .eyes-open,#pet[data-state="happy"] .mouth-smile{display:none}
+#pet[data-state="happy"] .eyes-happy,#pet[data-state="happy"] .mouth-grin{display:block}
+#pet[data-state="happy"] .tail-up{animation:pet-wag .6s ease-in-out infinite alternate;transform-origin:44px 50px}
+@keyframes pet-wag{from{transform:rotate(-8deg)}to{transform:rotate(14deg)}}
+#pet[data-state="thinking"] #pcat{transform:rotate(-8deg);transform-origin:32px 40px;transition:transform .3s}
+#pet[data-state="thinking"] .mouth-smile{display:none}
+#pet[data-state="thinking"] .mouth-o{display:block}
+#pet[data-state="thinking"] #pq{display:block;animation:pet-qfloat 1.2s ease-in-out infinite alternate}
+#pet[data-state="thinking"] .tail-up{animation:pet-wag 1.6s ease-in-out infinite alternate;transform-origin:44px 50px}
+@keyframes pet-qfloat{from{transform:translateY(0);opacity:.5}to{transform:translateY(-3px);opacity:1}}
+#pet[data-state="sleep"] .eyes-open,#pet[data-state="sleep"] .tail-up{display:none}
+#pet[data-state="sleep"] .eyes-sleep,#pet[data-state="sleep"] .tail-curl,#pet[data-state="sleep"] #pzzz{display:block}
+#pet[data-state="sleep"] #pzzz text{animation:pet-zfloat 2s linear infinite;opacity:0}
+#pet[data-state="sleep"] #pzzz text:nth-child(2){animation-delay:.66s}
+#pet[data-state="sleep"] #pzzz text:nth-child(3){animation-delay:1.33s}
+@keyframes pet-zfloat{0%{transform:translateY(4px);opacity:0}30%{opacity:1}100%{transform:translateY(-8px);opacity:0}}
+@media(max-width:640px){
+  #pet-root{right:12px;bottom:84px}
+  #pet-panel{right:0;left:0;bottom:0;width:100vw;height:60vh;border-radius:16px 16px 0 0}
+}
+@media(prefers-reduced-motion:reduce){
+  #pet,#pet svg *{animation:none!important}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 </head>
@@ -1119,14 +1180,42 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
-    <!-- 开发者置顶公告：新功能 细碎时光 -->
+    <!-- 开发者置顶公告：墨墨小猫 + 界面升级 -->
     <details class="dev-ann" open style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-left:4px solid #10b981;border-radius:8px;padding:12px 14px">
       <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span class="dev-chev" style="color:#059669">▶</span>
-        <span style="font-size:13px">🍃</span>
+        <span style="font-size:13px">🐾</span>
         <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 新功能上线</span>
         <span style="font-size:10px;color:#047857;background:#a7f3d0;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
-        <span style="font-size:10px;color:#059669;margin-left:auto">细碎时光 · 2026-07-08</span>
+        <span style="font-size:10px;color:#059669;margin-left:auto">墨墨小猫 & 界面升级 · 2026-07-08</span>
+      </summary>
+      <div style="font-size:12px;color:#064e3b;line-height:1.75">
+        <strong>🐾 「墨墨」来了！——住在工作台角落的 AI 小猫</strong><br>
+        右下角那只黑白简笔小猫就是墨墨，任何页面都能找到它：<br>
+        <ul style="margin:4px 0 4px 18px;padding:0">
+          <li><strong>摸摸它：</strong>点头是摸头、点身子会跳一下，它还会结合你今天的番茄数、待办、细碎时光碎碎念跟你打招呼；</li>
+          <li><strong>找它聊天：</strong>气泡出现后再点一下（或点「💬 找我聊聊」）就能像朋友一样对话——实验崩了、被拒稿了、想吐槽了，它都接得住（AI 对话，可在「个人设置 → AI 模型设置」换自己的模型）；</li>
+          <li><strong>嫌它烦：</strong>hover 右上角 ✕ 一键隐藏，右边缘会留一个 🐾 小把手随时唤回，刷新也记得你的选择。</li>
+        </ul>
+        <strong>🎨 全站界面同步升级</strong>
+        <ul style="margin:4px 0 4px 18px;padding:0">
+          <li>字体更粗更清晰（导航/标题字重全面加强），卡片有了细腻阴影，输入框有了聚焦光环；</li>
+          <li>侧栏图标改为灰度显示、选中才点亮，整体更专业耐看；</li>
+          <li>新增预设主题 <strong>「磐石·专业」</strong>（中性灰 + 精准橙，深浅双模式），在「界面主题 → 个性主题」一键切换，你原来选的主题不受影响。</li>
+        </ul>
+        <span style="color:#065f46">🔒 隐私：</span>与墨墨的对话记录<strong>只存你本机浏览器</strong>，不上传、不进留言墙；它引用的番茄/任务数据也只在本地读取。<br><br>
+        <span style="color:#065f46">💬</span> 想要小狗版、想让墨墨会更多花样？下方留言告诉我们。
+      </div>
+    </details>
+
+    <!-- 历史开发者公告：细碎时光（折叠） -->
+    <details class="dev-ann" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px">
+      <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="dev-chev" style="color:#a16207">▶</span>
+        <span style="font-size:13px">🍃</span>
+        <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
+        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">历史</span>
+        <span style="font-size:10px;color:#a16207;margin-left:auto">细碎时光 · 2026-07-08</span>
       </summary>
       <div style="font-size:12px;color:#064e3b;line-height:1.75">
         <strong>🍃 「细碎时光」上线啦！——零碎想法的随手记</strong><br>
@@ -3385,6 +3474,50 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 
 <div class="toast" id="toast"></div>
 
+<!-- ── 墨墨 · 悬浮情绪小猫 ── -->
+<div id="pet-root">
+  <div id="pet-bubble"><div class="pb-txt"></div><div class="pb-chat" onclick="petOpenPanel()">💬 找我聊聊</div></div>
+  <div id="pet" data-state="idle" title="点我一下试试" aria-label="AI小猫墨墨">
+    <svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <g id="pcat">
+        <g id="ptail">
+          <path class="tail-up" d="M44 50 Q57 53 56 40"/>
+          <path class="tail-curl" d="M44 50 Q54 56 60 51"/>
+        </g>
+        <path d="M18 52 Q14 40 22 36 Q18 30 20 22 M44 52 Q50 40 42 36 Q46 30 44 22"/>
+        <path d="M18 52 Q32 58 44 52"/>
+        <g id="pears"><path d="M20 22 L18 12 L27 17"/><path d="M44 22 L46 12 L37 17"/></g>
+        <path d="M27 17 Q32 15 37 17 M20 22 Q19 33 26 36 Q32 38 38 36 Q45 33 44 22"/>
+        <g id="peyes">
+          <g class="eyes-open"><circle cx="27" cy="29" r="1.6" fill="currentColor" stroke="none"/><circle cx="37" cy="29" r="1.6" fill="currentColor" stroke="none"/></g>
+          <g class="eyes-happy"><path d="M25 29 Q27 26.5 29 29"/><path d="M35 29 Q37 26.5 39 29"/></g>
+          <g class="eyes-sleep"><path d="M25 29.5 Q27 31 29 29.5"/><path d="M35 29.5 Q37 31 39 29.5"/></g>
+        </g>
+        <g id="pmouth">
+          <path class="mouth-smile" d="M30 33 Q32 35 34 33"/>
+          <path class="mouth-grin" d="M29 32.5 Q30.5 34.5 32 33 Q33.5 34.5 35 32.5"/>
+          <circle class="mouth-o" cx="32" cy="33.5" r="1.2"/>
+        </g>
+        <g stroke-width="1.5"><path d="M14 28 L21 29 M14 33 L21 32 M50 28 L43 29 M50 33 L43 32"/></g>
+      </g>
+      <g id="pq"><text x="50" y="16" font-size="13" font-family="sans-serif" fill="currentColor" stroke="none">?</text></g>
+      <g id="pzzz" font-family="sans-serif" fill="currentColor" stroke="none"><text x="48" y="18" font-size="9">z</text><text x="53" y="12" font-size="7">z</text><text x="57" y="7" font-size="5">z</text></g>
+    </svg>
+    <div id="pet-close" onclick="petHide(event)" title="隐藏小猫">✕</div>
+  </div>
+</div>
+<div id="pet-handle" onclick="petShow()" title="唤出小猫">🐾</div>
+<div id="pet-panel">
+  <div class="pp-head">🐾 墨墨 <span style="font-weight:400;font-size:11px;color:var(--text2)">· 你的科研伙伴</span>
+    <span class="pp-act"><button onclick="petClearChat()" title="清空对话">🗑</button><button onclick="petClosePanel()" title="关闭">✕</button></span>
+  </div>
+  <div id="pp-msgs"></div>
+  <div class="pp-input">
+    <textarea id="pp-input-ta" rows="1" placeholder="跟墨墨说点什么… Enter 发送"></textarea>
+    <button class="btn btn-primary btn-sm" onclick="petSend()" id="pp-send-btn">发送</button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════
 //  STORAGE KEYS & HELPERS
@@ -3420,6 +3553,8 @@ const K = {
   learning:   'phd_learning',
   // ── 细碎时光（独立命名空间；注册进 K 以纳入全量备份/导入/云同步）──
   moments:    'phd_moments',
+  // ── 墨墨小猫（隐藏状态+聊天记录）──
+  pet:        'phd_pet_v1',
 };
 
 // ── 数据保护层（防止刷新丢数据）──
@@ -17325,5 +17460,185 @@ function learnSrsAdd(tid){const q=prompt('卡片正面（问）：');if(!q)retur
   const d=_learnGet();const t=d.topics.find(x=>x.id===tid);if(!t)return;t.srs=t.srs||[];t.srs.push({id:uid(),q:q.trim(),a:a.trim(),ease:2.3,interval:0,due:_learnToday(),last:null});_learnSet(d);renderLearning();toast('✅ 已加卡');}
 </script>
 
+<script>
+// ══════════════════════════════════════
+//  墨墨 · 悬浮情绪小猫（独立存储 phd_pet_v1；对其他数据只读；AI 走 window._callAI）
+// ══════════════════════════════════════
+const PET_KEY='phd_pet_v1';
+function _petLoad(){const s=_safeGetItem(PET_KEY,{});return Object.assign({hidden:false,history:[]},s&&!Array.isArray(s)?s:{})}
+let _petData=_petLoad(),_petBusy=false,_petMoodTimer=null,_petSleepTimer=null,_petBubbleTimer=null;
+const _petSave=()=>sv(PET_KEY,_petData);
+const _$=id=>document.getElementById(id);
+
+function petMood(m,revertMs){
+  const el=_$('pet');if(!el)return;
+  el.dataset.state=m;
+  clearTimeout(_petMoodTimer);
+  if(revertMs)_petMoodTimer=setTimeout(()=>{el.dataset.state='idle'},revertMs);
+}
+// ── 只读事实采集：番茄/任务/细碎时光/反思，全部 try 包裹 ──
+function _petFacts(){
+  const f={h:new Date().getHours()};
+  try{
+    const td=today();
+    f.pomo=ld(K.pomos).filter(p=>p.date===td).length;
+    f.pend=ld(K.tasks).filter(t=>t.status!=='done');
+    const moms=(typeof getMoments==='function'?getMoments():[]).filter(m=>!m.archived);
+    f.tags=[...new Set(moms.flatMap(m=>m.tags||[]))];
+    f.momToday=moms.filter(m=>typeof _mmDay==='function'&&_mmDay(m.createdAt)===td).length;
+    const refs=ld(K.refs).filter(r=>!r.type&&r.wins);
+    f.lastWin=refs.length?String(refs[0].wins).split('\n')[0].slice(0,24):'';
+  }catch(_){}
+  return f;
+}
+function _petQuips(pat){
+  const f=_petFacts(),q=[];
+  if(pat)q.push('喵呜～摸头的感觉不错','再摸一下也不是不行喵','蹭蹭你的手心~');
+  if(f.h>=23||f.h<5)q.push('都这个点了还不睡喵？我陪你一会儿','夜深了，记得备份一下数据再走喵');
+  else if(f.h<9)q.push('早上好喵！今天从哪个实验开始？');
+  else if(f.h>=12&&f.h<14)q.push('午饭吃了吗？不能只想着喂论文不喂自己喵');
+  if(f.pomo)q.push(`今天已经专注 ${f.pomo} 个番茄了，尾巴给你摇一个`);
+  if(f.pend&&f.pend.length&&f.pend[0].title)q.push(`「${String(f.pend[0].title).slice(0,14)}」还没做完喵…不急，我陪你`);
+  if(f.tags&&f.tags.length){const t=f.tags[Math.floor(Math.random()*f.tags.length)];q.push(`你最近老提 #${t}，后来怎么样了喵？`)}
+  if(f.momToday)q.push(`今天记了 ${f.momToday} 条细碎时光，想法真多喵`);
+  if(f.lastWin)q.push(`你上次说做成了「${f.lastWin}」，还挺厉害的喵`);
+  q.push('喵？找我有事吗','实验跑着呢就歇会儿，我教你伸懒腰','据说摸猫可以降低论文被拒的概率喵','我在想罐头…啊不，在想你的下一个 idea');
+  return q;
+}
+function _petSay(pool){
+  const bub=_$('pet-bubble');if(!bub)return;
+  bub.querySelector('.pb-txt').textContent=pool[Math.floor(Math.random()*pool.length)];
+  bub.classList.add('show');
+  clearTimeout(_petBubbleTimer);
+  _petBubbleTimer=setTimeout(()=>bub.classList.remove('show'),7000);
+}
+function _petHideBubble(){const b=_$('pet-bubble');if(b)b.classList.remove('show');clearTimeout(_petBubbleTimer)}
+// ── 点击：气泡已开→进聊天；头部→摸头动画；身体→跳一下 ──
+function _petClick(e){
+  if(e.target.id==='pet-close')return;
+  const panel=_$('pet-panel');
+  if(panel.classList.contains('show')){petClosePanel();return}
+  const bub=_$('pet-bubble');
+  if(bub.classList.contains('show')){petOpenPanel();return}
+  const rect=e.currentTarget.getBoundingClientRect();
+  const isHead=(e.clientY-rect.top)<rect.height*0.45;
+  const el=e.currentTarget;
+  el.classList.remove('pet-bounce','pet-pat');void el.offsetWidth;
+  el.classList.add(isHead?'pet-pat':'pet-bounce');
+  petMood('happy',2600);
+  _petSay(_petQuips(isHead));
+}
+// ── 聊天 ──
+const _PET_PERSONA=`你是「墨墨」，一只住在科研工作台角落的黑白简笔画小猫，像朋友一样陪主人做实验、写论文、改 rebuttal。
+【性格】温暖、机灵、有点小傲娇但绝不毒舌；真心关心主人但表达克制，不油腻、不说教、不灌鸡汤。
+【说话规则】每次回复 1~3 句、不超过 60 字；语气自然口语化，可偶尔句尾带"喵"但别每句都带；偶尔叫一声"铲屎官"（一次对话最多一次）；不用敬语，不说"作为AI"，不列 1234 条建议。
+【能聊什么】科研压力（先接住情绪再轻巧宽慰，不急着给方案）；闲聊都能接；严肃技术问题简短给方向即可。
+【情绪标签】每次回复必须以且仅以一个标签开头：[happy] [neutral] [sad] [sleepy]，标签后直接跟正文。
+示例：
+用户：实验又崩了，跑了六个小时白跑。
+你：[sad]先揉揉你。六个小时的日志还在的话，崩的那一步反而是线索喵。
+用户：今天论文被接收了！
+你：[happy]哇——！铲屎官最棒！今晚罐头加倍！`;
+function _petCtx(){
+  const f=_petFacts(),b=[];
+  if(f.pomo)b.push(`今天专注了${f.pomo}个番茄钟`);
+  if(f.pend)b.push(`还有${f.pend.length}个待办任务`);
+  if(f.tags&&f.tags.length)b.push(`最近常记的话题：${f.tags.slice(0,5).map(t=>'#'+t).join(' ')}`);
+  if(f.lastWin)b.push(`最近反思日记提到做成了「${f.lastWin}」`);
+  return b.join('；')||'暂无记录';
+}
+function _petPrompt(){
+  const recent=_petData.history.slice(-12);
+  const convo=recent.map(m=>(m.role==='user'?'用户':'墨墨')+'：'+m.content).join('\n');
+  return _PET_PERSONA+'\n【主人近况】'+_petCtx()+'\n\n【对话记录】\n'+convo+'\n墨墨：';
+}
+const _petStrip=s=>String(s).replace(/^\[(happy|neutral|sad|sleepy)\]\s*/,'');
+function _petRenderMsgs(){
+  const box=_$('pp-msgs');if(!box)return;
+  box.innerHTML='';
+  _petData.history.slice(-40).forEach(m=>{
+    const d=document.createElement('div');
+    d.className='pp-msg '+(m.role==='user'?'user':'cat');
+    d.textContent=m.role==='user'?m.content:_petStrip(m.content);
+    box.appendChild(d);
+  });
+  box.scrollTop=box.scrollHeight;
+}
+async function petSend(){
+  if(_petBusy)return;
+  const ta=_$('pp-input-ta');const text=ta.value.trim();if(!text)return;
+  ta.value='';
+  _petData.history.push({role:'user',content:text,t:Date.now()});
+  _petTrimSave();_petRenderMsgs();
+  const box=_$('pp-msgs');
+  const pend=document.createElement('div');
+  pend.className='pp-msg cat pending';pend.innerHTML='<span>·</span><span>·</span><span>·</span>';
+  box.appendChild(pend);box.scrollTop=box.scrollHeight;
+  _petBusy=true;_$('pp-send-btn').disabled=true;petMood('thinking');
+  let raw=null;
+  try{raw=typeof window._callAI==='function'?await window._callAI(_petPrompt(),300):null}catch(_){}
+  _petBusy=false;_$('pp-send-btn').disabled=false;pend.remove();
+  if(!raw){
+    petMood('idle');
+    _petData.history.push({role:'assistant',content:'[sad]喵…信号不太好，等会儿再找我聊。也可以去「个人设置 → AI 模型设置」看看配置。',t:Date.now()});
+  }else{
+    _petData.history.push({role:'assistant',content:String(raw).trim(),t:Date.now()});
+    const m=String(raw).match(/^\[(happy|neutral|sad|sleepy)\]/);
+    petMood(m&&m[1]==='happy'?'happy':m&&m[1]==='sleepy'?'sleep':'idle',3000);
+  }
+  _petTrimSave();_petRenderMsgs();
+}
+function _petTrimSave(){_petData.history=_petData.history.slice(-40);_petSave()}
+function petOpenPanel(){
+  _petHideBubble();
+  const p=_$('pet-panel');p.classList.add('show');
+  if(!_petData.history.length){
+    _petData.history.push({role:'assistant',content:'[happy]喵！我是墨墨，你的科研搭子。实验、论文、心情，什么都能跟我说说。',t:Date.now()});
+    _petTrimSave();
+  }
+  _petRenderMsgs();
+  _$('pp-input-ta').focus();
+}
+function petClosePanel(){_$('pet-panel').classList.remove('show')}
+function petClearChat(){
+  if(!confirm('清空和墨墨的对话记录？'))return;
+  _petData.history=[];_petSave();_petRenderMsgs();
+}
+function petHide(e){
+  e&&e.stopPropagation();
+  _petHideBubble();petClosePanel();
+  _$('pet-root').style.display='none';_$('pet-handle').style.display='flex';
+  _petData.hidden=true;_petSave();
+}
+function petShow(){
+  _$('pet-root').style.display='';_$('pet-handle').style.display='none';
+  _petData.hidden=false;_petSave();
+  petMood('happy',2000);
+}
+// ── 无操作 3 分钟入睡，任意交互唤醒（节流 1s）──
+let _petLastReset=0;
+function _petResetSleep(){
+  const now=Date.now();if(now-_petLastReset<1000)return;_petLastReset=now;
+  const el=_$('pet');
+  if(el&&el.dataset.state==='sleep')el.dataset.state='idle';
+  clearTimeout(_petSleepTimer);
+  _petSleepTimer=setTimeout(()=>{if(!_petBusy)petMood('sleep')},180000);
+}
+(function _petInit(){
+  const pet=_$('pet');if(!pet)return;
+  pet.addEventListener('click',_petClick);
+  if(_petData.hidden){_$('pet-root').style.display='none';_$('pet-handle').style.display='flex'}
+  const ta=_$('pp-input-ta');
+  ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();petSend()}});
+  ['mousemove','keydown','click'].forEach(ev=>document.addEventListener(ev,_petResetSleep,{passive:true}));
+  _petResetSleep();
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)_petHideBubble()});
+  // 每个会话最多一次的欢迎气泡
+  if(!_petData.hidden&&!sessionStorage.getItem('_pet_hi')){
+    sessionStorage.setItem('_pet_hi','1');
+    setTimeout(()=>{if(!document.hidden)_petSay(_petQuips(false))},2500);
+  }
+})();
+</script>
 </body>
 </html>
