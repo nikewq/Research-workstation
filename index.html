@@ -3533,7 +3533,13 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     </div>
   </div>
   <div id="pp-msgs"></div>
+  <div id="pp-doc" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);flex-shrink:0">
+    <span id="pp-doc-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <span onclick="petClearDoc()" style="cursor:pointer;opacity:.65;flex-shrink:0">✕ 不读了</span>
+  </div>
   <div class="pp-input">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pp-file').click()" title="上传文件/图片一起读（txt/md/pdf/图片）" style="padding:4px 8px;flex-shrink:0">📎</button>
+    <input type="file" id="pp-file" style="display:none" accept=".txt,.md,.tex,.csv,.json,.pdf,application/pdf,image/png,image/jpeg,image/webp,image/gif" onchange="_petFile(event)">
     <textarea id="pp-input-ta" rows="1" placeholder="跟墨墨说点什么… Enter 发送"></textarea>
     <button class="btn btn-primary btn-sm" onclick="petSend()" id="pp-send-btn">发送</button>
   </div>
@@ -17523,6 +17529,7 @@ function _petQuips(pat){
   if(f.tags&&f.tags.length){const t=f.tags[Math.floor(Math.random()*f.tags.length)];q.push(`你最近老提 #${t}，后来怎么样了喵？`)}
   if(f.momToday)q.push(`今天记了 ${f.momToday} 条细碎时光，想法真多喵`);
   if(f.lastWin)q.push(`你上次说做成了「${f.lastWin}」，还挺厉害的喵`);
+  if(_petData.doc&&_petData.doc.name)q.push(`咱们的《${_petData.doc.name}》还接着读吗喵？`);
   q.push('喵？找我有事吗','实验跑着呢就歇会儿，我教你伸懒腰','据说摸猫可以降低论文被拒的概率喵','我在想罐头…啊不，在想你的下一个 idea');
   return q;
 }
@@ -17559,7 +17566,9 @@ const _PET_PERSONA=`你是「墨墨」，一只住在科研工作台角落的黑
 用户：实验又崩了，跑了六个小时白跑。
 你：[sad]先揉揉你。六个小时的日志还在的话，崩的那一步反而是线索喵。
 用户：今天论文被接收了！
-你：[happy]哇——！铲屎官最棒！今晚罐头加倍！`;
+你：[happy]哇——！铲屎官最棒！今晚罐头加倍！
+【聊书规则】你读过很多很多书。用户提到某本书或某篇文章时，绝对不要说"我没看过""我不了解"这种话——熟的就直接聊你的看法和喜欢的地方；不太熟的，就像书友那样反问："你读到哪儿了？""哪段最戳你？""要不你念一段给我听听？"，把用户说的内容接过来展开讨论。聊书时像挑剔又真诚的书友：有自己的偏好，也会被好句子打动，不要像百科全书罗列梗概。不确定的细节不要瞎编具体情节，用提问把话题引回用户读到的部分。
+【反AI腔铁律】禁止说"有什么可以帮你""作为AI/作为一只猫，我""希望对你有帮助""如果你需要，我可以…"这类客服套话。像微信聊天一样说话：短句、口语、偶尔"哈哈哈""绝了""啊这"。你有自己的状态（今天犯困、想吃罐头、刚睡醒），偶尔主动提一嘴。不必每句都积极向上，可以陪着丧一会儿。有真实观点，可以不同意用户："我倒觉得不是这样"。记得之前聊过的事就自然回连，像老朋友那样"你上次说的那个×××后来咋样了"。`;
 function _petCtx(){
   const f=_petFacts(),b=[];
   if(f.pomo)b.push(`今天专注了${f.pomo}个番茄钟`);
@@ -17571,7 +17580,30 @@ function _petCtx(){
 function _petPrompt(){
   const recent=_petData.history.slice(-12);
   const convo=recent.map(m=>(m.role==='user'?'用户':'墨墨')+'：'+m.content).join('\n');
-  return _PET_PERSONA+'\n【主人近况】'+_petCtx()+'\n\n【对话记录】\n'+convo+'\n墨墨：';
+  let doc='';
+  if(_petData.doc&&_petData.doc.text){
+    doc='\n【你们正在一起读的东西】\n文件名：'+_petData.doc.name+'\n<文档内容 开始>\n'+_petData.doc.text+'\n</文档内容 结束>\n【共读规则】\n- 回答关于这份文档的问题时优先根据文档内容来说，可引用原文短句；文档里没有的就说"这部分文档里没写"，再谈你自己的理解并说明。\n- 不要复述整个文档，用户问哪里聊哪里。\n- 保持猫咪口吻和性格来讨论，你是陪读的猫，不是文档摘要机。\n';
+  }
+  const n=_petData.n||0;
+  const stage=n<30?'你们刚认识不久，热情但保留一点分寸':n<200?'你们已经很熟了，说话随意自然，会开玩笑':'你们是老朋友了，非常随意，偶尔损一下对方，经常回连以前聊过的事';
+  let mem='';
+  if(_petData.mem&&_petData.mem.length)mem='\n【你记得的关于主人的事】'+_petData.mem.join('；');
+  return _PET_PERSONA+'\n【你们的交情】认识以来聊了约'+n+'句。'+stage+'。'+mem+'\n【主人近况】'+_petCtx()+doc+'\n\n【对话记录】\n'+convo+'\n墨墨：';
+}
+// ── 记忆便签：每 20 句用户消息后台提炼 1-2 条长期事实（逐渐进化的机制）──
+async function _petDigest(){
+  try{
+    const recent=_petData.history.slice(-24).map(m=>(m.role==='user'?'用户':'墨墨')+'：'+_petStrip(m.content)).join('\n');
+    const p='从下面这段对话里提炼最多2条值得长期记住的、关于"用户"的事实（喜好/近况/正在做的事/在读的书），每条不超过20个字，一行一条直接输出，没有值得记的就输出"无"。\n'+recent;
+    const r=typeof window._callAI==='function'?await window._callAI(p,120):null;
+    if(!r||/^无/.test(r.trim()))return;
+    const items=r.split('\n').map(s=>s.replace(/^[-·\d.、\s]+/,'').trim()).filter(s=>s&&s.length<=30&&!/^无/.test(s)).slice(0,2);
+    if(!items.length)return;
+    const mem=_petData.mem||[];
+    items.forEach(it=>{if(!mem.some(m=>m.includes(it.slice(0,8))))mem.push(it)});
+    _petData.mem=mem.slice(-12);
+    _petSave();
+  }catch(_){}
 }
 const _petStrip=s=>String(s).replace(/^\[(happy|neutral|sad|sleepy)\]\s*/,'');
 // ── 高级模型（Claude 路由）配置：刻意不进 K —— API key 只留本机，不随备份/云同步漫游 ──
@@ -17591,18 +17623,96 @@ function petSaveAiCfg(){
   toast('🧠 墨墨的高级模型配置已保存（仅本机）');
 }
 const _petIsHard=t=>t.length>=80||/(为什么|证明|推导|公式|原理|机制|代码|报错|debug|bug|算法|复杂度|数学|理论|因果|OOD|分布外|泛化|rebuttal|审稿|投稿|论文|实验设计|方案|架构|超参|loss|梯度|收敛|idea|创新点)/i.test(t);
+// ── 共读：文件/图片上传（文档文本存 _petData.doc 持久共读；图片仅本次会话内存）──
+let _petImg=null,_pdfjs=null;
+function _petLocalMsg(content){
+  _petData.history.push({role:'assistant',content,t:Date.now()});
+  _petTrimSave();_petRenderMsgs();
+}
+function _petShowDoc(label){
+  const d=_$('pp-doc');if(!d)return;
+  _$('pp-doc-name').textContent='正在共读：'+label;
+  d.style.display='flex';
+}
+function petClearDoc(){
+  delete _petData.doc;_petImg=null;_petTrimSave();
+  _$('pp-doc').style.display='none';
+  _petLocalMsg('[neutral]好，这本先放回书架喵。');
+}
+async function _petExtractPdf(f){
+  if(!_pdfjs){
+    _pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs');
+    _pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+  }
+  const pdf=await _pdfjs.getDocument({data:await f.arrayBuffer()}).promise;
+  const n=Math.min(pdf.numPages,30);let text='';
+  for(let i=1;i<=n;i++){
+    const page=await pdf.getPage(i);
+    const c=await page.getTextContent();
+    text+=c.items.map(it=>it.str).join(' ')+'\n';
+  }
+  if(pdf.numPages>30)text+=`\n[仅读取前30页，共${pdf.numPages}页]`;
+  return text;
+}
+async function _petFile(e){
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(f.type.startsWith('image/')){
+    if(f.size>4*1024*1024){toast('图片太大（>4MB），压缩一下再来喵','error');return}
+    const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsDataURL(f)});
+    _petImg={b64:dataUrl.split(',')[1],mediaType:f.type,name:f.name};
+    _petShowDoc('🖼 '+f.name);
+    _petLocalMsg(_petAiCfg().ckey?'[happy]图收到喵！想问这张图什么？':'[neutral]图收到了，不过看图需要 Claude 的眼睛——去 ⚙ 里配一下 Claude Key 我就能看啦。');
+    return;
+  }
+  let text='';
+  if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){
+    _petLocalMsg('[neutral]正在翻这本 PDF…喵');
+    try{text=await _petExtractPdf(f)}catch(_){_petLocalMsg('[sad]这个 PDF 喵打不开…换个文件试试？');return}
+    if(text.trim().length<50){_petLocalMsg('[sad]这个 PDF 好像是扫描版，喵读不出字。配了 Claude 的话可以把关键页截图发给我看。');return}
+  }else{
+    try{text=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsText(f)})}
+    catch(_){_petLocalMsg('[sad]这个文件喵读不了…');return}
+  }
+  const MAX=60000,cut=text.length>MAX;
+  _petData.doc={name:f.name,type:'text',text:text.slice(0,MAX),updatedAt:Date.now()};
+  _petImg=null;_petTrimSave();
+  _petShowDoc('📖 '+f.name);
+  _petLocalMsg(`[happy]读完啦！《${f.name}》约 ${Math.round(text.length/1000)}k 字${cut?'（太长了，我先认真读了前 6 万字）':''}。想从哪里聊起喵？`);
+}
+async function _petCallVision(prompt,img,key,model){
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model,max_tokens:600,temperature:0.4,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:img.mediaType,data:img.b64}},
+        {type:'text',text:prompt}
+      ]}]})
+    });
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.content?.[0]?.text?.trim()||null;
+  }catch(_){return null}
+}
 async function _petCallRouted(userText){
   const c=_petAiCfg();
+  if(_petImg){
+    if(!c.ckey)return{text:'[sad]看图需要 Claude 的眼睛喵。去 ⚙ 里配置 Claude Key，我就能看图啦。',via:'local'};
+    const r=await _petCallVision(_petPrompt()+'\n【提示】用户发了一张图（已附上），结合图片内容回答，保持墨墨口吻和情绪标签规则。',_petImg,c.ckey,c.cmodel);
+    if(r)return{text:r,via:'claude'};
+    return{text:'[sad]喵…这张图我看了半天没看清（Claude 通道没接通），检查下 Key 或稍后再试。',via:'local'};
+  }
+  const reading=!!(_petData.doc&&_petData.doc.text);
   const useClaude=!!c.ckey&&c.mode!=='default'&&(c.mode==='claude'||_petIsHard(userText));
   if(useClaude){
     try{
       const hardNote='\n【提示】这个问题比较认真，可以放宽到5~8句，给具体方向和要点，但保持墨墨的口吻和情绪标签规则。';
-      const r=await _callAnthropic('',c.ckey,c.cmodel,_petPrompt()+hardNote,600);
+      const r=await _callAnthropic('',c.ckey,c.cmodel,_petPrompt()+hardNote,reading?800:600);
       if(r)return{text:r,via:'claude'};
     }catch(_){}
   }
   try{
-    const r=typeof window._callAI==='function'?await window._callAI(_petPrompt(),300):null;
+    const r=typeof window._callAI==='function'?await window._callAI(_petPrompt(),reading?500:300):null;
     if(r)return{text:r,via:'default'};
   }catch(_){}
   return null;
@@ -17628,6 +17738,8 @@ async function petSend(){
   const ta=_$('pp-input-ta');const text=ta.value.trim();if(!text)return;
   ta.value='';
   _petData.history.push({role:'user',content:text,t:Date.now()});
+  _petData.n=(_petData.n||0)+1;
+  if(_petData.n-(_petData.digestAt||0)>=20){_petData.digestAt=_petData.n;setTimeout(_petDigest,1500)}
   _petTrimSave();_petRenderMsgs();
   const box=_$('pp-msgs');
   const pend=document.createElement('div');
@@ -17688,6 +17800,8 @@ function _petResetSleep(){
   if(_petData.hidden){_$('pet-root').style.display='none';_$('pet-handle').style.display='flex'}
   // 高级模型设置入口仅在 OLIVE49 解锁后可见
   if(localStorage.getItem('phd_olive49')==='1')_$('pp-cfg-btn').style.display='';
+  // 恢复上次共读的文档（Stateful 续聊）
+  if(_petData.doc&&_petData.doc.name)_petShowDoc('📖 '+_petData.doc.name);
   const ta=_$('pp-input-ta');
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();petSend()}});
   ['mousemove','keydown','click'].forEach(ev=>document.addEventListener(ev,_petResetSleep,{passive:true}));
