@@ -3509,7 +3509,28 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 <div id="pet-handle" onclick="petShow()" title="唤出小猫">🐾</div>
 <div id="pet-panel">
   <div class="pp-head">🐾 墨墨 <span style="font-weight:400;font-size:11px;color:var(--text2)">· 你的科研伙伴</span>
-    <span class="pp-act"><button onclick="petClearChat()" title="清空对话">🗑</button><button onclick="petClosePanel()" title="关闭">✕</button></span>
+    <span class="pp-act"><button onclick="petToggleAiCfg()" title="高级模型设置" id="pp-cfg-btn" style="display:none">⚙</button><button onclick="petClearChat()" title="清空对话">🗑</button><button onclick="petClosePanel()" title="关闭">✕</button></span>
+  </div>
+  <div id="pp-cfg" style="display:none;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:12px;flex-shrink:0">
+    <div style="font-weight:600;margin-bottom:6px">🧠 高级模型 · 难题切换 Claude</div>
+    <label>Claude API Key（只存本机浏览器，不进备份/云同步）</label>
+    <input id="pp-ckey" type="password" placeholder="sk-ant-...">
+    <div class="form-row c2" style="margin:6px 0 0">
+      <div><label>Claude 模型</label><select id="pp-cmodel">
+        <option value="claude-sonnet-5">Sonnet 5（推荐）</option>
+        <option value="claude-opus-4-8">Opus 4.8（最强）</option>
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5（最省）</option>
+      </select></div>
+      <div><label>路由模式</label><select id="pp-cmode">
+        <option value="auto">智能路由（难题才用 Claude）</option>
+        <option value="claude">全部用 Claude</option>
+        <option value="default">只用默认模型</option>
+      </select></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="petSaveAiCfg()">保存</button>
+      <span style="font-size:11px;color:var(--text2)">闲聊走默认模型（如 DeepSeek），难题自动切 Claude，回复带 🧠 标记</span>
+    </div>
   </div>
   <div id="pp-msgs"></div>
   <div class="pp-input">
@@ -17553,6 +17574,39 @@ function _petPrompt(){
   return _PET_PERSONA+'\n【主人近况】'+_petCtx()+'\n\n【对话记录】\n'+convo+'\n墨墨：';
 }
 const _petStrip=s=>String(s).replace(/^\[(happy|neutral|sad|sleepy)\]\s*/,'');
+// ── 高级模型（Claude 路由）配置：刻意不进 K —— API key 只留本机，不随备份/云同步漫游 ──
+const PET_AI_KEY='phd_pet_ai';
+function _petAiCfg(){const c=_safeGetItem(PET_AI_KEY,{});return Object.assign({ckey:'',cmodel:'claude-sonnet-5',mode:'auto'},c&&!Array.isArray(c)?c:{})}
+function petToggleAiCfg(){
+  const d=_$('pp-cfg');if(!d)return;
+  if(d.style.display==='none'){
+    const c=_petAiCfg();
+    _$('pp-ckey').value=c.ckey;_$('pp-cmodel').value=c.cmodel;_$('pp-cmode').value=c.mode;
+    d.style.display='block';
+  }else d.style.display='none';
+}
+function petSaveAiCfg(){
+  sv(PET_AI_KEY,{ckey:_$('pp-ckey').value.trim(),cmodel:_$('pp-cmodel').value,mode:_$('pp-cmode').value});
+  _$('pp-cfg').style.display='none';
+  toast('🧠 墨墨的高级模型配置已保存（仅本机）');
+}
+const _petIsHard=t=>t.length>=80||/(为什么|证明|推导|公式|原理|机制|代码|报错|debug|bug|算法|复杂度|数学|理论|因果|OOD|分布外|泛化|rebuttal|审稿|投稿|论文|实验设计|方案|架构|超参|loss|梯度|收敛|idea|创新点)/i.test(t);
+async function _petCallRouted(userText){
+  const c=_petAiCfg();
+  const useClaude=!!c.ckey&&c.mode!=='default'&&(c.mode==='claude'||_petIsHard(userText));
+  if(useClaude){
+    try{
+      const hardNote='\n【提示】这个问题比较认真，可以放宽到5~8句，给具体方向和要点，但保持墨墨的口吻和情绪标签规则。';
+      const r=await _callAnthropic('',c.ckey,c.cmodel,_petPrompt()+hardNote,600);
+      if(r)return{text:r,via:'claude'};
+    }catch(_){}
+  }
+  try{
+    const r=typeof window._callAI==='function'?await window._callAI(_petPrompt(),300):null;
+    if(r)return{text:r,via:'default'};
+  }catch(_){}
+  return null;
+}
 function _petRenderMsgs(){
   const box=_$('pp-msgs');if(!box)return;
   box.innerHTML='';
@@ -17560,6 +17614,11 @@ function _petRenderMsgs(){
     const d=document.createElement('div');
     d.className='pp-msg '+(m.role==='user'?'user':'cat');
     d.textContent=m.role==='user'?m.content:_petStrip(m.content);
+    if(m.role!=='user'&&m.via==='claude'){
+      const b=document.createElement('span');
+      b.textContent=' 🧠';b.title='由 Claude 回答';b.style.opacity='.55';b.style.fontSize='10px';
+      d.appendChild(b);
+    }
     box.appendChild(d);
   });
   box.scrollTop=box.scrollHeight;
@@ -17575,15 +17634,14 @@ async function petSend(){
   pend.className='pp-msg cat pending';pend.innerHTML='<span>·</span><span>·</span><span>·</span>';
   box.appendChild(pend);box.scrollTop=box.scrollHeight;
   _petBusy=true;_$('pp-send-btn').disabled=true;petMood('thinking');
-  let raw=null;
-  try{raw=typeof window._callAI==='function'?await window._callAI(_petPrompt(),300):null}catch(_){}
+  const res=await _petCallRouted(text);
   _petBusy=false;_$('pp-send-btn').disabled=false;pend.remove();
-  if(!raw){
+  if(!res){
     petMood('idle');
     _petData.history.push({role:'assistant',content:'[sad]喵…信号不太好，等会儿再找我聊。也可以去「个人设置 → AI 模型设置」看看配置。',t:Date.now()});
   }else{
-    _petData.history.push({role:'assistant',content:String(raw).trim(),t:Date.now()});
-    const m=String(raw).match(/^\[(happy|neutral|sad|sleepy)\]/);
+    _petData.history.push({role:'assistant',content:String(res.text).trim(),via:res.via,t:Date.now()});
+    const m=String(res.text).match(/^\[(happy|neutral|sad|sleepy)\]/);
     petMood(m&&m[1]==='happy'?'happy':m&&m[1]==='sleepy'?'sleep':'idle',3000);
   }
   _petTrimSave();_petRenderMsgs();
@@ -17628,6 +17686,8 @@ function _petResetSleep(){
   const pet=_$('pet');if(!pet)return;
   pet.addEventListener('click',_petClick);
   if(_petData.hidden){_$('pet-root').style.display='none';_$('pet-handle').style.display='flex'}
+  // 高级模型设置入口仅在 OLIVE49 解锁后可见
+  if(localStorage.getItem('phd_olive49')==='1')_$('pp-cfg-btn').style.display='';
   const ta=_$('pp-input-ta');
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();petSend()}});
   ['mousemove','keydown','click'].forEach(ev=>document.addEventListener(ev,_petResetSleep,{passive:true}));
