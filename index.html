@@ -1259,6 +1259,24 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div id="pomo-log" class="scrollable" style="max-height:350px"></div>
     </div>
   </div>
+  <div class="card" style="margin-top:16px" id="moments-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="card-title" style="margin-bottom:0">🍃 细碎时光</div>
+      <div class="flex gap-8">
+        <button class="btn btn-ghost btn-sm" onclick="momentRandomReview()" title="随机抽一条过往记录，与过去的自己不期而遇">🎲 随机回顾</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleMomentArchive()" id="moment-archive-btn">📦 归档箱</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportMoments()" title="导出全部记录为 JSON 备份">⬇ 备份</button>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <textarea id="moment-input" rows="2" placeholder="此刻在想什么？零碎想法、灵感、牢骚都行… 用 #标签 归类，Cmd/Ctrl+Enter 记下" style="width:100%" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){event.preventDefault();addMoment()}"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px">
+        <div id="moment-tagbar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+        <button class="btn btn-primary btn-sm" onclick="addMoment()" style="flex-shrink:0">✎ 记下</button>
+      </div>
+    </div>
+    <div id="moment-stream" class="scrollable" style="max-height:420px;margin-top:10px"></div>
+  </div>
 </div>
 
 <!-- ── Habits ── -->
@@ -2008,6 +2026,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div class="form-row"><div><label>🎯 明日计划</label><textarea id="r-tomorrow" placeholder="明天最重要的3件事..." rows="2"></textarea></div></div>
       <div class="form-row"><div><label>💙 一句话感恩</label><input id="r-gratitude" placeholder="今天感激的一件事..."></div></div>
       <button class="btn btn-primary" style="width:100%" onclick="saveReflection()">💾 保存</button>
+      <div id="ref-today-moments"></div>
     </div>
     <div class="card">
       <div class="card-title">历史记录</div>
@@ -3330,6 +3349,8 @@ const K = {
   aiCfg:      '_ai_cfg',
   // ── 学习驾驶舱（独立命名空间，不与任何现有键冲突）──
   learning:   'phd_learning',
+  // ── 细碎时光（独立命名空间；注册进 K 以纳入全量备份/导入/云同步）──
+  moments:    'phd_moments',
 };
 
 // ── 数据保护层（防止刷新丢数据）──
@@ -3873,12 +3894,12 @@ function switchPage(name) {
   if (nav) nav.classList.add('active');
   if (name==='stats') renderCharts();
   if (name==='overview') { renderOverview(); renderCheckin(); }
-  if (name==='focus') renderPomoLog();
+  if (name==='focus') { renderPomoLog(); renderMoments(); }
   if (name==='habits') renderHabits();
   if (name==='tasks') {renderTasks();_refreshNickDisplay();}
   if (name==='submissions') { renderSubmissions(); renderPapersPage(); }
   if (name==='learning') renderLearning();
-  if (name==='reflection') renderRefHistory();
+  if (name==='reflection') { renderRefHistory(); renderTodayMoments(); }
   if (name==='settings') populateSettingsForm();
   if (name==='tools') renderTools();
   if (name==='lab') renderLab();
@@ -5842,6 +5863,144 @@ function deleteRefEntry(id,e){
   sv(K.refs,list)
   renderRefHistory()
   toast('🗑 已删除')
+}
+
+// ══════════════════════════════════════
+//  MOMENTS 细碎时光（独立存储 phd_moments，走 ld/sv 继承数据保护层；不触碰任何既有 key 的读写路径）
+// ══════════════════════════════════════
+const MOMENTS_KEY='phd_moments';
+const getMoments=()=>ld(MOMENTS_KEY);
+const saveMoments=l=>sv(MOMENTS_KEY,l);
+const _mmTags=c=>[...new Set((c.match(/#([^\s#，。、,;；]+)/g)||[]).map(t=>t.slice(1)))];
+const _mmDay=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const _mmTime=ts=>{const d=new Date(ts);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+const _MM_ICON_BTN='background:none;border:none;cursor:pointer;font-size:12px;opacity:.55;padding:1px 3px;line-height:1';
+let _mmFilter='',_mmShowArchive=false,_mmReviewId=null;
+
+function addMoment(){
+  const el=document.getElementById('moment-input');if(!el)return;
+  const content=el.value.trim();
+  if(!content){toast('先写点什么吧','error');return}
+  const list=getMoments();const now=Date.now();
+  list.unshift({id:uid(),content,tags:_mmTags(content),createdAt:now,updatedAt:now,pinned:false,archived:false});
+  saveMoments(list);el.value='';
+  renderMoments();toast('🍃 已记下');
+}
+function _mmContentHtml(c){
+  return escHtml(c).replace(/#([^\s#，。、,;；&<]+)/g,'<span style="color:var(--primary);font-weight:600;cursor:pointer" onclick="filterMoments(&quot;$1&quot;)">#$1</span>').replace(/\n/g,'<br>');
+}
+function renderMomentTagbar(all){
+  const bar=document.getElementById('moment-tagbar');if(!bar)return;
+  const cnt={};
+  all.filter(m=>!m.archived).forEach(m=>(m.tags&&m.tags.length?m.tags:_mmTags(m.content)).forEach(t=>cnt[t]=(cnt[t]||0)+1));
+  const tags=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  bar.innerHTML=tags.map(([t,n])=>`<span onclick="filterMoments(&quot;${escHtml(t)}&quot;)" style="font-size:11px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid ${_mmFilter===t?'var(--primary)':'var(--border)'};color:${_mmFilter===t?'var(--primary)':'var(--text2)'};background:${_mmFilter===t?'var(--primary-bg)':'transparent'}">#${escHtml(t)} ${n}</span>`).join('');
+}
+function renderMoments(){
+  const el=document.getElementById('moment-stream');if(!el)return;
+  const all=getMoments();
+  renderMomentTagbar(all);
+  const nArch=all.filter(m=>m.archived).length;
+  const btn=document.getElementById('moment-archive-btn');
+  if(btn)btn.textContent=_mmShowArchive?'← 返回时光流':`📦 归档箱${nArch?`(${nArch})`:''}`;
+  let list=all.filter(m=>_mmShowArchive?m.archived:!m.archived);
+  if(_mmFilter)list=list.filter(m=>(m.tags&&m.tags.length?m.tags:_mmTags(m.content)).includes(_mmFilter));
+  let html='';
+  if(_mmReviewId&&!_mmShowArchive){
+    const rm=all.find(m=>m.id===_mmReviewId);
+    if(rm)html+=`<div style="border:1.5px dashed var(--primary);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--primary-bg)">
+      <div style="font-size:11px;color:var(--primary);font-weight:700;margin-bottom:4px">🎲 与过去的自己不期而遇 · ${_mmDay(rm.createdAt)}<span style="float:right;cursor:pointer" onclick="_mmReviewId=null;renderMoments()">✕</span></div>
+      <div style="font-size:13px;word-break:break-word">${_mmContentHtml(rm.content)}</div>
+      <div style="margin-top:6px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="momentRandomReview()">🎲 再来一张</button><button class="btn btn-ghost btn-sm" onclick="sendMomentToReflection('${rm.id}')">✍️ 汇入反思</button></div>
+    </div>`;
+  }
+  if(!list.length){
+    el.innerHTML=html+`<div class="empty-state"><div class="icon">🍃</div><p>${_mmShowArchive?'归档箱是空的':_mmFilter?'该标签下暂无记录':'随手记点什么吧，想法不分大小'}</p></div>`;
+    return;
+  }
+  list.sort((a,b)=>((b.pinned?1:0)-(a.pinned?1:0))||(b.createdAt-a.createdAt));
+  const todayStr=_mmDay(Date.now()),yesterStr=_mmDay(Date.now()-864e5);
+  let lastGroup='';
+  html+=list.map(m=>{
+    const day=_mmDay(m.createdAt);
+    const group=(m.pinned&&!_mmShowArchive)?'📌 置顶':day===todayStr?'今天':day===yesterStr?'昨天':day;
+    let head='';
+    if(group!==lastGroup){lastGroup=group;head=`<div style="font-size:11px;font-weight:700;color:var(--text2);margin:10px 0 6px">${group}</div>`}
+    const acts=_mmShowArchive
+      ?`<button title="恢复" onclick="restoreMoment('${m.id}')" style="${_MM_ICON_BTN}">↩</button><button title="彻底删除" onclick="deleteMomentForever('${m.id}')" style="${_MM_ICON_BTN}">🗑</button>`
+      :`<button title="汇入今日反思" onclick="sendMomentToReflection('${m.id}')" style="${_MM_ICON_BTN}">✍️</button><button title="${m.pinned?'取消置顶':'置顶'}" onclick="togglePinMoment('${m.id}')" style="${_MM_ICON_BTN}">${m.pinned?'📍':'📌'}</button><button title="编辑" onclick="editMoment('${m.id}')" style="${_MM_ICON_BTN}">✏️</button><button title="归档（可在归档箱恢复）" onclick="archiveMoment('${m.id}')" style="${_MM_ICON_BTN}">📦</button>`;
+    return head+`<div id="moment-card-${m.id}" style="border:1px solid var(--border);border-radius:10px;padding:9px 11px;margin-bottom:8px;background:var(--surface)">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text2)">
+        <span>${m.pinned&&!_mmShowArchive?'📌 ':''}${_mmTime(m.createdAt)}${m.updatedAt>m.createdAt?' · 已编辑':''}</span>
+        <span style="display:flex;gap:2px">${acts}</span>
+      </div>
+      <div style="font-size:13px;margin-top:4px;word-break:break-word">${_mmContentHtml(m.content)}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML=html;
+}
+function filterMoments(t){_mmFilter=_mmFilter===t?'':t;renderMoments()}
+function toggleMomentArchive(){_mmShowArchive=!_mmShowArchive;_mmReviewId=null;renderMoments()}
+function togglePinMoment(id){const l=getMoments();const m=l.find(x=>x.id===id);if(!m)return;m.pinned=!m.pinned;saveMoments(l);renderMoments()}
+function archiveMoment(id){const l=getMoments();const m=l.find(x=>x.id===id);if(!m)return;m.archived=true;m.pinned=false;saveMoments(l);renderMoments();toast('📦 已归档，可在归档箱恢复')}
+function restoreMoment(id){const l=getMoments();const m=l.find(x=>x.id===id);if(!m)return;m.archived=false;saveMoments(l);renderMoments();toast('↩ 已恢复')}
+function deleteMomentForever(id){
+  if(!confirm('彻底删除这条记录？此操作不可恢复'))return;
+  saveMoments(getMoments().filter(x=>x.id!==id));renderMoments();toast('🗑 已删除');
+}
+function editMoment(id){
+  const card=document.getElementById('moment-card-'+id);const m=getMoments().find(x=>x.id===id);if(!card||!m)return;
+  card.innerHTML=`<textarea id="moment-edit-${id}" rows="3" style="width:100%">${escHtml(m.content)}</textarea>
+    <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px">
+      <button class="btn btn-ghost btn-sm" onclick="renderMoments()">取消</button>
+      <button class="btn btn-primary btn-sm" onclick="saveMomentEdit('${id}')">保存</button>
+    </div>`;
+  const ta=document.getElementById('moment-edit-'+id);ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
+}
+function saveMomentEdit(id){
+  const ta=document.getElementById('moment-edit-'+id);if(!ta)return;
+  const content=ta.value.trim();if(!content){toast('内容不能为空','error');return}
+  const l=getMoments();const m=l.find(x=>x.id===id);if(!m)return;
+  m.content=content;m.tags=_mmTags(content);m.updatedAt=Date.now();
+  saveMoments(l);renderMoments();toast('✏️ 已更新');
+}
+function momentRandomReview(){
+  const pool=getMoments().filter(m=>!m.archived);
+  if(!pool.length){toast('还没有记录，先随手记一条吧','error');return}
+  if(_mmShowArchive){_mmShowArchive=false}
+  let pick=pool[Math.floor(Math.random()*pool.length)];
+  if(pool.length>1&&pick.id===_mmReviewId)pick=pool[(pool.indexOf(pick)+1)%pool.length];
+  _mmReviewId=pick.id;renderMoments();
+}
+function exportMoments(){
+  const list=getMoments();
+  if(!list.length){toast('暂无记录可备份','error');return}
+  const data=JSON.stringify({version:1,exportedAt:new Date().toLocaleString('zh-CN'),moments:list},null,2);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download=`细碎时光备份_${today()}.json`;a.click();URL.revokeObjectURL(a.href);
+  toast('⬇ 已导出 JSON 备份');
+}
+// ── 与反思日记联动：只读取 moments、只往输入框追加文本；不改动 saveReflection / phd_refs 的任何写入逻辑 ──
+function sendMomentToReflection(id){
+  const m=getMoments().find(x=>x.id===id);if(!m)return;
+  switchPage('reflection');
+  const ta=document.getElementById('r-wins');if(!ta)return;
+  ta.value=(ta.value?ta.value+'\n':'')+'💭 '+m.content;
+  ta.focus();
+  toast('✍️ 已汇入「今日亮点」，编辑后记得保存');
+}
+function renderTodayMoments(){
+  const el=document.getElementById('ref-today-moments');if(!el)return;
+  const todayStr=_mmDay(Date.now());
+  const list=getMoments().filter(m=>!m.archived&&_mmDay(m.createdAt)===todayStr).sort((a,b)=>a.createdAt-b.createdAt);
+  if(!list.length){el.innerHTML='';return}
+  el.innerHTML=`<hr class="divider"><div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">🍃 这一天的细碎时光（${list.length}条）<span style="font-weight:400;opacity:.7">点 ✍️ 引用到今日亮点</span></div>`+
+    list.map(m=>`<div style="display:flex;align-items:flex-start;gap:6px;font-size:12px;color:var(--text2);margin-bottom:5px">
+      <span style="flex-shrink:0;opacity:.7">${_mmTime(m.createdAt)}</span>
+      <span style="flex:1;min-width:0;word-break:break-word">${_mmContentHtml(m.content)}</span>
+      <button title="引用到今日亮点" onclick="sendMomentToReflection('${m.id}')" style="${_MM_ICON_BTN}">✍️</button>
+    </div>`).join('');
 }
 
 // ══════════════════════════════════════
