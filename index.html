@@ -2986,7 +2986,9 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <span style="color:#fbbf24" title="金币"><span id="farm-gold-icon">💰</span> <span id="farm-gold">0</span></span>
           <span style="color:#a78bfa" id="farm-accel-wrap" title="加速器：番茄钟换得"><span id="farm-accel-icon">⚡</span> <span id="farm-accel">0</span></span>
           <span style="color:#10b981" id="farm-fert-wrap" title="肥料：商店购买"><span id="farm-fert-icon">🧪</span> <span id="farm-fert">0</span></span>
+          <span id="farm-weather" style="color:var(--text2);font-weight:600;font-size:12px" title="当季与今日天气影响作物产出"></span>
           <button class="btn btn-primary btn-sm" onclick="farm_openShop()">🛍️ 商店</button>
+          <button class="btn btn-ghost btn-sm" onclick="farm_openCodex()" title="收集图鉴">📖 图鉴</button>
           <button class="btn btn-ghost btn-sm" onclick="farm_openMilestones()" title="金币里程碑奖励">🏆 里程碑</button>
           <button class="btn btn-ghost btn-sm" onclick="farm_openAchievements()" title="成就榜" style="position:relative">🏅 成就 <span id="farm-ach-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;padding:1px 5px;font-weight:700">0</span></button>
           <button class="btn btn-ghost btn-sm" onclick="farm_themeMenu()" title="按你的研究方向主题化整个农场">🎨 主题</button>
@@ -3041,6 +3043,18 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         </div>
         <div id="farm-ach-summary" style="font-size:12px;color:var(--text2);margin-bottom:14px"></div>
         <div id="farm-ach-body"></div>
+      </div>
+    </div>
+
+    <!-- 图鉴浮层 -->
+    <div id="farm-codex-modal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(15,23,42,0.6);align-items:center;justify-content:center" onclick="if(event.target===this)farm_closeCodex()">
+      <div style="background:var(--surface);border-radius:14px;width:min(600px,92vw);max-height:82vh;overflow:auto;padding:20px 22px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:16px;font-weight:700">📖 收集图鉴</div>
+          <button class="btn btn-ghost btn-sm" onclick="farm_closeCodex()">×</button>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">首次以某品质收获某作物即永久点亮。集齐可领完成度大奖。</div>
+        <div id="farm-codex-body"></div>
       </div>
     </div>
 
@@ -16407,6 +16421,50 @@ ${kp.slice(0,3000)}
   // 阶段图（前 N-1 通用，最后一个 = 成熟作物 emoji）
   const STAGE_EMOJI=['🌱','🌿','🪴','🌳'];
 
+  // ── 季节 / 天气（真实日期驱动，纯前端确定性，不写任何存储）──
+  const SEASON_META={spring:{name:'春',emoji:'🌱'},summer:{name:'夏',emoji:'☀️'},autumn:{name:'秋',emoji:'🍂'},winter:{name:'冬',emoji:'❄️'}};
+  // 气象季：3-5春 6-8夏 9-11秋 12-2冬（getMonth 0-11）
+  const _SEASON_BY_MONTH=['winter','winter','spring','spring','spring','summer','summer','summer','autumn','autumn','autumn','winter'];
+  function currentSeason(){return _SEASON_BY_MONTH[new Date().getMonth()];}
+  const CROP_SEASON={
+    tomato:['summer'],wheat:['spring','autumn'],strawberry:['spring'],carrot:['spring','winter'],
+    corn:['summer','autumn'],potato:['winter','spring'],sunflower:['summer'],pumpkin:['autumn'],
+    grape:['summer','autumn'],apple:['autumn'],cherry:['spring']
+  };
+  function seasonMult(k){return (CROP_SEASON[k]||[]).includes(currentSeason())?1.15:0.85;} // 当季 +15% / 反季 -15%
+  const WEATHER_META={
+    rain: {name:'小雨',emoji:'🌧',tip:'雨水润田，产出 +5%',yieldMul:1.05,critAdd:0},
+    storm:{name:'暴风',emoji:'🌪',tip:'露天减产 -10%',      yieldMul:0.9, critAdd:0},
+    sunny:{name:'烈日',emoji:'🔆',tip:'光照充足，暴击率 +5%',yieldMul:1,   critAdd:0.05},
+    clear:{name:'晴',  emoji:'⛅',tip:'风和日丽',            yieldMul:1,   critAdd:0}
+  };
+  function _hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h+s.charCodeAt(i))|0;}return Math.abs(h);}
+  function todayWeather(){
+    const key=(typeof today==='function')?today():new Date().toISOString().slice(0,10);
+    const r=_hashStr('wx'+key)%100;
+    if(r<15)return'rain';if(r<22)return'storm';if(r<30)return'sunny';return'clear';
+  }
+  // ── 收集图鉴（作物 × 品质，11×3=33 格）──
+  const CODEX_TIERS=[{n:10,gold:1000},{n:20,gold:2500},{n:33,gold:5000,title:'农学大师'}];
+  function _lightCodex(k,q){
+    S.codex=S.codex||{};
+    const e=S.codex[k]=S.codex[k]||{normal:false,silver:false,gold:false};
+    if(!e.normal)e.normal=true;
+    if((q==='silver'||q==='gold')&&!e.silver)e.silver=true;
+    if(q==='gold'&&!e.gold)e.gold=true;
+  }
+  function codexCount(){let c=0;Object.values(S.codex||{}).forEach(e=>{if(e.normal)c++;if(e.silver)c++;if(e.gold)c++;});return c;}
+  function checkCodexTiers(){
+    S.codexClaimed=S.codexClaimed||[];
+    const cnt=codexCount();
+    CODEX_TIERS.forEach(t=>{
+      if(cnt>=t.n&&!S.codexClaimed.includes(t.n)){
+        S.codexClaimed.push(t.n);S.gold+=t.gold;S.goldEarned+=t.gold;
+        if(typeof toast==='function')toast(`📖 图鉴 ${t.n}/33！${t.title?'达成「'+t.title+'」 · ':''}奖励 +${t.gold}${uiName('gold').e}`);
+      }
+    });
+  }
+
   // ── 状态 ──
   const FARM_KEY='rw_farm_state_v1';
   const SKIN_KEY='rw_farm_skin_v1';
@@ -16485,6 +16543,8 @@ ${kp.slice(0,3000)}
       unlockedPlots:24,        // 已解锁地块数（24 起，可扩到 PLOT_CAP）
       ownedThemes:[],          // 已解锁的内置主题 id
       dailyLedger:{date:'',taskFert:0,habitAccel:0,checkinBonus:0}, // 跨模块联动当日发放台账
+      codex:{},                // 收集图鉴 {cropKey:{normal,silver,gold}}
+      codexClaimed:[],         // 已领取的图鉴完成度阶梯
       lastTick:Date.now()
     };
   }
@@ -16562,6 +16622,8 @@ ${kp.slice(0,3000)}
     $('farm-gold').textContent=S.gold;
     $('farm-accel').textContent=S.accel;
     $('farm-fert').textContent=S.fert;
+    const wxEl=$('farm-weather');
+    if(wxEl){const se=SEASON_META[currentSeason()],w=WEATHER_META[todayWeather()];wxEl.textContent=`${se.emoji}${se.name} · ${w.emoji}${w.name}`;wxEl.title=w.tip;}
     const grid=$('farm-grid');if(!grid)return;
     const un=S.unlockedPlots||PLOTS;
     const html=[];
@@ -16654,7 +16716,9 @@ ${kp.slice(0,3000)}
   function harvest(idx){
     const p=S.plots[idx];if(!p||!isRipe(p))return;
     const c=CROPS[p.crop];
-    const base=Math.round(c.price*(p.fertBonus||1));
+    const wx=WEATHER_META[todayWeather()]||WEATHER_META.clear;
+    const yieldFactor=seasonMult(p.crop)*(wx.yieldMul||1); // 季节×天气产出系数
+    const base=Math.round(c.price*(p.fertBonus||1)*yieldFactor);
     S.dropStats=S.dropStats||{silver:0,gold:0,chest:0,crit:0};
     const drop=rollDrop();
     let label='',rare=false;
@@ -16663,19 +16727,22 @@ ${kp.slice(0,3000)}
       S.gold+=bonus;S.goldEarned+=bonus;S.accel=(S.accel||0)+1;
       S.dropStats.chest=(S.dropStats.chest||0)+1;S.harvestsSinceRare=0;
       label=`🎁 宝箱！+${bonus}💰 +1⚡`;rare=true;
+      _lightCodex(p.crop,'normal');
     }else{
-      let g=Math.round(base*(drop.mult||1));
-      const crit=Math.random()<0.15;
+      let g=Math.max(1,Math.round(base*(drop.mult||1)));
+      const crit=Math.random()<(0.15+(wx.critAdd||0));
       if(crit){g*=2;S.dropStats.crit=(S.dropStats.crit||0)+1;}
       S.gold+=g;S.goldEarned+=g;
       if(drop.type==='gold'){S.dropStats.gold=(S.dropStats.gold||0)+1;S.harvestsSinceRare=0;label=`🌟 金色${c.name}！+${g}💰`;rare=true;}
       else if(drop.type==='silver'){S.dropStats.silver=(S.dropStats.silver||0)+1;S.harvestsSinceRare=(S.harvestsSinceRare||0)+1;label=`✨ 银色${c.name} +${g}💰`;}
       else{S.harvestsSinceRare=(S.harvestsSinceRare||0)+1;label='+'+g;}
       if(crit)label+=' 💥暴击';
+      _lightCodex(p.crop,drop.type);
     }
     S.inv[p.crop]=(S.inv[p.crop]||0)+1;
     S.harvests++;
     S.plots[idx]=null;
+    checkCodexTiers();
     saveFarm(S);render();checkMilestones(true);checkAchievements();
     flashGold(label);
     if(rare&&typeof toast==='function')toast(label);
@@ -16973,6 +17040,24 @@ ${kp.slice(0,3000)}
     if(!b)return;
     if(n>0){b.style.display='block';b.textContent=n;}
     else b.style.display='none';
+  }
+  function openCodex(){renderCodex();$('farm-codex-modal').style.display='flex';}
+  function closeCodex(){$('farm-codex-modal').style.display='none';}
+  function renderCodex(){
+    const body=$('farm-codex-body');if(!body)return;
+    const cnt=codexCount();
+    const cell=(on,lbl,col)=>`<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:22px;border-radius:5px;font-size:10px;font-weight:700;margin-left:4px;background:${on?col:'var(--surface2)'};color:${on?'#fff':'var(--text2)'};opacity:${on?1:.45}">${lbl}</span>`;
+    const rows=Object.keys(CROPS).map(k=>{
+      const d=display(k);const e=(S.codex||{})[k]||{};
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:20px;width:26px;text-align:center">${e.normal?d.emoji:'❔'}</span>
+        <span style="flex:1;font-size:12px;color:${e.normal?'var(--text)':'var(--text2)'}">${e.normal?esc(d.name):'？？？'}</span>
+        ${cell(e.normal,'普通','#94a3b8')}${cell(e.silver,'银','#9ca3af')}${cell(e.gold,'金','#f59e0b')}
+      </div>`;
+    }).join('');
+    const tiers=CODEX_TIERS.map(t=>`<span style="opacity:${cnt>=t.n?1:.5};margin-right:10px">${cnt>=t.n?'✅':'⬜'} ${t.n}格${t.title?'·'+t.title:''} +${t.gold}${uiName('gold').e}</span>`).join('');
+    body.innerHTML=`<div style="font-size:14px;font-weight:700;margin-bottom:4px">完成度 ${cnt}/33</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:12px">${tiers}</div>${rows}`;
   }
   function checkAchievements(){
     // 自动检测达成但未领取的，弹一次性 toast（仅新达成）
@@ -17280,6 +17365,8 @@ ${kp.slice(0,3000)}
   window.farm_sell=sell;
   window.farm_buyPlot=buyPlot;
   window.farm_applyTheme=applyBuiltinTheme;
+  window.farm_openCodex=openCodex;
+  window.farm_closeCodex=closeCodex;
   window.farm_openMilestones=openMilestones;
   window.farm_closeMilestones=closeMilestones;
   window.farm_claimMile=claimMile;
