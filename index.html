@@ -1180,14 +1180,49 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
-    <!-- 开发者置顶公告：墨墨小猫 + 界面升级 -->
+    <!-- 开发者置顶公告：农场大升级 + 墨墨会读书 + 回应留言 -->
     <details class="dev-ann" open style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-left:4px solid #10b981;border-radius:8px;padding:12px 14px">
       <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span class="dev-chev" style="color:#059669">▶</span>
-        <span style="font-size:13px">🐾</span>
-        <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 新功能上线</span>
+        <span style="font-size:13px">🌾</span>
+        <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 大版本更新</span>
         <span style="font-size:10px;color:#047857;background:#a7f3d0;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
-        <span style="font-size:10px;color:#059669;margin-left:auto">墨墨小猫 & 界面升级 · 2026-07-08</span>
+        <span style="font-size:10px;color:#059669;margin-left:auto">农场大升级 & 墨墨会读书 · 2026-07-09</span>
+      </summary>
+      <div style="font-size:12px;color:#064e3b;line-height:1.75">
+        <strong>🌾 摸鱼农场大升级（摸鱼侦察局 → 🌾 农场主）</strong><br>
+        这次把农场做深了，简单说说怎么玩：
+        <ul style="margin:4px 0 8px 18px;padding:0">
+          <li><strong>答题看答案：</strong>成熟作物冒 ❓ 时答题，<strong>答完立刻显示参考答案 + 得分 + 点评</strong>，连对还有倍率奖励——学习闭环补上了；</li>
+          <li><strong>种收赚钱：</strong>收获有几率出 ✨银 / 🌟金 / 🎁宝箱 / 💥暴击（30 次没出稀有必给保底），卖钱买种子；</li>
+          <li><strong>每天来领奖：</strong>每日首次进农场领登录奖（7 天循环，断签有雪花宽容不清零）；</li>
+          <li><strong>🏞 扩建 & 🌌 主题：</strong>金币开垦新地块（24→42 格）；达成条件解锁 5 款内置主题（星空 / 和风 / 秋收 / 赛博 / 像素）；</li>
+          <li><strong>🌦 季节天气：</strong>按真实日期变化，种应季作物、赶好天气收获，产出更高；</li>
+          <li><strong>📖 图鉴：</strong>集齐作物各品质，完成度达标领大奖；</li>
+          <li><strong>🔗 科研联动：</strong>你在工作台完成任务、习惯打卡、上班签到，进农场会自动折算成肥料 / 加速器 / 金币（每日封顶，<strong>只读取、绝不改动你的任务数据</strong>）。</li>
+        </ul>
+        <strong>🐾 墨墨小猫会读书了</strong>
+        <ul style="margin:4px 0 8px 18px;padding:0">
+          <li>聊天面板点 📎 可以上传 txt / md / <strong>PDF</strong> 或图片，让墨墨陪你一起读、一起讨论（它不会再说"没看过"了）；聊得越多越懂你。</li>
+        </ul>
+        <div style="background:rgba(16,185,129,0.1);border-radius:6px;padding:8px 10px;margin:6px 0">
+          <strong>💬 回应大家在留言墙的建议：</strong><br>
+          · <b>@Sage</b> 说"答题后要是同步出现正确答案就好了"——<strong>已经做好了！</strong>农场答题现在会同步显示参考答案和点评，谢谢你的建议 🙏<br>
+          · <b>@Daisy、@Clover</b> 反馈"刷新后数据丢失"——底层存储早前已系统性加固（镜像备份 + 快照 + 损坏隔离），<strong>这次所有新功能（农场 / 墨墨 / 细碎时光）都用各自独立的存储，绝不碰你的任务、日记、文献数据</strong>。仍建议到「个人设置 → 云同步」存好同步码或定期导出，双保险。<br>
+          · <b>@Dodo</b> 等问"加 AI 模型失败"——排查见下方历史公告，多为 Key 或模型名填写问题，Pollinations 免 Key 可直接用。
+        </div>
+        <span style="color:#065f46">💬</span> 农场想要限时悬赏、温室分区？墨墨想要小狗版？继续在下方留言，我们都会认真看。
+      </div>
+    </details>
+
+    <!-- 历史开发者公告：墨墨小猫 + 界面升级（折叠） -->
+    <details class="dev-ann" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px">
+      <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="dev-chev" style="color:#a16207">▶</span>
+        <span style="font-size:13px">🐾</span>
+        <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
+        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">历史</span>
+        <span style="font-size:10px;color:#a16207;margin-left:auto">墨墨小猫 & 界面升级 · 2026-07-08</span>
       </summary>
       <div style="font-size:12px;color:#064e3b;line-height:1.75">
         <strong>🐾 「墨墨」来了！——住在工作台角落的 AI 小猫</strong><br>
