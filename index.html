@@ -2979,7 +2979,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <div style="min-width:0;flex:1">
           <div style="font-weight:700;font-size:14px;margin-bottom:4px"><span id="farm-title">🌾 科研农场 · Research Farm</span></div>
           <div style="font-size:12px;color:var(--text2);line-height:1.6" id="farm-welcome">
-            种作物 → 收获 → 卖钱解锁奖励 · 完成番茄钟 → 加速生长 · 成熟作物可能冒❓→答对赏励
+            种作物 → 收获（可能出✨银/🌟金/🎁宝箱/💥暴击）→ 卖钱 · 番茄钟加速 · ❓答题看参考答案+连击翻倍奖 · 每日登录领奖
           </div>
         </div>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:14px;font-weight:700">
@@ -16471,6 +16471,10 @@ ${kp.slice(0,3000)}
       streakHigh:0,streakBest:0, // 连续 80+ 答题
       ownedSeeds:{tomato:3,wheat:2},
       achievements:{},         // 已领取的成就 key
+      // ── 农场 2.0 新增（补键迁移自动兼容老存档）──
+      harvestsSinceRare:0,     // 稀有掉落保底计数
+      dropStats:{silver:0,gold:0,chest:0,crit:0}, // 掉落图鉴统计
+      lastLogin:'',loginStreak:0,freezes:2,        // 每日登录 + 断签宽容雪花
       lastTick:Date.now()
     };
   }
@@ -16616,16 +16620,43 @@ ${kp.slice(0,3000)}
     if(!S.cropsPlantedSet.includes(key))S.cropsPlantedSet.push(key);
     saveFarm(S);render();checkAchievements();
   }
+  function rollDrop(){
+    // 保底：连续 30 次未出金/宝箱 → 强制金作物
+    if((S.harvestsSinceRare||0)>=30)return{type:'gold',mult:3};
+    const r=Math.random();
+    if(r<0.01)return{type:'chest'};
+    if(r<0.05)return{type:'gold',mult:3};
+    if(r<0.20)return{type:'silver',mult:1.5};
+    return{type:'normal',mult:1};
+  }
   function harvest(idx){
     const p=S.plots[idx];if(!p||!isRipe(p))return;
     const c=CROPS[p.crop];
-    const yieldGold=Math.round(c.price*(p.fertBonus||1));
-    S.gold+=yieldGold;S.goldEarned+=yieldGold;
+    const base=Math.round(c.price*(p.fertBonus||1));
+    S.dropStats=S.dropStats||{silver:0,gold:0,chest:0,crit:0};
+    const drop=rollDrop();
+    let label='',rare=false;
+    if(drop.type==='chest'){
+      const bonus=Math.round(c.price*2+50);
+      S.gold+=bonus;S.goldEarned+=bonus;S.accel=(S.accel||0)+1;
+      S.dropStats.chest=(S.dropStats.chest||0)+1;S.harvestsSinceRare=0;
+      label=`🎁 宝箱！+${bonus}💰 +1⚡`;rare=true;
+    }else{
+      let g=Math.round(base*(drop.mult||1));
+      const crit=Math.random()<0.15;
+      if(crit){g*=2;S.dropStats.crit=(S.dropStats.crit||0)+1;}
+      S.gold+=g;S.goldEarned+=g;
+      if(drop.type==='gold'){S.dropStats.gold=(S.dropStats.gold||0)+1;S.harvestsSinceRare=0;label=`🌟 金色${c.name}！+${g}💰`;rare=true;}
+      else if(drop.type==='silver'){S.dropStats.silver=(S.dropStats.silver||0)+1;S.harvestsSinceRare=(S.harvestsSinceRare||0)+1;label=`✨ 银色${c.name} +${g}💰`;}
+      else{S.harvestsSinceRare=(S.harvestsSinceRare||0)+1;label='+'+g;}
+      if(crit)label+=' 💥暴击';
+    }
     S.inv[p.crop]=(S.inv[p.crop]||0)+1;
     S.harvests++;
     S.plots[idx]=null;
     saveFarm(S);render();checkMilestones(true);checkAchievements();
-    flashGold('+'+yieldGold);
+    flashGold(label);
+    if(rare&&typeof toast==='function')toast(label);
   }
   function useAccel(idx){
     const p=S.plots[idx];if(!p)return;
@@ -16981,22 +17012,31 @@ ${kp.slice(0,3000)}
     let obj;try{obj=JSON.parse(m[0]);}catch(e){$('farm-q-result').innerHTML='<span style="color:#ef4444">JSON 失败</span>';return;}
     const score=Math.max(0,Math.min(100,parseInt(obj.score)||0));
     const fb=obj.feedback||'';
-    // 奖励梯度
-    let reward='';
-    if(score>=80){S.accel+=2;S.fert+=1;reward='🏆 优秀！奖励 +2 ⚡加速器 +1 🧪肥料';}
-    else if(score>=60){S.accel+=1;reward='👍 不错！奖励 +1 ⚡加速器';}
-    else if(score>=40){S.fert+=1;reward='💪 加油！奖励 +1 🧪肥料';}
-    else{reward='💭 再多想想，没奖励但下次还有机会';}
     S.questionsAnswered++;if(score>=60)S.questionsCorrect++;
-    // 连续高分
+    // 连续高分（≥80）先更新，供连击倍率使用
     if(score>=80){S.streakHigh=(S.streakHigh||0)+1;if(S.streakHigh>(S.streakBest||0))S.streakBest=S.streakHigh;}
     else S.streakHigh=0;
+    // 连击倍率：连对越多，本次奖励越高（封顶 3×）
+    const streakMult=[1,1,1.2,1.5,2,2.5,3][Math.min(S.streakHigh||0,6)];
+    let reward='';
+    if(score>=80){
+      const a=Math.round(2*streakMult),fz=Math.max(1,Math.round(streakMult)),bonus=Math.round(30*streakMult);
+      S.accel+=a;S.fert+=fz;S.gold+=bonus;S.goldEarned+=bonus;
+      reward=`🏆 优秀！+${a}⚡ +${fz}🧪 +${bonus}💰`+(S.streakHigh>=2?` · 🔥连对${S.streakHigh}×${streakMult}`:'');
+    }
+    else if(score>=60){S.accel+=1;reward='👍 不错！+1⚡';}
+    else if(score>=40){S.fert+=1;reward='💪 加油！+1🧪';}
+    else{reward='💭 再想想，下次还有机会';}
     // 清掉问号
     const p=S.plots[curQ.idx];if(p){p.hasQ=false;}
     saveFarm(S);render();checkAchievements();
     $('farm-q-result').innerHTML=`<div style="padding:10px 12px;border-radius:8px;background:var(--surface2)">
-      <div style="font-size:13px;font-weight:600;color:${score>=60?'#10b981':'#f59e0b'}">分数：${score}/100</div>
+      <div style="font-size:13px;font-weight:600;color:${score>=60?'#10b981':'#f59e0b'}">📊 得分：${score}/100</div>
       <div style="font-size:12px;color:var(--text2);margin-top:4px">${esc(fb)}</div>
+      <div style="margin-top:8px;padding:8px 10px;border-radius:6px;background:var(--surface);border-left:3px solid #10b981">
+        <div style="font-size:11px;font-weight:700;color:#10b981;margin-bottom:3px">✅ 参考答案</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.65">${esc(curQ.expected)}</div>
+      </div>
       <div style="font-size:13px;color:var(--primary);margin-top:8px;font-weight:600">${reward}</div>
     </div>`;
   }
@@ -17077,10 +17117,43 @@ ${kp.slice(0,3000)}
   // ══════════════════════════════════════
   //  初始化
   // ══════════════════════════════════════
+  const DAILY_REWARDS=[
+    {gold:100,txt:'+100💰'},
+    {gold:150,txt:'+150💰'},
+    {gold:200,fert:2,txt:'+200💰 +2🧪'},
+    {gold:250,accel:1,txt:'+250💰 +1⚡'},
+    {gold:300,fert:3,txt:'+300💰 +3🧪'},
+    {gold:400,accel:2,txt:'+400💰 +2⚡'},
+    {gold:600,accel:2,fert:2,seed:'sunflower',txt:'🎁 第7天大奖！+600💰 +2⚡ +2🧪 +1🌻'},
+  ];
+  function _fdayStr(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+  function checkDailyLogin(){
+    const t=_fdayStr(new Date());
+    if(S.lastLogin===t)return; // 今天已发过
+    const y=new Date();y.setDate(y.getDate()-1);
+    const yStr=_fdayStr(y);
+    if(S.lastLogin===yStr){S.loginStreak=(S.loginStreak||0)+1;}
+    else if(S.lastLogin){
+      // 断签：有雪花则消耗一枚保住连签，否则重置
+      if((S.freezes||0)>0){S.freezes--;S.loginStreak=(S.loginStreak||0)+1;}
+      else S.loginStreak=1;
+    }else S.loginStreak=1;
+    S.lastLogin=t;
+    const day=((S.loginStreak-1)%7);
+    const r=DAILY_REWARDS[day];
+    if(r.gold){S.gold+=r.gold;S.goldEarned+=r.gold;}
+    if(r.accel)S.accel=(S.accel||0)+r.accel;
+    if(r.fert)S.fert=(S.fert||0)+r.fert;
+    if(r.seed){S.ownedSeeds=S.ownedSeeds||{};S.ownedSeeds[r.seed]=(S.ownedSeeds[r.seed]||0)+1;}
+    if(day===6)S.freezes=Math.min(2,(S.freezes||0)+1); // 满一轮补一枚雪花
+    saveFarm(S);
+    if(typeof toast==='function')toast(`📅 连续登录第 ${S.loginStreak} 天！${r.txt}`);
+  }
   function init(){
     S=loadFarm();
     skin=loadSkin();
     applySkinDOM();
+    checkDailyLogin();
     render();refreshAchBadge();checkAchievements();
     if(renderIv)clearInterval(renderIv);
     renderIv=setInterval(()=>{
