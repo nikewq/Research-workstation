@@ -3013,6 +3013,8 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <div style="display:flex;gap:6px;margin-bottom:14px">
           <button class="farm-shop-tab active" data-stab="buy" onclick="farm_shopTab('buy')" style="background:none;border:none;padding:6px 12px;font-size:13px;font-weight:600;border-bottom:2px solid var(--primary);color:var(--primary);cursor:pointer">🌱 买种子/肥料</button>
           <button class="farm-shop-tab" data-stab="sell" onclick="farm_shopTab('sell')" style="background:none;border:none;padding:6px 12px;font-size:13px;font-weight:600;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer">💰 卖作物</button>
+          <button class="farm-shop-tab" data-stab="expand" onclick="farm_shopTab('expand')" style="background:none;border:none;padding:6px 12px;font-size:13px;font-weight:600;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer">🏞 扩建</button>
+          <button class="farm-shop-tab" data-stab="theme" onclick="farm_shopTab('theme')" style="background:none;border:none;padding:6px 12px;font-size:13px;font-weight:600;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer">🌌 主题</button>
         </div>
         <div id="farm-shop-body"></div>
       </div>
@@ -3066,6 +3068,8 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 .farm-plot:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15);border-color:#fbbf24}
 .farm-plot.empty{background:repeating-linear-gradient(45deg,var(--farm-soil,#92400e) 0,var(--farm-soil,#92400e) 6px,var(--farm-soil2,#78350f) 6px,var(--farm-soil2,#78350f) 12px);color:rgba(255,255,255,0.4);font-size:22px}
 .farm-plot.empty:hover::after{content:'+';position:absolute;font-size:38px;color:#fff;text-shadow:0 0 6px rgba(0,0,0,0.4)}
+.farm-plot.locked{background:var(--surface2);border:2px dashed var(--border);flex-direction:column;font-size:22px;opacity:.75}
+.farm-plot.locked:hover{opacity:1;border-color:#fbbf24;transform:translateY(-2px)}
 .farm-plot.ripe{background:linear-gradient(180deg,#fef3c7,#fde68a);animation:farmRipe 1.4s ease-in-out infinite}
 .farm-plot .stage-bar{position:absolute;bottom:4px;left:6px;right:6px;height:5px;background:rgba(0,0,0,0.3);border-radius:3px;overflow:hidden}
 .farm-plot .stage-bar-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width .4s ease;border-radius:3px}
@@ -16406,7 +16410,9 @@ ${kp.slice(0,3000)}
   // ── 状态 ──
   const FARM_KEY='rw_farm_state_v1';
   const SKIN_KEY='rw_farm_skin_v1';
-  const PLOTS=24; // 6×4
+  const PLOTS=24; // 初始田地 6×4（所有老玩家保留）
+  const PLOT_CAP=42; // 扩建上限 6×7（24 格之外纯加法解锁，不动任何现有格）
+  const plotCost=n=>Math.floor(80*Math.pow(1.18,n-24)); // 第 25 格起指数成本
   let skin=null; // {farmName, welcomeLine, bgGradient[2], soilColor, soilColor2, accelEmoji, accelName, fertEmoji, fertName, goldEmoji, goldName, cropMap:{key:{emoji,name}}}
   function loadSkin(){try{const s=JSON.parse(localStorage.getItem(SKIN_KEY));return s||null;}catch(e){return null;}}
   function saveSkin(s){localStorage.setItem(SKIN_KEY,JSON.stringify(s));}
@@ -16475,6 +16481,10 @@ ${kp.slice(0,3000)}
       harvestsSinceRare:0,     // 稀有掉落保底计数
       dropStats:{silver:0,gold:0,chest:0,crit:0}, // 掉落图鉴统计
       lastLogin:'',loginStreak:0,freezes:2,        // 每日登录 + 断签宽容雪花
+      // ── 3.0 新增（顶层字段走补键迁移自动兼容）──
+      unlockedPlots:24,        // 已解锁地块数（24 起，可扩到 PLOT_CAP）
+      ownedThemes:[],          // 已解锁的内置主题 id
+      dailyLedger:{date:'',taskFert:0,habitAccel:0,checkinBonus:0}, // 跨模块联动当日发放台账
       lastTick:Date.now()
     };
   }
@@ -16483,6 +16493,13 @@ ${kp.slice(0,3000)}
       if(!s)return defaultState();
       // 向后兼容：补齐缺字段
       const d=defaultState();for(const k in d){if(!(k in s))s[k]=d[k];}
+      // 3.0 迁移加固（纯加法，绝不缩减/隐藏任何已种植格）
+      if(!Array.isArray(s.plots))s.plots=d.plots;
+      let maxPlanted=0;for(let i=0;i<s.plots.length;i++){if(s.plots[i])maxPlanted=i+1;}
+      s.unlockedPlots=Math.min(PLOT_CAP,Math.max(s.unlockedPlots||24,24,maxPlanted,s.plots.length>PLOTS?s.plots.length:0));
+      while(s.plots.length<s.unlockedPlots)s.plots.push(null); // 补齐地块位
+      if(!Array.isArray(s.ownedThemes))s.ownedThemes=[];
+      if(!s.dailyLedger||typeof s.dailyLedger!=='object')s.dailyLedger=d.dailyLedger;
       return s;
     }catch(e){return defaultState();}
   }
@@ -16546,8 +16563,9 @@ ${kp.slice(0,3000)}
     $('farm-accel').textContent=S.accel;
     $('farm-fert').textContent=S.fert;
     const grid=$('farm-grid');if(!grid)return;
+    const un=S.unlockedPlots||PLOTS;
     const html=[];
-    for(let i=0;i<PLOTS;i++){
+    for(let i=0;i<un;i++){
       const p=S.plots[i];
       if(!p){html.push(`<div class="farm-plot empty" data-idx="${i}" onclick="farm_clickPlot(${i})">＋</div>`);continue;}
       maybeSpawnQuestion(p);
@@ -16560,6 +16578,10 @@ ${kp.slice(0,3000)}
       const q=p.hasQ?`<div class="q-badge">❓</div>`:'';
       const pct=growthPct(p);
       html.push(`<div class="${cls.join(' ')}" data-idx="${i}" onclick="farm_clickPlot(${i})" title="${esc(d.name)} · ${stageProgress(p)} 阶段 · ${timeLeft(p)}">${emoji}<div class="stage-bar"><div class="stage-bar-fill" style="width:${pct}%"></div></div>${q}</div>`);
+    }
+    if(un<PLOT_CAP){
+      const cost=plotCost(un);const can=S.gold>=cost;
+      html.push(`<div class="farm-plot locked" onclick="farm_buyPlot()" title="扩建新地块">🔓<div style="font-size:9px;line-height:1.2;margin-top:2px;color:${can?'#fbbf24':'var(--text2)'}">${cost}${uiName('gold').e}</div></div>`);
     }
     grid.innerHTML=html.join('');
   }
@@ -16725,7 +16747,7 @@ ${kp.slice(0,3000)}
         <button class="btn btn-primary btn-sm" ${S.gold<15?'disabled':''} onclick="farm_buyFert()">买 (15${ag.e})</button>
       </div>`);
       body.innerHTML=items.join('');
-    }else{
+    }else if(shopTab==='sell'){
       const entries=Object.entries(S.inv||{}).filter(([,n])=>n>0);
       if(entries.length===0){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2)">库存空空，先去收获作物吧 🌱</div>';return;}
       body.innerHTML=entries.map(([k,n])=>{const c=CROPS[k];const d=display(k);return `<div class="farm-shop-card">
@@ -16734,6 +16756,30 @@ ${kp.slice(0,3000)}
         <button class="btn btn-ghost btn-sm" onclick="farm_sell('${k}',1)">卖 1</button>
         <button class="btn btn-primary btn-sm" onclick="farm_sell('${k}',${n})">卖全部 (+${c.price*n}${ag.e})</button>
       </div>`;}).join('');
+    }else if(shopTab==='expand'){
+      const un=S.unlockedPlots||PLOTS;
+      let h=`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">当前农场 <b>${un}</b> 格。扩建新地块可种更多作物，成本随规模指数上升（软上限 ${PLOT_CAP} 格）。</div>`;
+      if(un>=PLOT_CAP){h+=`<div style="text-align:center;padding:24px;color:var(--text2)">🏆 农场已扩建至最大规模 ${PLOT_CAP} 格！</div>`;}
+      else{const cost=plotCost(un);h+=`<div class="farm-shop-card">
+        <span class="emoji">🏞</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600">开垦第 ${un+1} 格</div><div style="font-size:11px;color:var(--text2)">解锁后可种植，永久保留</div></div>
+        <button class="btn btn-primary btn-sm" ${S.gold<cost?'disabled':''} onclick="farm_buyPlot()">开垦 (${cost}${ag.e})</button>
+      </div>`;}
+      body.innerHTML=h;
+    }else if(shopTab==='theme'){
+      const owned=S.ownedThemes||[];
+      let h=`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">达成条件解锁内置主题，切换整个农场氛围。可与「🎨 主题（AI 生成）」并存，随时切换。</div>`;
+      h+=BUILTIN_THEMES.map(t=>{
+        const has=owned.includes(t.id);
+        return `<div class="farm-shop-card">
+          <span class="emoji">${t.emoji}</span>
+          <div style="flex:1"><div style="font-size:13px;font-weight:600">${t.label} ${has?'':'<span style=\"font-size:10px;color:var(--text2)\">🔒 '+esc(t.need)+'</span>'}</div>
+            <div style="font-size:11px;color:var(--text2)">${has?esc(t.skin.welcomeLine):'解锁进度 '+t.prog(S)}</div></div>
+          ${has?`<button class="btn btn-primary btn-sm" onclick="farm_applyTheme('${t.id}')">使用</button>`:`<button class="btn btn-ghost btn-sm" disabled>未解锁</button>`}
+        </div>`;
+      }).join('');
+      h+=`<div style="margin-top:12px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="farm_resetSkin()">↺ 恢复默认外观</button></div>`;
+      body.innerHTML=h;
     }
   }
   function buySeed(k){
@@ -16748,6 +16794,58 @@ ${kp.slice(0,3000)}
     const c=CROPS[k];S.inv[k]-=n;if(S.inv[k]<=0)delete S.inv[k];
     const earned=c.price*n;S.gold+=earned;S.goldEarned+=earned;
     saveFarm(S);render();renderShop();checkMilestones(true);checkAchievements();
+  }
+  // ── 地块扩建（纯加法，24 格之外）──
+  function buyPlot(){
+    const un=S.unlockedPlots||PLOTS;
+    if(un>=PLOT_CAP)return;
+    const cost=plotCost(un);
+    if(S.gold<cost){if(typeof toast==='function')toast('金币不够扩建这块地喵','error');return;}
+    S.gold-=cost;S.unlockedPlots=un+1;
+    while(S.plots.length<S.unlockedPlots)S.plots.push(null);
+    saveFarm(S);render();if(shopTab==='expand')renderShop();
+    if(typeof toast==='function')toast(`🏞 开垦成功！农场扩大到 ${S.unlockedPlots} 格`);
+  }
+  // ── 内置固定主题（复用 skin 对象结构，与 AI 皮肤并存）──
+  const BUILTIN_THEMES=[
+    {id:'starry',emoji:'🌌',label:'星空农场',need:'连续登录 7 天',prog:s=>`${Math.min(s.loginStreak||0,7)}/7`,cond:s=>(s.loginStreak||0)>=7,
+     skin:{farmName:'🌌 星空农场',welcomeLine:'夜幕低垂，作物在星光下静静生长',bgGradient:['#0f172a','#1e293b'],soilColor:'#334155',soilColor2:'#1e293b'}},
+    {id:'sakura',emoji:'🎍',label:'和风庭院',need:'答对 50 道题',prog:s=>`${Math.min(s.questionsCorrect||0,50)}/50`,cond:s=>(s.questionsCorrect||0)>=50,
+     skin:{farmName:'🎍 和风庭院',welcomeLine:'一期一会，静待花开',bgGradient:['#fdf2f8','#fce7f3'],soilColor:'#9f1239',soilColor2:'#831843'}},
+    {id:'harvest',emoji:'🍂',label:'秋收季',need:'累计收获 100 次',prog:s=>`${Math.min(s.harvests||0,100)}/100`,cond:s=>(s.harvests||0)>=100,
+     skin:{farmName:'🍂 秋收季',welcomeLine:'金秋时节，颗粒归仓',bgGradient:['#fff7ed','#fed7aa'],soilColor:'#9a3412',soilColor2:'#7c2d12'}},
+    {id:'cyber',emoji:'🌙',label:'赛博夜田',need:'收获 10 个金色作物',prog:s=>`${Math.min((s.dropStats&&s.dropStats.gold)||0,10)}/10`,cond:s=>((s.dropStats&&s.dropStats.gold)||0)>=10,
+     skin:{farmName:'🌙 赛博夜田',welcomeLine:'霓虹之下，数据即作物',bgGradient:['#1e1b4b','#312e81'],soilColor:'#4c1d95',soilColor2:'#2e1065'}},
+    {id:'pixel',emoji:'🟫',label:'像素农场',need:'累计赚 8000 金',prog:s=>`${Math.min(s.goldEarned||0,8000)}/8000`,cond:s=>(s.goldEarned||0)>=8000,
+     skin:{farmName:'🟫 像素农场',welcomeLine:'8-bit 的田园牧歌',bgGradient:['#166534','#14532d'],soilColor:'#a16207',soilColor2:'#854d0e'}},
+  ];
+  function checkThemeUnlocks(){
+    S.ownedThemes=S.ownedThemes||[];
+    const newly=[];
+    BUILTIN_THEMES.forEach(t=>{if(!S.ownedThemes.includes(t.id)&&t.cond(S)){S.ownedThemes.push(t.id);newly.push(t);S.gold+=500;S.goldEarned+=500;}});
+    if(newly.length){saveFarm(S);if(typeof toast==='function')toast(`🎨 解锁新主题：${newly.map(t=>t.emoji+t.label).join('、')}！各 +500${uiName('gold').e}`);}
+  }
+  function applyBuiltinTheme(id){
+    const t=BUILTIN_THEMES.find(x=>x.id===id);if(!t||!(S.ownedThemes||[]).includes(id))return;
+    skin=JSON.parse(JSON.stringify(t.skin));saveSkin(skin);applySkinDOM();render();renderShop();
+    if(typeof toast==='function')toast(`${t.emoji} 已切换到「${t.label}」`);
+  }
+  // ── 跨模块只读联动：真实科研行为 → 农场资源，单向·每日封顶·绝不回写工作台 ──
+  function syncWorkstationRewards(){
+    if(typeof ld!=='function'||typeof K==='undefined')return;
+    const td=(typeof today==='function')?today():'';
+    if(!S.dailyLedger||S.dailyLedger.date!==td)S.dailyLedger={date:td,taskFert:0,habitAccel:0,checkinBonus:0};
+    const L=S.dailyLedger,msg=[];
+    // 今日完成任务 → 肥料（封顶 5）
+    try{const n=ld(K.tasks).filter(t=>t.status==='done'&&t.done===td).length;
+      const g=Math.max(0,Math.min(n,5)-L.taskFert);if(g>0){S.fert+=g;L.taskFert+=g;msg.push(`完成任务 +${g}🧪`);}}catch(_){}
+    // 今日习惯打卡 → 加速器（封顶 3）
+    try{const h=ld(K.habits)||{};const n=h[td]?Object.values(h[td]).filter(v=>v).length:0;
+      const g=Math.max(0,Math.min(n,3)-L.habitAccel);if(g>0){S.accel+=g;L.habitAccel+=g;msg.push(`习惯打卡 +${g}⚡`);}}catch(_){}
+    // 今日上班签到 → 金币（一次性 100）
+    try{const ci=(typeof getTodayCI==='function')?getTodayCI():null;
+      if(ci&&!L.checkinBonus){S.gold+=100;S.goldEarned+=100;L.checkinBonus=1;msg.push('上班签到 +100💰');}}catch(_){}
+    if(msg.length){saveFarm(S);if(typeof toast==='function')toast('🔗 科研联动奖励：'+msg.join(' · '));}
   }
 
   // ══════════════════════════════════════
@@ -16886,6 +16984,7 @@ ${kp.slice(0,3000)}
         if(typeof toast==='function')toast(`🏅 解锁成就「${a.title}」，去成就榜领取`);
       }
     });
+    checkThemeUnlocks();
     saveFarm(S);refreshAchBadge();
   }
   function openAchievements(){renderAchievements();$('farm-ach-modal').style.display='flex';}
@@ -17154,6 +17253,8 @@ ${kp.slice(0,3000)}
     skin=loadSkin();
     applySkinDOM();
     checkDailyLogin();
+    syncWorkstationRewards();
+    checkThemeUnlocks();
     render();refreshAchBadge();checkAchievements();
     if(renderIv)clearInterval(renderIv);
     renderIv=setInterval(()=>{
@@ -17177,6 +17278,8 @@ ${kp.slice(0,3000)}
   window.farm_buySeed=buySeed;
   window.farm_buyFert=buyFert;
   window.farm_sell=sell;
+  window.farm_buyPlot=buyPlot;
+  window.farm_applyTheme=applyBuiltinTheme;
   window.farm_openMilestones=openMilestones;
   window.farm_closeMilestones=closeMilestones;
   window.farm_claimMile=claimMile;
