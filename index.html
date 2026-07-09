@@ -3565,24 +3565,40 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     <span class="pp-act"><button onclick="petToggleAiCfg()" title="高级模型设置" id="pp-cfg-btn" style="display:none">⚙</button><button onclick="petClearChat()" title="清空对话">🗑</button><button onclick="petClosePanel()" title="关闭">✕</button></span>
   </div>
   <div id="pp-cfg" style="display:none;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:12px;flex-shrink:0">
-    <div style="font-weight:600;margin-bottom:6px">🧠 高级模型 · 难题切换 Claude</div>
-    <label>Claude API Key（只存本机浏览器，不进备份/云同步）</label>
-    <input id="pp-ckey" type="password" placeholder="sk-ant-...">
-    <div class="form-row c2" style="margin:6px 0 0">
-      <div><label>Claude 模型</label><select id="pp-cmodel">
+    <div style="font-weight:600;margin-bottom:6px">🧠 高级模型 · 难题切换</div>
+    <div class="form-row c2" style="margin:0 0 6px">
+      <div><label>供应商</label><select id="pp-cprov" onchange="petProvChange()">
+        <option value="claude">Claude (Anthropic)</option>
+        <option value="openai">ChatGPT (OpenAI)</option>
+      </select></div>
+      <div><label>路由模式</label><select id="pp-cmode">
+        <option value="auto">智能路由（难题才切）</option>
+        <option value="always">全部用高级模型</option>
+        <option value="default">只用默认模型</option>
+      </select></div>
+    </div>
+    <div id="pp-claude-fields">
+      <label>Claude API Key（只存本机浏览器，不进备份/云同步）</label>
+      <input id="pp-ckey" type="password" placeholder="sk-ant-...">
+      <div style="margin:6px 0 0"><label>Claude 模型</label><select id="pp-cmodel">
         <option value="claude-sonnet-5">Sonnet 5（推荐）</option>
         <option value="claude-opus-4-8">Opus 4.8（最强）</option>
         <option value="claude-haiku-4-5-20251001">Haiku 4.5（最省）</option>
       </select></div>
-      <div><label>路由模式</label><select id="pp-cmode">
-        <option value="auto">智能路由（难题才用 Claude）</option>
-        <option value="claude">全部用 Claude</option>
-        <option value="default">只用默认模型</option>
+    </div>
+    <div id="pp-openai-fields" style="display:none">
+      <label>OpenAI API Key（只存本机浏览器，不进备份/云同步）</label>
+      <input id="pp-okey" type="password" placeholder="sk-...">
+      <div style="margin:6px 0 0"><label>ChatGPT 模型</label><select id="pp-omodel">
+        <option value="gpt-4o">GPT-4o（推荐·支持看图）</option>
+        <option value="gpt-4o-mini">GPT-4o mini（省）</option>
+        <option value="o3-mini">o3-mini（推理·省）</option>
+        <option value="o1-mini">o1-mini（推理）</option>
       </select></div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" onclick="petSaveAiCfg()">保存</button>
-      <span style="font-size:11px;color:var(--text2)">闲聊走默认模型（如 DeepSeek），难题自动切 Claude，回复带 🧠 标记</span>
+      <span style="font-size:11px;color:var(--text2)">闲聊走默认模型，难题自动切所选高级模型，回复带 🧠 标记</span>
     </div>
   </div>
   <div id="pp-msgs"></div>
@@ -17904,19 +17920,36 @@ async function _petDigest(){
   }catch(_){}
 }
 const _petStrip=s=>String(s).replace(/^\[(happy|neutral|sad|sleepy)\]\s*/,'');
-// ── 高级模型（Claude 路由）配置：刻意不进 K —— API key 只留本机，不随备份/云同步漫游 ──
+// ── 高级模型（Claude / ChatGPT 路由）配置：刻意不进 K —— API key 只留本机，不随备份/云同步漫游 ──
 const PET_AI_KEY='phd_pet_ai';
-function _petAiCfg(){const c=_safeGetItem(PET_AI_KEY,{});return Object.assign({ckey:'',cmodel:'claude-sonnet-5',mode:'auto'},c&&!Array.isArray(c)?c:{})}
+function _petAiCfg(){
+  const c=_safeGetItem(PET_AI_KEY,{});
+  const cfg=Object.assign({provider:'claude',ckey:'',cmodel:'claude-sonnet-5',okey:'',omodel:'gpt-4o',mode:'auto'},c&&!Array.isArray(c)?c:{});
+  if(cfg.mode==='claude')cfg.mode='always'; // 旧值迁移
+  return cfg;
+}
+function petProvChange(){
+  const prov=_$('pp-cprov').value;
+  _$('pp-claude-fields').style.display=prov==='openai'?'none':'block';
+  _$('pp-openai-fields').style.display=prov==='openai'?'block':'none';
+}
 function petToggleAiCfg(){
   const d=_$('pp-cfg');if(!d)return;
   if(d.style.display==='none'){
     const c=_petAiCfg();
-    _$('pp-ckey').value=c.ckey;_$('pp-cmodel').value=c.cmodel;_$('pp-cmode').value=c.mode;
+    _$('pp-cprov').value=c.provider;_$('pp-cmode').value=c.mode;
+    _$('pp-ckey').value=c.ckey;_$('pp-cmodel').value=c.cmodel;
+    _$('pp-okey').value=c.okey;_$('pp-omodel').value=c.omodel;
+    petProvChange();
     d.style.display='block';
   }else d.style.display='none';
 }
 function petSaveAiCfg(){
-  sv(PET_AI_KEY,{ckey:_$('pp-ckey').value.trim(),cmodel:_$('pp-cmodel').value,mode:_$('pp-cmode').value});
+  sv(PET_AI_KEY,{
+    provider:_$('pp-cprov').value,mode:_$('pp-cmode').value,
+    ckey:_$('pp-ckey').value.trim(),cmodel:_$('pp-cmodel').value,
+    okey:_$('pp-okey').value.trim(),omodel:_$('pp-omodel').value
+  });
   _$('pp-cfg').style.display='none';
   toast('🧠 墨墨的高级模型配置已保存（仅本机）');
 }
@@ -17959,7 +17992,7 @@ async function _petFile(e){
     const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsDataURL(f)});
     _petImg={b64:dataUrl.split(',')[1],mediaType:f.type,name:f.name};
     _petShowDoc('🖼 '+f.name);
-    _petLocalMsg(_petAiCfg().ckey?'[happy]图收到喵！想问这张图什么？':'[neutral]图收到了，不过看图需要 Claude 的眼睛——去 ⚙ 里配一下 Claude Key 我就能看啦。');
+    _petLocalMsg((function(){const c=_petAiCfg();const k=c.provider==='openai'?c.okey:c.ckey;return k?'[happy]图收到喵！想问这张图什么？':'[neutral]图收到了，不过看图需要高级模型的眼睛——去 ⚙ 里配一下 Claude 或 ChatGPT 的 Key 我就能看啦。';})());
     return;
   }
   let text='';
@@ -17992,21 +18025,54 @@ async function _petCallVision(prompt,img,key,model){
     return d.content?.[0]?.text?.trim()||null;
   }catch(_){return null}
 }
+async function _petCallOpenAI(key,model,prompt,maxTok){
+  try{
+    const reasoning=/^o\d/.test(model); // o1/o3 系列：用 max_completion_tokens、不接受 temperature
+    const body={model,messages:[{role:'user',content:prompt}]};
+    if(reasoning)body.max_completion_tokens=maxTok;else{body.max_tokens=maxTok;body.temperature=0.4;}
+    const r=await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.choices?.[0]?.message?.content?.trim()||null;
+  }catch(_){return null}
+}
+async function _petCallOpenAIVision(prompt,img,key,model){
+  try{
+    const r=await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model,max_tokens:600,temperature:0.4,messages:[{role:'user',content:[
+        {type:'text',text:prompt},
+        {type:'image_url',image_url:{url:`data:${img.mediaType};base64,${img.b64}`}}
+      ]}]})
+    });
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.choices?.[0]?.message?.content?.trim()||null;
+  }catch(_){return null}
+}
 async function _petCallRouted(userText){
   const c=_petAiCfg();
+  const advKey=c.provider==='openai'?c.okey:c.ckey;
+  const advModel=c.provider==='openai'?c.omodel:c.cmodel;
   if(_petImg){
-    if(!c.ckey)return{text:'[sad]看图需要 Claude 的眼睛喵。去 ⚙ 里配置 Claude Key，我就能看图啦。',via:'local'};
-    const r=await _petCallVision(_petPrompt()+'\n【提示】用户发了一张图（已附上），结合图片内容回答，保持墨墨口吻和情绪标签规则。',_petImg,c.ckey,c.cmodel);
-    if(r)return{text:r,via:'claude'};
-    return{text:'[sad]喵…这张图我看了半天没看清（Claude 通道没接通），检查下 Key 或稍后再试。',via:'local'};
+    if(!advKey)return{text:'[sad]看图需要高级模型的眼睛喵。去 ⚙ 里配置 Claude 或 ChatGPT 的 Key，我就能看图啦。',via:'local'};
+    const vp=_petPrompt()+'\n【提示】用户发了一张图（已附上），结合图片内容回答，保持墨墨口吻和情绪标签规则。';
+    const r=c.provider==='openai'?await _petCallOpenAIVision(vp,_petImg,advKey,advModel):await _petCallVision(vp,_petImg,advKey,advModel);
+    if(r)return{text:r,via:c.provider};
+    return{text:'[sad]喵…这张图我看了半天没看清（高级模型通道没接通），检查下 Key/模型是否支持看图，或稍后再试。',via:'local'};
   }
   const reading=!!(_petData.doc&&_petData.doc.text);
-  const useClaude=!!c.ckey&&c.mode!=='default'&&(c.mode==='claude'||_petIsHard(userText));
-  if(useClaude){
+  const useAdv=!!advKey&&c.mode!=='default'&&(c.mode==='always'||_petIsHard(userText));
+  if(useAdv){
     try{
       const hardNote='\n【提示】这个问题比较认真，可以放宽到5~8句，给具体方向和要点，但保持墨墨的口吻和情绪标签规则。';
-      const r=await _callAnthropic('',c.ckey,c.cmodel,_petPrompt()+hardNote,reading?800:600);
-      if(r)return{text:r,via:'claude'};
+      const r=c.provider==='openai'
+        ? await _petCallOpenAI(advKey,advModel,_petPrompt()+hardNote,reading?800:600)
+        : await _callAnthropic('',advKey,advModel,_petPrompt()+hardNote,reading?800:600);
+      if(r)return{text:r,via:c.provider};
     }catch(_){}
   }
   try{
@@ -18022,9 +18088,9 @@ function _petRenderMsgs(){
     const d=document.createElement('div');
     d.className='pp-msg '+(m.role==='user'?'user':'cat');
     d.textContent=m.role==='user'?m.content:_petStrip(m.content);
-    if(m.role!=='user'&&m.via==='claude'){
+    if(m.role!=='user'&&(m.via==='claude'||m.via==='openai')){
       const b=document.createElement('span');
-      b.textContent=' 🧠';b.title='由 Claude 回答';b.style.opacity='.55';b.style.fontSize='10px';
+      b.textContent=' 🧠';b.title=m.via==='openai'?'由 ChatGPT 回答':'由 Claude 回答';b.style.opacity='.55';b.style.fontSize='10px';
       d.appendChild(b);
     }
     box.appendChild(d);
