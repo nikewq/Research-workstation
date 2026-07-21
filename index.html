@@ -4544,11 +4544,19 @@ window.addEventListener('popstate',function(){
   const h=(location.hash||'').slice(1)
   if(_VALID_PAGES.has(h))switchPage(h)
 })
-// 初始加载：从 hash 恢复页面（setTimeout 确保所有 script 块执行完毕后再调用渲染函数）
-setTimeout(function(){
+// 初始加载：从 hash 恢复页面。
+// 必须等 DOMContentLoaded —— switchPage 会调用后续脚本块里才定义的页面初始化函数
+// （如 initIntelPage 在更靠后的 script 块），setTimeout(0) 在大页面上可能早于那些块执行，
+// 触发 "initIntelPage is not defined" 并跳过页面初始化。DOMContentLoaded 保证所有同步脚本已执行。
+function _bootFromHash(){
   const h=(location.hash||'').slice(1)
-  if(_VALID_PAGES.has(h))switchPage(h)
-},0)
+  if(_VALID_PAGES.has(h)){
+    try{ switchPage(h) }
+    catch(e){ setTimeout(function(){ try{switchPage(h)}catch(_){} },0) } // 兜底重试
+  }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_bootFromHash)
+else _bootFromHash()
 
 // ══════════════════════════════════════
 //  CLOCK & COUNTERS
