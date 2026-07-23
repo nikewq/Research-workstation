@@ -6941,7 +6941,30 @@ function toast(msg,type='success'){
 
 // initSetupWizard() 已移至 DOMContentLoaded（见第二个 script 块末尾）
 </script>
-<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<script>
+// 站点访客计数：不蒜子(busuanzi)后端长期不稳定/超时，换用 CounterAPI，每浏览器每天只自增一次
+(function(){
+  var container = document.getElementById('busuanzi_container_site_uv');
+  var valueEl = document.getElementById('busuanzi_value_site_uv');
+  if (!container || !valueEl) return;
+  var NS = 'scholarclub', KEY = 'site_uv';
+  var today = new Date().toISOString().slice(0, 10);
+  var shouldIncrement = localStorage.getItem('rw_counter_last_hit') !== today;
+  var url = 'https://api.counterapi.dev/v1/' + NS + '/' + KEY + (shouldIncrement ? '/up' : '');
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = ctrl && setTimeout(function(){ ctrl.abort(); }, 6000);
+  fetch(url, ctrl ? {signal: ctrl.signal} : {})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (timer) clearTimeout(timer);
+      if (typeof data.count !== 'number') return;
+      valueEl.textContent = data.count;
+      container.style.display = 'inline';
+      if (shouldIncrement) localStorage.setItem('rw_counter_last_hit', today);
+    })
+    .catch(function(){ if (timer) clearTimeout(timer); });
+})();
+</script>
 <script>
 // ── 打卡树洞 ────────────────────────────────────────
 // ══════════════════════════════════════
