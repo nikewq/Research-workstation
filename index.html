@@ -429,6 +429,10 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .task-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .task-due{font-size:11px;color:var(--text2)}
 .task-due.overdue{color:var(--red)}
+.task-progress-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.task-progress-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.task-progress-fill{height:100%;background:var(--primary);border-radius:2px;transition:width .2s}
+.task-progress-label{font-size:10px;color:var(--text2);flex-shrink:0;min-width:28px;text-align:right}
 .task-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
 .task-item:hover .task-actions{opacity:1}
 .task-actions button{background:none;border:none;color:var(--text2);cursor:pointer;padding:2px 4px;font-size:13px}
@@ -2782,6 +2786,11 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       </div>
     </div>
     <div class="form-row"><div><label>截止日期</label><input type="date" id="et-due"></div></div>
+    <div class="form-row"><div>
+      <label>完成进度&nbsp;<span id="et-progress-val" style="color:var(--primary);font-weight:700">0%</span></label>
+      <input type="range" id="et-progress" min="0" max="100" step="5" value="0"
+        oninput="document.getElementById('et-progress-val').textContent=this.value+'%'">
+    </div></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('editTaskModal')">取消</button>
       <button class="btn btn-primary" onclick="saveEditTask()">保存</button>
@@ -4923,7 +4932,7 @@ function addTask(){
   const tasks=ld(K.tasks);
   tasks.push({id:uid(),title:t,proj:document.getElementById('task-proj').value,
     prio:document.getElementById('task-prio').value,due:document.getElementById('task-due').value,
-    status:'todo',created:today(),done:null,pomos:0});
+    status:'todo',created:today(),done:null,pomos:0,progress:0});
   sv(K.tasks,tasks);
   document.getElementById('task-input').value='';
   renderTasks();renderOverview();toast('✅ 任务已添加');
@@ -4931,7 +4940,12 @@ function addTask(){
 function toggleTask(id){
   const tasks=ld(K.tasks),t=tasks.find(t=>t.id===id);if(!t)return;
   t.status=t.status==='done'?'todo':'done';t.done=t.status==='done'?today():null;
+  if(t.status==='done')t.progress=100;
   sv(K.tasks,tasks);renderTasks();renderOverview();updateStats();
+}
+function taskProgressHtml(t){
+  const p=Math.max(0,Math.min(100,t.progress||0));
+  return `<div class="task-progress-row"><div class="task-progress-track"><div class="task-progress-fill" style="width:${p}%"></div></div><span class="task-progress-label">${p}%</span></div>`;
 }
 function delTask(id){let tasks=ld(K.tasks).filter(t=>t.id!==id);sv(K.tasks,tasks);renderTasks();renderOverview();}
 let _noteAutoSaveTimer=null;
@@ -4974,12 +4988,15 @@ function openEditTask(id){
   document.getElementById('et-proj').value=t.proj;
   document.getElementById('et-prio').value=t.prio;
   document.getElementById('et-due').value=t.due||'';
+  document.getElementById('et-progress').value=t.progress||0;
+  document.getElementById('et-progress-val').textContent=(t.progress||0)+'%';
   openModal('editTaskModal');
 }
 function saveEditTask(){
   const id=document.getElementById('et-id').value,tasks=ld(K.tasks),t=tasks.find(t=>t.id===id);if(!t)return;
   t.title=document.getElementById('et-title').value;t.proj=document.getElementById('et-proj').value;
   t.prio=document.getElementById('et-prio').value;t.due=document.getElementById('et-due').value;
+  t.progress=parseInt(document.getElementById('et-progress').value)||0;
   sv(K.tasks,tasks);closeModal('editTaskModal');renderTasks();renderOverview();
 }
 function filterTasks(f,btn){
@@ -5004,6 +5021,7 @@ function renderTasks(){
       <div class="task-body">
         <div class="task-title ${t.status==='done'?'crossed':''}">${t.title}${t.note?` <span style="font-size:10px;color:var(--primary);opacity:.7" title="有笔记">📝</span>`:''}</div>
         <div class="task-meta">${projTagHtml(t.proj)}${t.due?`<span class="task-due ${ov?'overdue':''}">📅 ${t.due}${ov?' ⚠️':''}</span>`:''}</div>
+        ${taskProgressHtml(t)}
       </div>
       <div class="task-actions">
         <button onclick="openTaskNote('${t.id}')" title="任务笔记" style="${t.note?'color:var(--primary)':''}">📝</button>
@@ -6332,6 +6350,7 @@ function renderOverview(){
     <div class="task-body">
       <div class="task-title">${t.title}${t.note?` <span style="font-size:10px;color:var(--primary);opacity:.7">📝</span>`:''}</div>
       <div class="task-meta">${projTagHtml(t.proj)}${t.due&&t.due<today()?`<span class="task-due overdue">📅 ${t.due} ⚠️</span>`:t.due?`<span class="task-due">📅 ${t.due}</span>`:''}</div>
+      ${taskProgressHtml(t)}
     </div>
     <div class="task-actions"><button onclick="openTaskNote('${t.id}')" title="任务笔记" style="opacity:.6${t.note?';color:var(--primary);opacity:1':''}">📝</button></div>
   </div>`).join('')+(allPending.length>8?`<div style="text-align:center;padding:6px 0;font-size:11px;color:var(--text2)">还有 ${allPending.length-8} 条任务 · <span style="cursor:pointer;color:var(--primary)" onclick="switchPage('tasks')">查看全部</span></div>`:'')+`</div>`:'<div class="empty-state" style="padding:20px"><div class="icon">✅</div><p>今日任务全部完成！</p></div>';
