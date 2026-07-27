@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隐私政策 · 博士工作台 PhD Workstation</title>
+<style>
+  :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--text:#e6edf3;--text2:#8b949e;--primary:#7c3aed;--border:#30363d}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 20px 80px}
+  h1{font-size:24px;margin-bottom:4px}
+  .updated{color:var(--text2);font-size:13px;margin-bottom:32px}
+  h2{font-size:17px;margin-top:36px;margin-bottom:10px;color:var(--primary)}
+  p,li{font-size:14px;color:var(--text)}
+  ul{padding-left:20px}
+  li{margin-bottom:8px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px}
+  .en{color:var(--text2);font-size:13px;border-left:2px solid var(--border);padding-left:12px;margin:16px 0}
+  a{color:var(--primary)}
+  code{background:var(--surface2);padding:1px 6px;border-radius:4px;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--text2);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>隐私政策 · Privacy Policy</h1>
+  <div class="updated">最后更新 / Last updated: 2026-07-27</div>
+
+  <div class="card en">
+    <strong>Summary (English):</strong> This app stores your data locally on your device (localStorage / IndexedDB). The developer does not operate a server that collects, stores, or sells your personal data. Two features are opt-in and involve third parties: (1) Cloud Sync, which backs up your data to a Supabase project you control access to via a random sync code you generate; (2) AI features, which are Bring-Your-Own-Key — your API key is stored only on your device and requests go directly from your device to the AI provider you choose (Anthropic, OpenAI, DeepSeek, Google, etc.), never through the developer's servers. Full details below (Chinese).
+  </div>
+
+  <h2>1. 这是一个什么样的应用</h2>
+  <p>「博士工作台 · PhD Workstation」是一款为科研人员设计的个人生产力工具，包含任务管理、文献库、投稿追踪、专注计时、习惯打卡、反思日记等模块。<strong>本应用的核心设计原则是：你的数据默认只存在你自己的设备上，不需要注册账号即可完整使用全部功能。</strong></p>
+
+  <h2>2. 我们如何处理你的数据</h2>
+  <div class="card">
+    <table>
+      <tr><th>数据类型</th><th>存储位置</th><th>是否上传</th></tr>
+      <tr><td>任务、文献、投稿记录、日记、习惯打卡、番茄计时、笔记等日常使用数据</td><td>仅存于本机浏览器 / App 本地存储（localStorage / IndexedDB）</td><td>否，开发者的服务器不会收集这些内容</td></tr>
+      <tr><td>AI 服务 API Key（如你自行配置）</td><td>仅存于本机，不进入任何备份或同步</td><td>否，只会在你使用 AI 功能时由你的设备直接发往你选择的 AI 服务商</td></tr>
+      <tr><td>云同步数据（需你主动开启）</td><td>你控制的 Supabase 项目，以你本机生成的随机同步码为唯一索引</td><td>是，仅在你主动打开「云同步」并保存时上传</td></tr>
+      <tr><td>留言墙内容（如你选择发布）</td><td>公开展示的社区板块</td><td>是，发布后对其他访客可见，请勿发布隐私信息</td></tr>
+    </table>
+  </div>
+
+  <h2>3. 云同步（可选功能）</h2>
+  <p>「个人设置 → 云同步」是一个可选功能。开启后，应用会为你生成一个高强度随机同步码（约 1.8 万亿种组合），并将你的任务/日记/文献等数据打包上传到开发者使用的 <a href="https://supabase.com" target="_blank">Supabase</a>（第三方后端服务）项目中，以该同步码为唯一索引。任何人只要持有你的同步码就能读取/覆盖该份数据，请像对待密码一样妥善保管，不要分享给他人。你可以随时选择不使用该功能，改用「导出数据」将 JSON 备份文件保存在自己设备上。</p>
+
+  <h2>4. AI 功能（Bring Your Own Key）</h2>
+  <p>本应用集成的 AI 辅助功能（写作润色、文献解读、AI 建议等）需要你自行在设置中填入你自己申请的 API Key（支持 Anthropic Claude、OpenAI、DeepSeek、Google Gemini 等服务商，以及本地私有部署的兼容接口）。Key 仅保存在你的设备本地，<strong>不会被打包进云同步或导出备份</strong>，不会经过开发者运营的任何服务器中转。使用 AI 功能时，你输入的内容会由你的设备直接发送给你所选择的第三方 AI 服务商，其处理与保留方式受该服务商自身隐私政策约束，与本应用开发者无关。</p>
+
+  <h2>5. 第三方接口调用</h2>
+  <p>以下功能会在使用时向对应的第三方公开接口发起请求，均为学术公开数据检索，不携带你的个人身份信息：</p>
+  <ul>
+    <li>文献检索与元数据：OpenAlex、Semantic Scholar、Crossref、arXiv</li>
+    <li>PDF 解析、公式渲染、图表绘制、ZIP 解压：PDF.js、KaTeX、Chart.js、JSZip（均通过 jsdelivr / cdnjs 公共 CDN 加载脚本本身，不上传你的数据）</li>
+    <li>你如自行配置 Zotero API Key，用于同步你自己的 Zotero 文献库</li>
+    <li>访客计数：使用不蒜子（busuanzi）做匿名页面浏览量统计，不采集可识别个人身份的信息</li>
+  </ul>
+
+  <h2>6. 我们不做什么</h2>
+  <ul>
+    <li>不收集你的姓名、邮箱、位置等个人身份信息（应用本身无需注册账号）</li>
+    <li>不向第三方出售或出租你的数据</li>
+    <li>不投放广告、不做用户行为跟踪分析</li>
+    <li>不会未经你主动操作而上传你的数据</li>
+  </ul>
+
+  <h2>7. 数据删除</h2>
+  <p>本地数据：直接清除 App 数据 / 卸载即可完全删除。云同步数据：在「云同步」中可清空对应同步码下的记录；如需协助彻底删除，可通过下方联系方式与开发者联系。</p>
+
+  <h2>8. 儿童隐私</h2>
+  <p>本应用面向科研人员设计，不面向 13 周岁以下儿童，也不会主动收集儿童个人信息。</p>
+
+  <h2>9. 政策更新</h2>
+  <p>如本政策发生重大变更，我们会更新本页顶部的日期，并视情况在应用内提示。</p>
+
+  <h2>10. 联系方式</h2>
+  <p>如对本隐私政策有任何疑问，请通过 <a href="https://github.com/nikewq/Research-workstation" target="_blank">GitHub 仓库</a> 提交 Issue 联系开发者。</p>
+</div>
+</body>
+</html>
