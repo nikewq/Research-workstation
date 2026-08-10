@@ -493,8 +493,8 @@ label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
 .ref-content{font-size:13px;line-height:1.6;white-space:pre-wrap}
 
 /* Modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
-.modal-overlay.show{opacity:1;pointer-events:all}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:none;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{display:flex;opacity:1;pointer-events:all}
 .modal,.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;min-width:400px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
 .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
@@ -2106,6 +2106,69 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <input type="password" id="lab-token-input" placeholder="ghp_xxxxxx" style="flex:1">
         <button class="btn btn-primary" onclick="saveLabToken()">保存并刷新</button>
         <button class="btn" onclick="localStorage.removeItem('phd_gh_token');document.getElementById('lab-token-input').value='';toast('Token 已清除')">清除</button>
+      </div>
+    </div>
+
+    <!-- ── 健康 · 自主神经负荷（key 不进 K：不参与全量备份/导入/云同步）── -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">💓 健康 · 自主神经负荷 / 恢复度</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="_hsToggleImport()" style="font-size:11px">⬆ 导入</button>
+          <button class="btn btn-ghost btn-sm" onclick="_hsExport()" style="font-size:11px">⬇ 导出 CSV</button>
+        </div>
+      </div>
+
+      <div id="hs-import" style="display:none;margin-bottom:14px">
+        <div id="hs-drop" style="border:1.5px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;font-size:12px;color:var(--text2)">
+          <div style="font-weight:600;color:var(--text);margin-bottom:4px">拖入文件，或点击选择</div>
+          只收 <b>CSV</b>：快捷指令的每日增量，或 health_score.html 解析完整 zip 后导出的历史
+          <input type="file" id="hs-file" accept=".csv" style="display:none">
+        </div>
+        <div id="hs-prog" style="display:none;margin-top:8px">
+          <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden"><i id="hs-bar" style="display:block;height:100%;width:0;background:var(--primary);border-radius:3px;transition:width .2s"></i></div>
+          <div id="hs-prog-txt" style="font-size:11px;color:var(--text2);margin-top:5px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.6">
+          🔒 解析全在本机浏览器完成，文件不上传。数据存本地且<b>不进备份、不参与云同步</b>。
+        </div>
+      </div>
+
+      <div id="hs-empty" style="color:var(--text2);font-size:12px;line-height:1.7">
+        还没有数据。先用 health_score.html 解析一次完整 zip 并导出 CSV 建立历史，之后快捷指令每天增量同步一行即可。
+      </div>
+
+      <div id="hs-body" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+            <div style="font-size:11px;color:var(--text2)">自主神经负荷</div>
+            <div style="font-size:26px;font-weight:700;line-height:1.2" id="hs-stress">—</div>
+            <div style="font-size:11px" id="hs-stress-tag"></div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+            <div style="font-size:11px;color:var(--text2)">恢复度</div>
+            <div style="font-size:26px;font-weight:700;line-height:1.2" id="hs-rec">—</div>
+            <div style="font-size:11px" id="hs-rec-tag"></div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+            <div style="font-size:11px;color:var(--text2)">近 7 天均值</div>
+            <div style="font-size:26px;font-weight:700;line-height:1.2" id="hs-w7">—</div>
+            <div style="font-size:11px;color:var(--text2)" id="hs-w7-sub">负荷</div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+            <div style="font-size:11px;color:var(--text2)">可出分天数</div>
+            <div style="font-size:26px;font-weight:700;line-height:1.2" id="hs-days">—</div>
+            <div style="font-size:11px;color:var(--text2)" id="hs-range"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;font-size:11px;color:var(--text2);margin-bottom:4px">
+          <span><i style="display:inline-block;width:11px;height:3px;border-radius:2px;background:var(--hs-s2,#eb6834);vertical-align:middle"></i> 负荷</span>
+          <span><i style="display:inline-block;width:11px;height:3px;border-radius:2px;background:var(--hs-s1,#2a78d6);vertical-align:middle"></i> 恢复</span>
+          <span style="margin-left:auto">虚线 = 你自己的基线（50 分）</span>
+        </div>
+        <svg id="hs-chart" style="width:100%;display:block"></svg>
+        <div id="hs-recent" style="margin-top:10px;font-size:12px"></div>
+        <div id="hs-foot" style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.6"></div>
       </div>
     </div>
   </div>
@@ -18203,6 +18266,288 @@ function _petResetSleep(){
     sessionStorage.setItem('_pet_hi','1');
     setTimeout(()=>{if(!document.hidden)_petSay(_petQuips(false))},2500);
   }
+})();
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  健康 · 自主神经负荷 / 恢复度（Lab 页，OLIVE49 门控内）
+//  数据源：Apple 健康导出 zip / 每日 CSV，全部本机解析
+//  存储：phd_health_v1 —— 刻意不注册进 K，不进全量备份/导入/云同步
+// ══════════════════════════════════════════════════════════════
+(function(){
+  const HKEY = 'phd_health_v1';
+  const BASE_N = 60, BASE_MIN = 14;
+  const CONFOUNDED = ['hrv','rhr','resp'];
+  const STRESS_W   = { hrvAdj:{w:.50,dir:-1}, rhrAdj:{w:.30,dir:+1}, respAdj:{w:.20,dir:+1} };
+  const RECOVERY_W = { hrvAdj:{w:.40,dir:+1}, sleepDur:{w:.25,dir:+1}, deepPct:{w:.15,dir:+1}, rhrAdj:{w:.20,dir:-1} };
+  // 紧凑行：[date, hrv, rhr, resp, sleepDur, deepPct, load, steps]
+  const F = ['date','hrv','rhr','resp','sleepDur','deepPct','load','steps'];
+
+  const $h = id => document.getElementById(id);
+  const med = a => { if(!a.length) return null; const b=Float64Array.from(a).sort(); const n=b.length; return n%2?b[(n-1)/2]:(b[n/2-1]+b[n/2])/2; };
+  const madOf = (a,m) => med(a.map(v=>Math.abs(v-m)));
+  const sdOf = a => { if(a.length<2) return 0; const m=a.reduce((s,v)=>s+v,0)/a.length; return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/(a.length-1)); };
+
+  // ── 存取（走 ld/sv 保护层）──
+  function loadRows(){
+    const raw = ld(HKEY);
+    if(!Array.isArray(raw)) return [];
+    return raw.filter(r=>Array.isArray(r)&&r[0]).map(r=>{
+      const o={}; F.forEach((k,i)=> o[k] = i===0 ? r[0] : (r[i]==null?null:+r[i]));
+      return o;
+    });
+  }
+  function saveRows(rows){
+    sv(HKEY, rows.map(r=>F.map(k=> k==='date'?r.date : (r[k]==null?null:+(+r[k]).toFixed(2)))));
+  }
+  function mergeRows(oldRows, add){
+    const m = new Map(oldRows.map(r=>[r.date,r]));
+    for(const r of add){
+      const prev = m.get(r.date) || { date:r.date };
+      for(const k of F) if(k!=='date' && r[k]!=null) prev[k]=r[k];
+      m.set(r.date, prev);
+    }
+    return [...m.values()].sort((a,b)=> a.date<b.date?-1:1);
+  }
+
+  function parseCsv(text){
+    const lines=text.trim().split(/\r?\n/).filter(x=>x.trim());
+    if(!lines.length) return [];
+    const head=lines[0].split(',').map(x=>x.trim().toLowerCase());
+    const alias={date:'date',日期:'date',hrv:'hrv',sdnn:'hrv',rhr:'rhr',restingheartrate:'rhr',静息心率:'rhr',
+      resp:'resp',respiratoryrate:'resp',呼吸率:'resp',sleep:'sleepDur',sleepdur:'sleepDur',睡眠:'sleepDur',
+      deep:'deepPct',deeppct:'deepPct',深睡:'deepPct',load:'load',energy:'load',活动:'load',steps:'steps',步数:'steps'};
+    const cols=head.map(h=>alias[h]||null);
+    if(cols.indexOf('date')<0) throw new Error('CSV 缺少 date 列');
+    const out=[];
+    for(let i=1;i<lines.length;i++){
+      const c=lines[i].split(',');
+      const r={};
+      cols.forEach((k,j)=>{ if(!k) return; const raw=(c[j]||'').trim();
+        if(k==='date'){ r.date=raw.slice(0,10); }
+        else if(raw!==''&&isFinite(+raw)) r[k]=+raw; });
+      if(r.date&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)) out.push(r);
+    }
+    return out;
+  }
+
+  // ── 评分（与 health_score.html 同一套，已交叉验证）──
+  function score(rows){
+    const keys=['hrv','rhr','resp','sleepDur','deepPct','load'];
+    const hist={}; keys.forEach(k=>hist[k]=[]);
+    for(const r of rows){
+      r.z={}; r.base={};
+      for(const k of keys){
+        const h=hist[k];
+        if(h.length>=BASE_MIN){
+          const w=h.slice(-BASE_N), m=med(w);
+          let sc=1.4826*madOf(w,m);
+          if(!(sc>1e-6)) sc=sdOf(w)||Math.abs(m)*.05||1;
+          r.base[k]={m,sc};
+          if(r[k]!=null) r.z[k]=(r[k]-m)/sc;
+        }
+        if(r[k]!=null) h.push(r[k]);
+      }
+    }
+    // 剔除前一日运动负荷混杂：运动后 HRV 掉是训练反应，不是心理压力
+    const fit={};
+    for(const k of CONFOUNDED){
+      const P=[];
+      for(let i=1;i<rows.length;i++){
+        const zy=rows[i].z[k], zl=rows[i-1].z.load;
+        if(zy!=null&&zl!=null&&isFinite(zy)&&isFinite(zl)) P.push([zl,zy]);
+      }
+      let a=0,b=0,r2=0;
+      if(P.length>=20){
+        const mx=P.reduce((s,p)=>s+p[0],0)/P.length, my=P.reduce((s,p)=>s+p[1],0)/P.length;
+        let sxy=0,sxx=0,syy=0;
+        for(const [x,y] of P){ sxy+=(x-mx)*(y-my); sxx+=(x-mx)*(x-mx); syy+=(y-my)*(y-my); }
+        if(sxx>1e-9){ b=sxy/sxx; a=my-b*mx; r2=syy>1e-9?(sxy*sxy)/(sxx*syy):0; }
+      }
+      fit[k]={a,b,r2,n:P.length};
+    }
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i], zl=i>0?rows[i-1].z.load:null;
+      for(const k of CONFOUNDED){
+        if(r.z[k]==null) continue;
+        const f=fit[k];
+        r.z[k+'Adj']=r.z[k]-(zl!=null&&f.n>=20?f.a+f.b*zl:0);
+      }
+      if(r.z.sleepDur!=null) r.z.sleepDur=Math.min(r.z.sleepDur,1);
+    }
+    const build=(r,W)=>{
+      let sw=0; const parts=[];
+      for(const k in W){
+        const z=r.z[k]; if(z==null||!isFinite(z)) continue;
+        sw+=W[k].w; parts.push({k, raw:W[k].dir*Math.tanh(z/2), w:W[k].w});
+      }
+      if(parts.length<2||sw<=0) return null;
+      let acc=0;
+      for(const p of parts){ p.pts=50*p.raw*p.w/sw; acc+=p.pts; }
+      parts.sort((x,y)=>Math.abs(y.pts)-Math.abs(x.pts));
+      return { value:50+acc, parts };
+    };
+    for(const r of rows){ r.stress=build(r,STRESS_W); r.recovery=build(r,RECOVERY_W); }
+    return fit;
+  }
+
+  // ── 渲染 ──
+  function isDark(){
+    const c=getComputedStyle(document.body).getPropertyValue('--surface').trim();
+    const m=c.match(/^#?([0-9a-f]{6})$/i);
+    if(!m) return false;
+    const n=parseInt(m[1],16);
+    return (0.2126*(n>>16&255)+0.7152*(n>>8&255)+0.0722*(n&255))/255 < 0.5;
+  }
+  function tagOf(v,kind){
+    const d = kind==='recovery' ? 50-v : v-50;
+    const bad = kind==='recovery' ? ['显著不足','偏低'] : ['显著偏高','偏高'];
+    if(d>=12) return ['#d03b3b',bad[0]];
+    if(d>=5)  return ['#ec835a',bad[1]];
+    if(d<=-8) return ['#0ca30c','优于基线'];
+    return ['#8b949e','接近基线'];
+  }
+  function render(){
+    const rows=loadRows();
+    if(!rows.length){ $h('hs-empty').style.display=''; $h('hs-body').style.display='none'; return; }
+    const fit=score(rows);
+    const scored=rows.filter(r=>r.stress);
+    if(!scored.length){
+      $h('hs-empty').style.display='';
+      $h('hs-empty').innerHTML='已导入 <b>'+rows.length+'</b> 天，但还没有任何一天满足「基线 ≥ 14 天 + 有效通道 ≥ 2」。需要更长的连续佩戴历史。';
+      $h('hs-body').style.display='none'; return;
+    }
+    $h('hs-empty').style.display='none';
+    $h('hs-body').style.display='';
+
+    const dark=isDark();
+    const s1=dark?'#3987e5':'#2a78d6', s2=dark?'#d95926':'#eb6834';
+    const root=$h('hs-body');
+    root.style.setProperty('--hs-s1',s1); root.style.setProperty('--hs-s2',s2);
+    $h('hs-body').parentElement.style.setProperty('--hs-s1',s1);
+    $h('hs-body').parentElement.style.setProperty('--hs-s2',s2);
+
+    const last=scored[scored.length-1];
+    const st=Math.round(last.stress.value), rc=last.recovery?Math.round(last.recovery.value):null;
+    $h('hs-stress').textContent=st;
+    const t1=tagOf(last.stress.value,'stress');
+    $h('hs-stress-tag').textContent=t1[1]; $h('hs-stress-tag').style.color=t1[0];
+    $h('hs-rec').textContent=rc==null?'—':rc;
+    if(rc!=null){ const t2=tagOf(last.recovery.value,'recovery'); $h('hs-rec-tag').textContent=t2[1]; $h('hs-rec-tag').style.color=t2[0]; }
+    const w7=scored.slice(-7).map(r=>r.stress.value);
+    $h('hs-w7').textContent=(w7.reduce((a,b)=>a+b,0)/w7.length).toFixed(0);
+    $h('hs-days').textContent=scored.length;
+    $h('hs-range').textContent=rows[0].date.slice(2)+' 起';
+
+    drawChart(rows.slice(-60), s1, s2);
+
+    const recent=scored.slice(-7).reverse().map(r=>{
+      const c=tagOf(r.stress.value,'stress')[0];
+      return '<div style="display:flex;gap:10px;padding:3px 0;border-bottom:1px solid var(--border)">'
+        +'<span style="color:var(--text2);width:78px">'+r.date.slice(5)+'</span>'
+        +'<span style="color:'+c+';font-weight:600;width:34px">'+Math.round(r.stress.value)+'</span>'
+        +'<span style="color:var(--text2);width:34px">'+(r.recovery?Math.round(r.recovery.value):'—')+'</span>'
+        +'<span style="color:var(--text2);flex:1;text-align:right">HRV '+(r.hrv==null?'—':r.hrv.toFixed(1))
+        +' · 静息 '+(r.rhr==null?'—':r.rhr.toFixed(0))
+        +' · 睡 '+(r.sleepDur==null?'—':r.sleepDur.toFixed(1)+'h')+'</span></div>';
+    }).join('');
+    $h('hs-recent').innerHTML='<div style="display:flex;gap:10px;color:var(--text2);font-size:11px;padding-bottom:3px">'
+      +'<span style="width:78px">日期</span><span style="width:34px">负荷</span><span style="width:34px">恢复</span></div>'+recent;
+
+    const f=fit.hrv;
+    $h('hs-foot').textContent='共 '+rows.length+' 天 · '+scored.length+' 天可出分 · 最后一天 '+rows[rows.length-1].date
+      + (f&&f.n>=20 ? ' · 运动负荷解释 HRV 方差 '+(f.r2*100).toFixed(0)+'%（已剔除）' : ' · 样本不足，未做运动混杂剔除');
+  }
+
+  function drawChart(rows, s1, s2){
+    const svg=$h('hs-chart');
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    const W=svg.clientWidth||600, H=120, M={t:8,r:8,b:16,l:24};
+    const iw=W-M.l-M.r, ih=H-M.t-M.b;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H); svg.setAttribute('height',H);
+    const NS='http://www.w3.org/2000/svg';
+    const el=(t,at)=>{const n=document.createElementNS(NS,t); for(const k in at) n.setAttribute(k,at[k]); return n;};
+    const n=rows.length;
+    const X=i=> M.l+(n<=1?iw/2:i*iw/(n-1));
+    const Y=v=> M.t+ih-(v/100)*ih;
+    const grid=getComputedStyle(document.body).getPropertyValue('--border').trim()||'#ddd';
+    const ink=getComputedStyle(document.body).getPropertyValue('--text2').trim()||'#888';
+    for(const v of [0,50,100]){
+      svg.appendChild(el('line',{x1:M.l,x2:M.l+iw,y1:Y(v),y2:Y(v),stroke:grid,'stroke-width':1,'stroke-dasharray':v===50?'4 4':''}));
+      const t=el('text',{x:M.l-6,y:Y(v)+3,fill:ink,'font-size':9,'text-anchor':'end'}); t.textContent=v; svg.appendChild(t);
+    }
+    for(const s of [{k:'stress',c:s2},{k:'recovery',c:s1}]){
+      let d='',open=false;
+      rows.forEach((r,i)=>{ const o=r[s.k]; if(!o){open=false;return;}
+        d+=(open?'L':'M')+X(i).toFixed(1)+' '+Y(o.value).toFixed(1); open=true; });
+      if(d) svg.appendChild(el('path',{d,fill:'none',stroke:s.c,'stroke-width':2,'stroke-linecap':'round','stroke-linejoin':'round'}));
+    }
+    if(n){
+      const a=el('text',{x:M.l,y:H-4,fill:ink,'font-size':9}); a.textContent=rows[0].date.slice(5); svg.appendChild(a);
+      const b=el('text',{x:M.l+iw,y:H-4,fill:ink,'font-size':9,'text-anchor':'end'}); b.textContent=rows[n-1].date.slice(5); svg.appendChild(b);
+    }
+  }
+
+  // ── 导入 ──
+  async function ingest(file){
+    const prog=$h('hs-prog'), bar=$h('hs-bar'), txt=$h('hs-prog-txt');
+    prog.style.display=''; bar.style.width='0'; txt.textContent='正在读取…';
+    try{
+      if(!/\.csv$/i.test(file.name))
+        throw new Error('这里只收 CSV。完整 zip 请用 health_score.html 解析（1GB 级别，需要约 1 分钟且不能切走标签页），导出 CSV 后再拖进来');
+      const add=parseCsv(await file.text());
+      txt.textContent='CSV 解析完成，'+add.length+' 天';
+      if(!add.length) throw new Error('没有解析到可用记录');
+      const merged=mergeRows(loadRows(), add);
+      saveRows(merged);
+      bar.style.width='100%';
+      render();
+      if(typeof toast==='function') toast('已并入 '+add.length+' 天，当前共 '+merged.length+' 天');
+      setTimeout(()=>{ prog.style.display='none'; $h('hs-import').style.display='none'; }, 1800);
+    }catch(err){
+      txt.textContent='出错：'+(err&&err.message||err);
+      txt.style.color='#d03b3b';
+      console.error('[health]',err);
+    }
+  }
+
+  window._hsToggleImport=function(){
+    const d=$h('hs-import');
+    d.style.display = d.style.display==='none' ? '' : 'none';
+  };
+  window._hsExport=function(){
+    const rows=loadRows();
+    if(!rows.length){ if(typeof toast==='function') toast('还没有数据'); return; }
+    score(rows);
+    const head=['date','stress','recovery','hrv','rhr','resp','sleepDur','deepPct','load','steps'];
+    const body=rows.map(r=>[r.date,
+      r.stress?r.stress.value.toFixed(1):'', r.recovery?r.recovery.value.toFixed(1):'',
+      r.hrv??'', r.rhr??'', r.resp??'', r.sleepDur==null?'':r.sleepDur.toFixed(2),
+      r.deepPct==null?'':r.deepPct.toFixed(1), r.load??'', r.steps??''].join(','));
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob(['﻿'+[head.join(',')].concat(body).join('\n')],{type:'text/csv'}));
+    a.download='health_scores.csv'; a.click();
+  };
+
+  function bind(){
+    const drop=$h('hs-drop'), inp=$h('hs-file');
+    if(!drop||!inp) return;
+    drop.addEventListener('click',()=>inp.click());
+    inp.addEventListener('change',()=>{ if(inp.files[0]) ingest(inp.files[0]); inp.value=''; });
+    drop.addEventListener('dragover',e=>{e.preventDefault(); drop.style.borderColor='var(--primary)';});
+    drop.addEventListener('dragleave',()=>{drop.style.borderColor='var(--border)';});
+    drop.addEventListener('drop',e=>{ e.preventDefault(); drop.style.borderColor='var(--border)';
+      if(e.dataTransfer.files[0]) ingest(e.dataTransfer.files[0]); });
+    try{ render(); }catch(err){ console.error('[health] render',err); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
+  else bind();
+
+  let _hrt;
+  window.addEventListener('resize',()=>{ clearTimeout(_hrt); _hrt=setTimeout(()=>{ try{
+    if($h('hs-body')&&$h('hs-body').style.display!=='none') render();
+  }catch(_){}},200); });
 })();
 </script>
 </body>
