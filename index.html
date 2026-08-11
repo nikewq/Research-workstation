@@ -18281,13 +18281,56 @@ function _petResetSleep(){
   const CONFOUNDED = ['hrv','rhr','resp'];
   const STRESS_W   = { hrvAdj:{w:.50,dir:-1}, rhrAdj:{w:.30,dir:+1}, respAdj:{w:.20,dir:+1} };
   const RECOVERY_W = { hrvAdj:{w:.40,dir:+1}, sleepDur:{w:.25,dir:+1}, deepPct:{w:.15,dir:+1}, rhrAdj:{w:.20,dir:-1} };
-  // 紧凑行：[date, hrv, rhr, resp, sleepDur, deepPct, load, steps]
-  const F = ['date','hrv','rhr','resp','sleepDur','deepPct','load','steps'];
+  // 紧凑行：[date, hrv, rhr, resp, sleepDur, deepPct, load, steps, menses]
+  const F = ['date','hrv','rhr','resp','sleepDur','deepPct','load','steps','menses'];
 
   const $h = id => document.getElementById(id);
   const med = a => { if(!a.length) return null; const b=Float64Array.from(a).sort(); const n=b.length; return n%2?b[(n-1)/2]:(b[n/2-1]+b[n/2])/2; };
   const madOf = (a,m) => med(a.map(v=>Math.abs(v-m)));
   const sdOf = a => { if(a.length<2) return 0; const m=a.reduce((s,v)=>s+v,0)/a.length; return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/(a.length-1)); };
+
+  // ── 月经周期 ──（相位解释 HRV 残差方差约 8%，是运动负荷的近百倍；
+  //    不扣掉的话黄体期每月两周会被系统性判成「负荷偏高」）
+  const CYC_MIN=25, CYC_MAX=32;
+  const dDiff=(a,b)=>Math.round((Date.parse(b+'T00:00:00')-Date.parse(a+'T00:00:00'))/86400000);
+  const dAdd=(d,k)=>{const t=new Date(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10)+k);
+    return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};
+  const phaseName=(cd,len)=> cd<=5?'月经期':cd<=Math.round(len*0.45)?'卵泡期':cd<=Math.round(len*0.55)?'排卵窗':cd<=len-5?'黄体期':'黄体末期';
+  const harm=(cd,len)=>{const t=2*Math.PI*(cd-1)/len;return [1,Math.cos(t),Math.sin(t),Math.cos(2*t),Math.sin(2*t)];};
+  function olsFit(X,y){const p=X[0].length;
+    const A=Array.from({length:p},()=>new Float64Array(p+1));
+    for(let i=0;i<X.length;i++)for(let a=0;a<p;a++){A[a][p]+=X[i][a]*y[i];for(let c=0;c<p;c++)A[a][c]+=X[i][a]*X[i][c];}
+    for(let c=0;c<p;c++){let pv=c;for(let r=c+1;r<p;r++)if(Math.abs(A[r][c])>Math.abs(A[pv][c]))pv=r;
+      [A[c],A[pv]]=[A[pv],A[c]]; if(Math.abs(A[c][c])<1e-9)return null;
+      for(let r=0;r<p;r++){if(r===c)continue;const k=A[r][c]/A[c][c];for(let j=c;j<=p;j++)A[r][j]-=k*A[c][j];}}
+    return Array.from({length:p},(_,i)=>A[i][p]/A[i][i]);}
+  function cycleMap(rows){
+    const M=rows.filter(r=>r.menses).map(r=>r.date).sort();
+    if(M.length<2) return null;
+    const starts=[]; M.forEach((d,i)=>{ if(i===0||dDiff(M[i-1],d)>=10) starts.push(d); });
+    const full=[];
+    for(let i=0;i<starts.length;i++){
+      full.push({d:starts[i]});
+      if(i+1>=starts.length) continue;
+      const L=dDiff(starts[i],starts[i+1]);
+      if(L>=CYC_MIN&&L<=CYC_MAX) continue;
+      for(let k=2;k<=4;k++) if(L/k>=CYC_MIN&&L/k<=CYC_MAX){
+        for(let j=1;j<k;j++) full.push({d:dAdd(starts[i],Math.round(L*j/k))}); break; }
+    }
+    full.sort((a,b)=>a.d<b.d?-1:1);
+    const map=new Map(), lens=[];
+    for(let i=0;i<full.length-1;i++){
+      const L=dDiff(full[i].d,full[i+1].d);
+      if(L<CYC_MIN||L>CYC_MAX) continue;
+      lens.push(L);
+      for(let k=0;k<L;k++) map.set(dAdd(full[i].d,k),{cd:k+1,len:L});
+    }
+    if(!map.size) return null;
+    // 正在进行的周期没有下一个起始日，用中位长度外推，否则今天永远没有校正分
+    const typ=Math.round(med(lens))||28, ls=full[full.length-1].d;
+    for(let k=0;k<typ;k++){ const d=dAdd(ls,k); if(!map.has(d)) map.set(d,{cd:k+1,len:typ,projected:true}); }
+    return map;
+  }
 
   // ── 存取（走 ld/sv 保护层）──
   function loadRows(){
@@ -18317,7 +18360,7 @@ function _petResetSleep(){
     const head=lines[0].split(',').map(x=>x.trim().toLowerCase());
     const alias={date:'date',日期:'date',hrv:'hrv',sdnn:'hrv',rhr:'rhr',restingheartrate:'rhr',静息心率:'rhr',
       resp:'resp',respiratoryrate:'resp',呼吸率:'resp',sleep:'sleepDur',sleepdur:'sleepDur',睡眠:'sleepDur',
-      deep:'deepPct',deeppct:'deepPct',深睡:'deepPct',load:'load',energy:'load',活动:'load',steps:'steps',步数:'steps'};
+      deep:'deepPct',deeppct:'deepPct',深睡:'deepPct',load:'load',energy:'load',活动:'load',steps:'steps',步数:'steps',menses:'menses',月经:'menses',period:'menses'};
     const cols=head.map(h=>alias[h]||null);
     if(cols.indexOf('date')<0) throw new Error('CSV 缺少 date 列');
     const out=[];
@@ -18389,6 +18432,34 @@ function _petResetSleep(){
       return { value:50+acc, parts };
     };
     for(const r of rows){ r.stress=build(r,STRESS_W); r.recovery=build(r,RECOVERY_W); }
+
+    // 周期校正：把相位从各通道回归掉。原始分保留（黄体期交感张力确实更高，是真实生理），
+    // 校正分只用于「是否异常」的判定。
+    const cmap=cycleMap(rows);
+    if(cmap){
+      for(const r of rows){ const c=cmap.get(r.date);
+        if(c) r.cyc={cd:c.cd,len:c.len,projected:!!c.projected,phase:phaseName(c.cd,c.len)}; }
+      const cf={};
+      for(const k of CONFOUNDED){
+        const X=[],y=[];
+        for(const r of rows){ const v=r.z[k+'Adj'];
+          if(!r.cyc||v==null||!isFinite(v)) continue;
+          X.push(harm(r.cyc.cd,r.cyc.len)); y.push(v); }
+        if(X.length<40){ cf[k]=null; continue; }
+        cf[k]=olsFit(X,y);
+      }
+      for(const r of rows){
+        if(!r.cyc) continue;
+        const h=harm(r.cyc.cd,r.cyc.len), zc={};
+        for(const k of CONFOUNDED){ const b=cf[k];
+          if(!b||r.z[k+'Adj']==null) continue;
+          zc[k+'Adj']=r.z[k+'Adj']-h.reduce((s,v,j)=>s+v*b[j],0); }
+        for(const k of ['sleepDur','deepPct']) if(r.z[k]!=null) zc[k]=r.z[k];
+        const saved=r.z; r.z=zc;
+        r.stressCyc=build(r,STRESS_W); r.recoveryCyc=build(r,RECOVERY_W);
+        r.z=saved;
+      }
+    }
     return fit;
   }
 
@@ -18431,12 +18502,19 @@ function _petResetSleep(){
     const last=scored[scored.length-1];
     const st=Math.round(last.stress.value), rc=last.recovery?Math.round(last.recovery.value):null;
     $h('hs-stress').textContent=st;
-    const t1=tagOf(last.stress.value,'stress');
+    // 判定一律用周期校正分，避免黄体期每月假报警两周
+    const t1=tagOf(last.stressCyc?last.stressCyc.value:last.stress.value,'stress');
     $h('hs-stress-tag').textContent=t1[1]; $h('hs-stress-tag').style.color=t1[0];
     $h('hs-rec').textContent=rc==null?'—':rc;
-    if(rc!=null){ const t2=tagOf(last.recovery.value,'recovery'); $h('hs-rec-tag').textContent=t2[1]; $h('hs-rec-tag').style.color=t2[0]; }
+    if(rc!=null){ const t2=tagOf((last.recoveryCyc||last.recovery).value,'recovery');
+      $h('hs-rec-tag').textContent=t2[1]; $h('hs-rec-tag').style.color=t2[0]; }
     const w7=scored.slice(-7).map(r=>r.stress.value);
     $h('hs-w7').textContent=(w7.reduce((a,b)=>a+b,0)/w7.length).toFixed(0);
+    if(last.cyc){
+      $h('hs-w7').textContent=last.stressCyc?Math.round(last.stressCyc.value):'—';
+      $h('hs-w7').previousElementSibling.textContent='周期校正后负荷';
+      $h('hs-w7-sub').textContent='第 '+last.cyc.cd+'/'+last.cyc.len+' 天 · '+last.cyc.phase+(last.cyc.projected?'（外推）':'');
+    } else { $h('hs-w7-sub').textContent='负荷 · 无月经记录'; }
     $h('hs-days').textContent=scored.length;
     $h('hs-range').textContent=rows[0].date.slice(2)+' 起';
 
