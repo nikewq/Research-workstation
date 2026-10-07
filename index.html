@@ -1211,6 +1211,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <li><strong>AoE 时区：</strong>会议截稿选 AoE（UTC-12），自动换算成你的本地时间；</li>
           <li><strong>重复与提醒：</strong>支持每年/每月重复，可设提前几天提醒（默认 7 天、1 天），打开工作台时提示，也可开启浏览器系统通知；</li>
           <li><strong>联动：</strong>实验室项目里填的截稿日期会自动显示（只读，不改项目数据）。</li>
+          <li><strong>🎓 一键导入会议截稿：</strong>「全部 → 从 CCF-Deadlines 导入」，按 CCF 等级/领域筛选或直接搜 CVPR、ACL…，点「导入」即加入并自动提前 30/7/1 天提醒（数据源 ccfddl/ccf-deadlines）。</li>
         </ul>
         <span style="color:#065f46">🔒</span> 数据用独立存储，纳入备份与云同步，不碰其他模块。
       </div>
@@ -2597,6 +2598,16 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="btn btn-ghost" onclick="_msResetForm()">清空</button>
       <button class="btn btn-primary" onclick="saveMilestone()">保存</button>
     </div>
+    <details id="ms-ccf" style="margin-top:14px;background:var(--surface2);border-radius:10px;padding:10px 12px" ontoggle="if(this.open)ccfSearch()">
+      <summary style="font-size:13px;font-weight:600;cursor:pointer">🎓 从 CCF-Deadlines 一键导入会议截稿</summary>
+      <div style="display:flex;gap:8px;margin:10px 0 8px;flex-wrap:wrap">
+        <input id="ccf-q" placeholder="搜会议：NeurIPS / CVPR / KDD…" style="flex:1;min-width:160px" oninput="clearTimeout(window._ccfT);window._ccfT=setTimeout(ccfSearch,250)">
+        <select id="ccf-rank" onchange="ccfSearch()" style="width:auto"><option value="">全部等级</option><option value="A" selected>CCF-A</option><option value="B">CCF-B</option><option value="C">CCF-C</option></select>
+        <select id="ccf-sub" onchange="ccfSearch()" style="width:auto"><option value="">全部领域</option><option value="AI" selected>人工智能</option><option value="DB">数据挖掘/数据库</option><option value="MX">交叉/综合</option><option value="CG">图形学/多媒体</option><option value="HI">人机交互</option><option value="NW">计算机网络</option><option value="SC">网络安全</option><option value="SE">软件工程</option><option value="DS">体系结构/系统</option><option value="CT">计算理论</option></select>
+      </div>
+      <div id="ccf-res" style="font-size:12px;color:var(--text2)"></div>
+      <div style="font-size:10px;color:var(--text2);opacity:.7;margin-top:6px">数据来自开源项目 ccfddl/ccf-deadlines，截稿时间按原时区自动换算；以会议官网为准。</div>
+    </details>
     <div id="ms-list" style="margin-top:14px"></div>
   </div>
 </div>
@@ -4971,7 +4982,8 @@ function _msTs(m,from){
   const t=m.time||'23:59';
   const mk=(y,mo,d)=>{
     const dd=Math.min(d,new Date(y,mo,0).getDate()),s=`${y}-${String(mo).padStart(2,'0')}-${String(dd).padStart(2,'0')}T${t}:00`;
-    return m.tz==='aoe'?Date.parse(s+'-12:00'):new Date(s).getTime();
+    const off=_msOffset(m.tz);
+    return off===null?new Date(s).getTime():Date.parse(s+off);
   };
   let [y,mo,d]=m.date.split('-').map(Number),ts=mk(y,mo,d);
   if(m.repeat==='yearly'||m.repeat==='monthly'){
@@ -5001,8 +5013,14 @@ function _msCountdown(ts){
   const txt=d>0?`${d} 天 ${h} 时`:`${h} 时 ${mi} 分`;
   return{txt:'还剩 '+txt,color:d<3?'#ef4444':d<7?'#f59e0b':'var(--text2)',past:false};
 }
+function _msOffset(tz){
+  if(tz==='aoe')return'-12:00';
+  const r=/^UTC([+-])(\d{1,2})$/.exec(tz||'');
+  return r?`${r[1]}${r[2].padStart(2,'0')}:00`:null;
+}
 function _msWhen(m){
-  return new Date(m.ts).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+(m.tz==='aoe'?'（AoE 换算为本地）':'');
+  const tzl=m.tz==='aoe'?'AoE':_msOffset(m.tz)?m.tz:'';
+  return new Date(m.ts).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+(tzl?`（${tzl} 换算为本地）`:'');
 }
 function renderMilestones(){
   const el=document.getElementById('ms-panel');if(!el)return;
@@ -5031,7 +5049,9 @@ function _msFillForm(m){
   document.getElementById('ms-title').value=m.title||'';
   document.getElementById('ms-date').value=m.date||'';
   document.getElementById('ms-time').value=m.time||'';
-  document.getElementById('ms-tz').value=m.tz||'local';
+  const tzSel=document.getElementById('ms-tz');
+  if(m.tz&&![...tzSel.options].some(o=>o.value===m.tz))tzSel.add(new Option(m.tz,m.tz));
+  tzSel.value=m.tz||'local';
   document.getElementById('ms-repeat').value=m.repeat||'none';
   document.getElementById('ms-cat').value=m.cat||'other';
   document.getElementById('ms-remind').value=(m.remind||[]).join(',');
@@ -5095,6 +5115,47 @@ function _msCheckReminders(){
   });
   if(msgs.length)toast(msgs.length>1?`⏰ ${msgs.length} 个节点临近：`+msgs.map(x=>x.slice(2).split(' · ')[0]).join('、'):msgs[0],'error');
   if(msgs.length||ld(MS_NOTIFIED).length!==sent.length)sv(MS_NOTIFIED,sent);
+}
+// ── CCF-Deadlines 导入：只读拉取公开数据，导入时仅追加到 K.milestones ──
+let _ccfData=null;
+function _ccfLoad(){
+  if(_ccfData)return Promise.resolve(_ccfData);
+  const lib=window.jsyaml?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('YAML 解析库加载失败'));document.head.appendChild(sc)});
+  return Promise.all([lib,fetch('https://ccfddl.com/conference/allconf.yml').then(r=>{if(!r.ok)throw new Error('数据源 HTTP '+r.status);return r.text()})])
+    .then(([,txt])=>{
+      const out=[],now=Date.now();
+      (jsyaml.load(txt)||[]).forEach(c=>(c.confs||[]).forEach(cf=>(cf.timeline||[]).forEach(tl=>
+        [['abstract_deadline','摘要截稿'],['deadline','截稿']].forEach(([k,label])=>{
+          const r=/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?/.exec(String(tl[k]||''));if(!r)return;
+          const z=String(cf.timezone||'AoE').trim(),tz=/^(AoE|UTC-12)$/i.test(z)?'aoe':/^UTC$/i.test(z)?'UTC+0':/^PT$/i.test(z)?'UTC-7':/^UTC[+-]\d{1,2}$/.test(z)?z:'aoe';
+          const m={title:`${c.title} ${cf.year} ${label}${tl.comment?'（'+tl.comment+'）':''}`,date:r[1],time:r[2]||'23:59',tz,
+            src:`ccf:${cf.id}:${k}:${r[1]}`,note:cf.link||'',rank:c.rank?.ccf||'',sub:c.sub||'',desc:c.description||'',place:cf.place||''};
+          m.ts=_msTs(m,0);if(m.ts>now)out.push(m);
+        }))));
+      return _ccfData=out.sort((a,b)=>a.ts-b.ts);
+    });
+}
+function ccfSearch(){
+  const el=document.getElementById('ccf-res');if(!el)return;
+  if(!_ccfData)el.textContent='正在加载会议数据…';
+  _ccfLoad().then(data=>{
+    const q=document.getElementById('ccf-q').value.trim().toLowerCase(),rk=document.getElementById('ccf-rank').value,sb=document.getElementById('ccf-sub').value;
+    const have=new Set(ld(K.milestones).map(m=>m.src).filter(Boolean));
+    const hits=data.filter(m=>(!rk||m.rank===rk)&&(!sb||m.sub===sb)&&(!q||(m.title+' '+m.desc).toLowerCase().includes(q))).slice(0,40);
+    el.innerHTML=hits.length?hits.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+      <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)">${escHtml(m.title)} ${m.rank?`<span class="ms-tag">CCF-${escHtml(m.rank)}</span>`:''}</div>
+        <div>${escHtml(_msWhen(m))} · <span style="color:${_msCountdown(m.ts).color}">${_msCountdown(m.ts).txt}</span>${m.place?' · '+escHtml(m.place):''}</div></div>
+      ${have.has(m.src)?'<span class="ms-tag">已导入</span>':`<button class="btn btn-ghost btn-sm" onclick="ccfImport('${escHtml(m.src)}')">导入</button>`}</div>`).join('')
+      :'没有找到即将截稿的会议，换个关键词或放宽等级/领域试试';
+  }).catch(e=>{el.innerHTML=`加载失败：${escHtml(e.message)} · <a href="#" onclick="event.preventDefault();ccfSearch()">重试</a>`});
+}
+function ccfImport(src){
+  const m=(_ccfData||[]).find(x=>x.src===src);if(!m)return;
+  const list=ld(K.milestones);
+  if(list.some(x=>x.src===src)){toast('已导入过');return}
+  list.push({id:uid(),done:false,created:today(),title:m.title,date:m.date,time:m.time,tz:m.tz,repeat:'none',cat:'ddl',remind:[30,7,1],note:m.note,src});
+  sv(K.milestones,list);ccfSearch();_msRenderList();renderMilestones();toast('🎓 已导入：'+m.title);
 }
 let _msTimer=null;
 function initMilestones(){
