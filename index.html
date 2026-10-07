@@ -318,6 +318,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 #main{transition:margin-left .22s ease}
 .phd-counter{font-size:10px;color:var(--text2);text-align:center;letter-spacing:0.06em;opacity:.75}
 .phd-counter span{font-size:22px;font-weight:800;color:var(--primary);display:block;letter-spacing:-0.02em}
+#ms-panel{flex:1.25;min-width:0;align-self:stretch;border-left:1px dashed var(--border);padding-left:16px;cursor:default;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.ms-head{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text2)}
+.ms-head .btn{padding:1px 8px;font-size:11px}
+.ms-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 6px;border-radius:6px;cursor:pointer}
+.ms-row:hover{background:var(--surface2)}
+.ms-row .ms-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-row .ms-cd{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ms-tag{font-size:10px;padding:0 5px;border-radius:8px;background:var(--surface2);color:var(--text2)}
+@media(max-width:760px){#identity-card{flex-wrap:wrap}#ms-panel{flex-basis:100%;border-left:none;border-top:1px dashed var(--border);padding:10px 0 0}}
 .companion-counter{font-size:10px;color:var(--text2);text-align:center;margin-top:6px;opacity:.6;letter-spacing:0.04em}
 .role-badge{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid var(--primary);cursor:pointer;transition:.15s;font-size:11.5px;color:var(--primary);letter-spacing:0.02em}
 .role-badge:hover{background:var(--primary);color:#fff}
@@ -1136,6 +1145,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div id="identity-desc" style="font-size:12px;color:var(--text2);line-height:1.5"></div>
       <div id="identity-tip" style="font-size:11px;margin-top:5px;opacity:0.55;font-style:italic"></div>
     </div>
+    <div id="ms-panel" onclick="event.stopPropagation()" title=""></div>
   </div>
 
   <div class="grid-2">
@@ -1184,14 +1194,36 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
-    <!-- 开发者置顶公告：农场大升级 + 墨墨会读书 + 回应留言 -->
+    <!-- 开发者置顶公告：时间节点 -->
     <details class="dev-ann" open style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-left:4px solid #10b981;border-radius:8px;padding:12px 14px">
       <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span class="dev-chev" style="color:#059669">▶</span>
-        <span style="font-size:13px">🌾</span>
-        <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 大版本更新</span>
+        <span style="font-size:13px">⏰</span>
+        <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 新功能</span>
         <span style="font-size:10px;color:#047857;background:#a7f3d0;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
-        <span style="font-size:10px;color:#059669;margin-left:auto">农场大升级 & 墨墨会读书 · 2026-07-09</span>
+        <span style="font-size:10px;color:#059669;margin-left:auto">时间节点 · 2026-10-07</span>
+      </summary>
+      <div style="font-size:12px;color:#064e3b;line-height:1.75">
+        <strong>⏰ 「时间节点」上线——重要日子不再忘</strong><br>
+        总览页身份卡右侧新增倒计时面板，记下截稿、答辩、报销、生日等重要节点：
+        <ul style="margin:4px 0 8px 18px;padding:0">
+          <li><strong>倒计时：</strong>显示最近 3 个，≤3 天变红、≤7 天变琥珀，精确到小时；</li>
+          <li><strong>AoE 时区：</strong>会议截稿选 AoE（UTC-12），自动换算成你的本地时间；</li>
+          <li><strong>重复与提醒：</strong>支持每年/每月重复，可设提前几天提醒（默认 7 天、1 天），打开工作台时提示，也可开启浏览器系统通知；</li>
+          <li><strong>联动：</strong>实验室项目里填的截稿日期会自动显示（只读，不改项目数据）。</li>
+        </ul>
+        <span style="color:#065f46">🔒</span> 数据用独立存储，纳入备份与云同步，不碰其他模块。
+      </div>
+    </details>
+
+    <!-- 历史开发者公告：农场大升级 + 墨墨会读书 + 回应留言（折叠） -->
+    <details class="dev-ann" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px">
+      <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="dev-chev" style="color:#a16207">▶</span>
+        <span style="font-size:13px">🌾</span>
+        <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
+        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">历史</span>
+        <span style="font-size:10px;color:#a16207;margin-left:auto">农场大升级 & 墨墨会读书 · 2026-07-09</span>
       </summary>
       <div style="font-size:12px;color:#064e3b;line-height:1.75">
         <strong>🌾 摸鱼农场大升级（摸鱼侦察局 → 🌾 农场主）</strong><br>
@@ -2541,6 +2573,34 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
   </div>
 </div>
 
+<!-- ── 时间节点 Modal ── -->
+<div class="modal-overlay" id="ms-modal" onclick="if(event.target===this)closeModal('ms-modal')">
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title">⏰ 时间节点</div>
+    <div id="ms-notify-tip"></div>
+    <input type="hidden" id="ms-edit-id">
+    <div class="form-row"><div><label>事项</label><input id="ms-title" placeholder="如：NeurIPS 摘要截稿 / 中期答辩 / 报销截止"></div></div>
+    <div class="form-row c2">
+      <div><label>日期</label><input id="ms-date" type="date"></div>
+      <div><label>时间（可选，默认 23:59）</label><input id="ms-time" type="time"></div>
+    </div>
+    <div class="form-row c2">
+      <div><label>时区</label><select id="ms-tz"><option value="local">本地时间</option><option value="aoe">AoE（UTC-12，会议截稿常用）</option></select></div>
+      <div><label>重复</label><select id="ms-repeat"><option value="none">不重复</option><option value="yearly">每年</option><option value="monthly">每月</option></select></div>
+    </div>
+    <div class="form-row c2">
+      <div><label>分类</label><select id="ms-cat"><option value="ddl">📌 截稿</option><option value="conf">🎤 会议</option><option value="admin">🏛 行政</option><option value="life">🎂 生活</option><option value="other">🔖 其他</option></select></div>
+      <div><label>提前几天提醒（逗号分隔）</label><input id="ms-remind" placeholder="7,1" value="7,1"></div>
+    </div>
+    <div class="form-row"><div><label>备注（可选）</label><input id="ms-note" placeholder="投稿链接、材料清单……"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="_msResetForm()">清空</button>
+      <button class="btn btn-primary" onclick="saveMilestone()">保存</button>
+    </div>
+    <div id="ms-list" style="margin-top:14px"></div>
+  </div>
+</div>
+
 <!-- ── Edit Task Modal ── -->
 <div class="modal-overlay" id="syncModal">
   <div class="modal" style="max-width:420px">
@@ -3721,6 +3781,8 @@ const K = {
   learning:   'phd_learning',
   // ── 细碎时光（独立命名空间；注册进 K 以纳入全量备份/导入/云同步）──
   moments:    'phd_moments',
+  // ── 时间节点（独立命名空间；纳入全量备份/导入/云同步）──
+  milestones: 'phd_milestones',
   // ── 墨墨小猫（隐藏状态+聊天记录）──
   pet:        'phd_pet_v1',
 };
@@ -4232,6 +4294,7 @@ function initApp() {
   renderCheckin();
   renderOverview();
   renderIdentityCard();
+  initMilestones();
   renderTasks();
   renderHabits();
   renderSubmissions();
@@ -4900,6 +4963,144 @@ function renderIdentityCard(){
   document.getElementById('identity-tip').textContent='💡 '+(_NEXT_RANK[key]||'');
 }
 function rerollIdentityDesc(){_idIdx++;renderIdentityCard();}
+
+// ── 时间节点：自有数据存 K.milestones；实验室项目 deadline 只读并入 ──
+const MS_CATS={ddl:'📌',conf:'🎤',admin:'🏛',life:'🎂',other:'🔖'};
+const MS_NOTIFIED='phd_ms_notified';
+function _msTs(m,from){
+  const t=m.time||'23:59';
+  const mk=(y,mo,d)=>{
+    const dd=Math.min(d,new Date(y,mo,0).getDate()),s=`${y}-${String(mo).padStart(2,'0')}-${String(dd).padStart(2,'0')}T${t}:00`;
+    return m.tz==='aoe'?Date.parse(s+'-12:00'):new Date(s).getTime();
+  };
+  let [y,mo,d]=m.date.split('-').map(Number),ts=mk(y,mo,d);
+  if(m.repeat==='yearly'||m.repeat==='monthly'){
+    for(let i=0;ts<from&&i<1500;i++){
+      if(m.repeat==='yearly')y++;else if(++mo>12){mo=1;y++}
+      ts=mk(y,mo,d);
+    }
+  }
+  return ts;
+}
+function _msLab(){
+  try{
+    const ps=JSON.parse(localStorage.getItem(LAB_KEY))||[];
+    return ps.filter(p=>p.deadline).map(p=>({id:'lab_'+p.id,title:(p.name||'项目')+' 截稿',date:p.deadline,cat:'ddl',remind:[7,1],lab:true}));
+  }catch{return[]}
+}
+function _msItems(withDone){
+  const now=Date.now();
+  const all=[...ld(K.milestones).filter(m=>m.date&&(withDone||!m.done)),..._msLab()].map(m=>({...m,ts:_msTs(m,now)}));
+  const up=all.filter(m=>m.ts>=now).sort((a,b)=>a.ts-b.ts),past=all.filter(m=>m.ts<now).sort((a,b)=>b.ts-a.ts);
+  return[...up,...past];
+}
+function _msCountdown(ts){
+  const diff=ts-Date.now(),D=86400000,H=3600000;
+  if(diff<0)return{txt:`已过 ${Math.floor(-diff/D)} 天`,color:'var(--text2)',past:true};
+  const d=Math.floor(diff/D),h=Math.floor(diff%D/H),mi=Math.floor(diff%H/60000);
+  const txt=d>0?`${d} 天 ${h} 时`:`${h} 时 ${mi} 分`;
+  return{txt:'还剩 '+txt,color:d<3?'#ef4444':d<7?'#f59e0b':'var(--text2)',past:false};
+}
+function _msWhen(m){
+  return new Date(m.ts).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+(m.tz==='aoe'?'（AoE 换算为本地）':'');
+}
+function renderMilestones(){
+  const el=document.getElementById('ms-panel');if(!el)return;
+  const items=_msItems(false).slice(0,3);
+  const rows=items.map(m=>{
+    const c=_msCountdown(m.ts);
+    return`<div class="ms-row" style="${c.past?'opacity:.5':''}" title="${escHtml(_msWhen(m)+(m.note?' · '+m.note:''))}" onclick="openMilestones('${m.lab?'':m.id}')">
+      <span>${MS_CATS[m.cat]||'🔖'}</span><span class="ms-t">${escHtml(m.title)}</span>
+      ${m.lab?'<span class="ms-tag">项目</span>':''}<span class="ms-cd" style="color:${c.color}">${c.txt}</span></div>`;
+  }).join('');
+  el.innerHTML=`<div class="ms-head"><span>⏰ 时间节点</span><span style="flex:1"></span>
+    <button class="btn btn-ghost btn-sm" onclick="openMilestones('new')">＋</button>
+    <button class="btn btn-ghost btn-sm" onclick="openMilestones()">全部</button></div>
+    ${rows||'<div style="font-size:12px;color:var(--text2);opacity:.7;padding:3px 6px">还没有节点——点 ＋ 记下截稿、答辩、报销等重要日子</div>'}`;
+}
+function _msResetForm(){
+  document.getElementById('ms-edit-id').value='';
+  ['ms-title','ms-date','ms-time','ms-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ms-tz').value='local';
+  document.getElementById('ms-repeat').value='none';
+  document.getElementById('ms-cat').value='ddl';
+  document.getElementById('ms-remind').value='7,1';
+}
+function _msFillForm(m){
+  document.getElementById('ms-edit-id').value=m.id;
+  document.getElementById('ms-title').value=m.title||'';
+  document.getElementById('ms-date').value=m.date||'';
+  document.getElementById('ms-time').value=m.time||'';
+  document.getElementById('ms-tz').value=m.tz||'local';
+  document.getElementById('ms-repeat').value=m.repeat||'none';
+  document.getElementById('ms-cat').value=m.cat||'other';
+  document.getElementById('ms-remind').value=(m.remind||[]).join(',');
+  document.getElementById('ms-note').value=m.note||'';
+}
+function _msRenderList(){
+  const items=_msItems(true);
+  document.getElementById('ms-list').innerHTML=items.length?`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">全部节点（${items.length}）</div>`+items.map(m=>{
+    const c=_msCountdown(m.ts);
+    const ops=m.lab?'<span class="ms-tag">来自实验室项目，请在项目中修改</span>':
+      `<button class="btn btn-ghost btn-sm" onclick="_msFillForm(ld(K.milestones).find(x=>x.id==='${m.id}'))">编辑</button>
+       <button class="btn btn-ghost btn-sm" onclick="toggleMilestoneDone('${m.id}')">${m.done?'恢复':'完成'}</button>
+       <button class="btn btn-ghost btn-sm" onclick="deleteMilestone('${m.id}')">删除</button>`;
+    return`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);${m.done||c.past?'opacity:.55':''}">
+      <span>${MS_CATS[m.cat]||'🔖'}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;${m.done?'text-decoration:line-through':''}">${escHtml(m.title)}${m.repeat&&m.repeat!=='none'?` <span class="ms-tag">${m.repeat==='yearly'?'每年':'每月'}</span>`:''}</div>
+        <div style="font-size:11px;color:var(--text2)">${escHtml(_msWhen(m))} · <span style="color:${c.color}">${c.txt}</span>${m.note?' · '+escHtml(m.note):''}</div></div>
+      <div style="display:flex;gap:4px;flex-shrink:0">${ops}</div></div>`;
+  }).join(''):'';
+  const tip=document.getElementById('ms-notify-tip');
+  tip.innerHTML=('Notification' in window&&Notification.permission==='default')?
+    '<div style="font-size:12px;background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:12px">🔔 打开工作台时会在页面内提醒；想在页面开着时收到系统通知，<a href="#" onclick="event.preventDefault();Notification.requestPermission().then(_msRenderList)">点此开启</a></div>':'';
+}
+function openMilestones(id){
+  _msResetForm();
+  if(id&&id!=='new'){const m=ld(K.milestones).find(x=>x.id===id);if(m)_msFillForm(m);}
+  _msRenderList();openModal('ms-modal');
+  if(id==='new')setTimeout(()=>document.getElementById('ms-title').focus(),50);
+}
+function saveMilestone(){
+  const title=document.getElementById('ms-title').value.trim(),date=document.getElementById('ms-date').value;
+  if(!title||!date){toast('请填写事项和日期','error');return}
+  const id=document.getElementById('ms-edit-id').value;
+  const rec={title,date,time:document.getElementById('ms-time').value,tz:document.getElementById('ms-tz').value,
+    repeat:document.getElementById('ms-repeat').value,cat:document.getElementById('ms-cat').value,
+    remind:[...new Set(document.getElementById('ms-remind').value.split(/[,，\s]+/).map(Number).filter(n=>Number.isInteger(n)&&n>0))],
+    note:document.getElementById('ms-note').value.trim()};
+  const list=ld(K.milestones),i=list.findIndex(m=>m.id===id);
+  if(i>=0)list[i]={...list[i],...rec};else list.push({id:uid(),done:false,created:today(),...rec});
+  sv(K.milestones,list);_msResetForm();_msRenderList();renderMilestones();toast('⏰ 已保存');
+}
+function toggleMilestoneDone(id){
+  const list=ld(K.milestones),m=list.find(x=>x.id===id);if(!m)return;
+  m.done=!m.done;sv(K.milestones,list);_msRenderList();renderMilestones();
+}
+function deleteMilestone(id){
+  if(!confirm('删除这个时间节点？'))return;
+  sv(K.milestones,ld(K.milestones).filter(m=>m.id!==id));_msRenderList();renderMilestones();
+}
+function _msCheckReminders(){
+  const now=Date.now(),td=today(),sent=ld(MS_NOTIFIED).filter(s=>s.endsWith('|'+td));
+  const msgs=[];
+  _msItems(false).forEach(m=>{
+    if(m.ts<now)return;
+    const days=Math.floor((m.ts-now)/86400000),key=m.id+'|'+td;
+    if((days!==0&&!(m.remind||[]).includes(days))||sent.includes(key))return;
+    const msg=`⏰ ${m.title} · ${_msCountdown(m.ts).txt}`;
+    msgs.push(msg);
+    if('Notification' in window&&Notification.permission==='granted'){try{new Notification('科研工作台 · 时间节点',{body:msg})}catch{}}
+    sent.push(key);
+  });
+  if(msgs.length)toast(msgs.length>1?`⏰ ${msgs.length} 个节点临近：`+msgs.map(x=>x.slice(2).split(' · ')[0]).join('、'):msgs[0],'error');
+  if(msgs.length||ld(MS_NOTIFIED).length!==sent.length)sv(MS_NOTIFIED,sent);
+}
+let _msTimer=null;
+function initMilestones(){
+  renderMilestones();_msCheckReminders();
+  if(!_msTimer)_msTimer=setInterval(()=>{renderMilestones();_msCheckReminders()},60000);
+}
 
 function getTodayCI(){return ld(K.checkins).find(c=>c.date===today())||null;}
 function _checkinQuip(h){
