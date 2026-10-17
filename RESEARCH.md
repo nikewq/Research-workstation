@@ -143,3 +143,29 @@
 | 依赖 `reviewresponse.cls` | klb2 | 导出必须开箱即可编译；需要该样式的用户可以手动替换 |
 | Electron 桌面应用 | RebuttalStudio | 本项目是纯浏览器单页，无需安装 |
 | 回复中写"见上文 / 见 R1" | 常见做法 | 任务书要求每处完整重复（审稿人往往只读写给自己的部分） |
+
+---
+
+## 1c. 审稿意见 PDF 识别（Rebuttal 工作台 · 📄 PDF）
+
+调研日期：2026-10-17。结论：GitHub 上**没有**现成的"审稿意见 PDF → 结构化条目"工具（RebuttalStudio 只支持粘贴；Paper2Rebuttal 解析的是论文本身而不是审稿意见）。可借鉴的是审稿语篇的**标注体系**和**浏览器端的 PDF / OCR 库**。
+
+| 仓库 | ⭐ | 最近推送 | 借鉴 | 不采用 |
+|---|---|---|---|---|
+| nnkennard/DISAPERE（EMNLP 2022） | 1 | 2022-07 | 每个审稿句子都标了 `review_action`：`arg_request`（细分为 edit / explanation / experiment / typo …）、`arg_evaluative`、`arg_structuring`（summary / heading）、`arg_fact`、`arg_social`，以及 `polarity`（正面 / 负面）。我们由此确定**成条规则**：只有"请求"和"负面评价"的句子才成为一条意见；总结、标题、夸奖、客套归入"已忽略"，用户可一键恢复。数据文件里的 `rebuttal_stance`（concur / dispute）和"作者回复对齐到哪条意见"也印证了作者回复挂到对应意见下的做法 | 分类模型需要训练，无法在浏览器里运行 → 改用关键词规则 |
+| neulab/ReviewAdvisor（ASAP-Review） | 204 | 2023-06 | 8 个审稿方面：summary / motivation / originality / soundness / substance / replicability / meaningful-comparison / clarity → 映射到我们的 6 个类别：substance、meaningful-comparison → experiment，originality → related_work，clarity → writing / clarification，soundness、replicability → clarification。预览里显示方面标签，方便用户核对 | 方面标注模型 |
+| UKPLab/nlpeer | 35 | 2025-02 | 把 ARR、OpenReview、F1000、PLOS、eLife 的审稿统一成一种格式 → 说明不同平台的字段差异很大，所以**按平台分别写识别模板**：OpenReview / ARR / 期刊决定信，识别不了时用通用规则 | Python 数据加载代码 |
+| LiyingCheng95/ArgumentPairExtraction | 24 | 2022-11 | 审稿意见与作者回复的配对数据 → 识别"Official Comment by Authors"，把它填入对应审稿人第一条意见的回复草稿（只在草稿为空时填） | BiLSTM-CRF 模型 |
+| mozilla/pdf.js | 54k | 活跃 | 能拿到每段文字的坐标和字号 → 按坐标还原行、按行距还原段落；站点已经在用 3.11 版，浏览器缓存可以复用 | — |
+| unjs/unpdf | 1.2k | 活跃 | 提取接口更简洁 | 打包的 PDF.js v6 需要 Safari 18.4 以上，兼容性不如站点现在用的 3.11 版 |
+| naptha/tesseract.js | 38k | 活跃 | 在浏览器里做 OCR，处理扫描版 PDF；英文模型约 3 MB，中文约 1.7 MB（压缩版） | 默认不加载，检测到扫描版后由用户手动开启 |
+| grobidOrg/grobid、datalab-to/marker、docling-project/docling | 5k–69k | 活跃 | 版面分析的效果标杆 | 都需要服务器或 Python 环境，和本项目"纯浏览器、不需要服务器"的定位冲突 |
+
+清理规则（参考常见的打印版 PDF）：
+- 页眉页脚：出现在每页前后两行、且在 ≥50% 页面上重复的行（数字归一化后比较），视为页眉页脚并删除；
+- 页码：`Page n of m`、`n/m`、`- n -`、`第 n 页`；
+- 跨行断词：行尾是"字母-"、下一行以小写字母开头时，直接拼接；
+- OpenReview 打印页里的多余内容：Add / Reply / Readers / 修改时间戳等；
+- 期刊信的套话：Dear / Yours sincerely / Ms. No. 等。
+
+AI 校正：只把**带编号的句子**发给用户自己配置的模型，模型只返回"哪些编号属于同一条意见 + 类别 + 严重度"，然后**用原句重新拼出引用原文**。模型编造的编号会被丢弃，原文不会被改写。

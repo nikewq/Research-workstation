@@ -163,11 +163,11 @@
     return { reviewers, comments };
   }
 
-  const mkComment = (r, it, i) => ({
+  const mkComment = (r, it) => Object.assign({
     id: uid(), reviewer_id: it.reviewer_id, quote: it.quote || '', category: it.category || 'clarification', severity: it.severity || 'minor',
     linked_experiments: [], response_draft: it.response_draft || '', response_status: it.response_draft ? 'drafting' : 'todo',
     manuscript_change_location: '', cross_refs: []
-  });
+  }, it.source_page ? { source_page: it.source_page } : {});
   function addItems(doc, items, revMeta) {
     const r = cur(doc);
     items.forEach(it => {
@@ -224,7 +224,8 @@
     const head = `<div class="rbt-toolbar">${roundSel}
         <label>${E(l.venue)} ${sel('rbt-venue', [['conference', l.conference], ['journal', l.journal]], r.venue_type, ro)}</label>
         ${ro ? '' : `<button class="btn btn-ghost btn-sm" onclick="rbtPaste('${E(sid)}')">${E(l.paste)}</button>
-        <label class="btn btn-ghost btn-sm rbt-file">${E(l.importOR)}<input type="file" accept=".json" hidden onchange="rbtImportOR('${E(sid)}',this)"></label>`}
+        <label class="btn btn-ghost btn-sm rbt-file">${E(l.importOR)}<input type="file" accept=".json" hidden onchange="rbtImportOR('${E(sid)}',this)"></label>
+        ${window.rbtPdfOpen ? `<label class="btn btn-ghost btn-sm rbt-file">${E(window.rbtPdfLabel())}<input type="file" accept="application/pdf,.pdf" hidden onchange="rbtPdfOpen('${E(sid)}',this)"></label>` : ''}`}
         <button class="btn btn-ghost btn-sm" onclick="rbtExport('${E(sid)}','md',${viewIdx})">${E(l.exportMD)}</button>
         <button class="btn btn-ghost btn-sm" onclick="rbtExport('${E(sid)}','tex',${viewIdx})">${E(l.exportTeX)}</button>
         <button class="btn btn-ghost btn-sm" onclick="rbtExport('${E(sid)}','json')">${E(l.exportJSON)}</button>
@@ -263,6 +264,7 @@
         <span class="rbt-tag rbt-st-${E(c.response_status)}">${E(l.stat[c.response_status] || c.response_status)}</span>
         ${xn ? `<span class="rbt-tag rbt-same">${E(F(l.same, { n: xn + 1 }))}</span>` : ''}
         ${(c.linked_experiments || []).map(x => `<span class="rbt-tag rbt-exp-${E(x.status)}">🧪 ${E(x.name)}</span>`).join('')}
+        ${c.source_page ? `<span class="rbt-tag" title="PDF">📄 p.${E(c.source_page)}</span>` : ''}
         <span class="rbt-q">${E(c.quote)}</span></div>`;
     if (!open) return `<div class="rbt-row" data-cid="${E(c.id)}">${head}</div>`;
     const opt = (arr, v, map) => arr.map(k => `<option value="${E(k)}" ${k === v ? 'selected' : ''}>${E(map ? map[k] : k)}</option>`).join('');
@@ -601,6 +603,24 @@ Never fabricate numbers, results or citations; use placeholders like [result X] 
     }
     decorate(document.getElementById('sub-list'));
   }
+  // PDF import entry (modules/rebuttal-pdf.js): merge reviewers, append comments, fill empty drafts with author replies
+  window.rbtImportParsed = function (sid, parsed) {
+    mut(sid, (d, r) => {
+      (parsed.reviewers || []).forEach(v => {
+        const ex = r.reviewers.find(x => x.id === v.id);
+        if (!ex) r.reviewers.push(Object.assign({}, v));
+        else Object.keys(v).forEach(k => { if (ex[k] == null) ex[k] = v[k]; });
+      });
+      const added = (parsed.items || []).map(it => { const c = mkComment(r, it); r.comments.push(c); return c; });
+      (parsed.authorReplies || []).forEach(a => {
+        const target = added.find(c => c.reviewer_id === a.reviewer_id && !c.response_draft);
+        if (target) { target.response_draft = a.text; target.response_status = 'drafting'; }
+      });
+      r.reviewers.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+    });
+    U(sid).open = true; decorate(document.getElementById('sub-list'));
+  };
+  window.rbtLabels = L;
   window.rbtDecorate = decorate;
   window.rbtInternals = { parseText, parseOpenReview, progress, toMarkdown, toLatex, responseOf, labels };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
