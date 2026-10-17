@@ -76,23 +76,38 @@ class OfflineRun(unittest.TestCase):
         self.assertIn("coarse ranking only", latest["score_reason"])
         self.assertIn("summary fields missing", latest["score_reason"])
 
-    def test_empty_rss_falls_back_to_api(self):
-        atom = open(os.path.join(HERE, "fixtures", "atom_sample.xml"), encoding="utf-8").read()
+    def test_empty_rss_falls_back_to_openalex(self):
+        oa = open(os.path.join(HERE, "fixtures", "openalex_sample.json"), encoding="utf-8").read()
         empty = '<?xml version="1.0"?><rss version="2.0"><channel><title>empty</title></channel></rss>'
         urls = []
 
         def weekend_get(url):
             urls.append(url)
-            return empty if "rss.arxiv.org" in url else atom
+            return empty if "rss.arxiv.org" in url else oa
 
         st = dp.run(self.cfg, "2026-01-10", weekend_get, fake_ask)
         self.assertEqual(st["status"], "ok")
-        self.assertTrue(any("export.arxiv.org/api/query" in u for u in urls))
+        oa_url = next(u for u in urls if "api.openalex.org" in u)
+        self.assertIn("from_publication_date:2026-01-07", oa_url)
+        self.assertIn(dp.urllib.parse.quote('"your-keyword" OR "another topic"'), oa_url)
         cands = dp.fetch_candidates(self.cfg, weekend_get, dp.dt.datetime(2026, 1, 10, 23, 59, tzinfo=dp.dt.timezone.utc))
-        self.assertEqual(sorted(p.arxiv_id for p in cands), ["2601.00011", "2601.00012"])  # no cross-list, no >3-day-old
-        self.assertEqual(cands[0].title, "Paper F: Your-Keyword Across Domains")
-        latest = json.load(open(os.path.join(self.cfg.out_dir, "latest.json")))
-        self.assertIn(latest["arxiv_id"], {"2601.00011", "2601.00012"})
+        self.assertEqual(sorted(p.arxiv_id for p in cands), ["2601.00011", "2601.00012"])  # old-id new version dropped
+        self.assertEqual(next(p for p in cands if p.arxiv_id == "2601.00011").abstract,
+                         "We revisit your-keyword; accuracy rises from 61.0% to 66.4%.")
+
+    def test_fallback_outage_is_not_fatal(self):
+        empty = '<?xml version="1.0"?><rss version="2.0"><channel><title>empty</title></channel></rss>'
+
+        def down(url):
+            if "rss.arxiv.org" in url:
+                return empty
+            raise dp.urllib.error.URLError("down")
+
+        orig = dp.time.sleep
+        dp.time.sleep = lambda s: None
+        self.addCleanup(setattr, dp.time, "sleep", orig)
+        st = dp.run(self.cfg, "2026-01-10", down, fake_ask)
+        self.assertEqual(st["status"], "no_new_papers")
 
     def test_keyword_weights_and_cross_list(self):
         self.assertEqual(dp.parse_keywords("a:2, b"), [("a", 2.0), ("b", 1.0)])

@@ -1,0 +1,11 @@
+{"meta": {"count": 4}, "results": [
+ {"ids": {"doi": "https://doi.org/10.48550/arxiv.2601.00011"}, "title": "Paper F: Your-Keyword Across Domains", "publication_date": "2026-01-09",
+  "authorships": [{"author": {"display_name": "Author Seven"}}], "primary_location": {"landing_page_url": "https://doi.org/10.48550/arxiv.2601.00011"},
+  "abstract_inverted_index": {"We": [0], "revisit": [1], "your-keyword;": [2], "accuracy": [3], "rises": [4], "from": [5], "61.0%": [6], "to": [7], "66.4%.": [8]}},
+ {"ids": {}, "title": "Paper G: Another Topic Study", "publication_date": "2026-01-08",
+  "authorships": [{"author": {"display_name": "Author Eight"}}], "primary_location": {"landing_page_url": "http://arxiv.org/abs/2601.00012"},
+  "abstract_inverted_index": {"A": [0], "placeholder": [1], "study": [2], "of": [3], "another": [4], "topic.": [5]}},
+ {"ids": {"doi": "https://doi.org/10.48550/arxiv.2508.00013"}, "title": "Paper H: Old Paper, New Version", "publication_date": "2026-01-09",
+  "authorships": [], "primary_location": {"landing_page_url": "http://arxiv.org/abs/2508.00013"}, "abstract_inverted_index": {"your-keyword": [0]}},
+ {"ids": {}, "title": "Paper I: Without arXiv id", "publication_date": "2026-01-09", "authorships": [], "primary_location": {"landing_page_url": "https://example.org/x"}, "abstract_inverted_index": null}
+]}

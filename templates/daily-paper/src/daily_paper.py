@@ -14,6 +14,7 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
@@ -155,40 +156,44 @@ def parse_rss(xml_text: str) -> list[Paper]:
     return papers
 
 
-ATOM = {"a": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
+OPENALEX_ARXIV = "S4306400194"
 
 
-def parse_atom(xml_text: str, since: dt.datetime) -> list[Paper]:
-    root = ET.fromstring(xml_text)
+def _arxiv_yymm(arxiv_id: str) -> str:
+    return arxiv_id.split(".")[0]
+
+
+def parse_openalex(json_text: str, min_yymm: str) -> list[Paper]:
     papers = []
-    for e in root.findall("a:entry", ATOM):
-        m = re.search(r"(\d{4}\.\d{4,5})", e.findtext("a:id", default="", namespaces=ATOM))
-        published = e.findtext("a:published", default="", namespaces=ATOM)
-        if not m or not published:
+    for w in json.loads(json_text).get("results", []):
+        loc = (w.get("primary_location") or {}).get("landing_page_url") or ""
+        m = re.search(r"(\d{4}\.\d{4,5})", ((w.get("ids") or {}).get("doi") or "") + " " + loc)
+        if not m or _arxiv_yymm(m.group(1)) < min_yymm:  # updated versions of older papers are not "new"
             continue
-        if dt.datetime.fromisoformat(published.replace("Z", "+00:00")) < since:
-            continue
-        prim = e.find("arxiv:primary_category", ATOM)
+        inv = w.get("abstract_inverted_index") or {}
+        words = sorted((pos, word) for word, poss in inv.items() for pos in poss)
         papers.append(Paper(
             arxiv_id=m.group(1),
-            title=re.sub(r"\s+", " ", e.findtext("a:title", default="", namespaces=ATOM)).strip(),
-            abstract=re.sub(r"\s+", " ", e.findtext("a:summary", default="", namespaces=ATOM)).strip(),
-            authors=[a.findtext("a:name", default="", namespaces=ATOM) for a in e.findall("a:author", ATOM)],
-            categories=[c.get("term") for c in e.findall("a:category", ATOM) if c.get("term")],
-            announce_type="api:" + (prim.get("term") if prim is not None else ""),
+            title=re.sub(r"\s+", " ", w.get("title") or "").strip(),
+            abstract=" ".join(word for _, word in words),
+            authors=[(a.get("author") or {}).get("display_name", "") for a in w.get("authorships") or []][:20],
+            categories=["arXiv"],
+            announce_type="openalex",
         ))
     return papers
 
 
-def fetch_api_recent(cfg: Config, get: Callable[[str], str], now: dt.datetime, days: int = 3) -> list[Paper]:
-    query = "+OR+".join(f"cat:{c}" for c in cfg.categories)
-    url = (f"https://export.arxiv.org/api/query?search_query={query}"
-           "&sortBy=submittedDate&sortOrder=descending&max_results=400")
-    xml_text = with_retry(lambda: get(url), tries=4, wait=20.0)
-    papers = parse_atom(xml_text, now - dt.timedelta(days=days))
-    if not cfg.include_cross:
-        papers = [p for p in papers if p.announce_type.split(":", 1)[1] in cfg.categories]
-    return papers
+def fetch_openalex_recent(cfg: Config, get: Callable[[str], str], now: dt.datetime, days: int = 3) -> list[Paper]:
+    if not cfg.keywords:
+        return []
+    since = (now - dt.timedelta(days=days)).date()
+    min_yymm = (since - dt.timedelta(days=7)).strftime("%y%m")  # arXiv ids start with the submission yymm
+    search = " OR ".join(f'"{k}"' for k, _ in cfg.keywords)
+    url = ("https://api.openalex.org/works?per_page=200"
+           f"&filter=primary_location.source.id:{OPENALEX_ARXIV},from_publication_date:{since.isoformat()}"
+           f"&search={urllib.parse.quote(search)}"
+           "&select=ids,title,publication_date,authorships,abstract_inverted_index,primary_location")
+    return parse_openalex(with_retry(lambda: get(url)), min_yymm)
 
 
 def fetch_candidates(cfg: Config, get: Callable[[str], str] = http_get,
@@ -204,11 +209,14 @@ def fetch_candidates(cfg: Config, get: Callable[[str], str] = http_get,
                 seen.add(p.arxiv_id)
                 out.append(p)
     if rss_items == 0:
-        # arXiv does not announce on Fri/Sat nights (empty weekend feeds) or holidays:
-        # fall back to the API listing of the last 3 days so weekends and first-time setups still get a pick.
-        print("RSS feeds are empty (weekend/holiday) -> arXiv API fallback, last 3 days")
-        out = [p for p in fetch_api_recent(cfg, get, now or dt.datetime.now(dt.timezone.utc))
-               if not (p.arxiv_id in seen or seen.add(p.arxiv_id))]
+        # arXiv does not announce on Fri/Sat nights (empty weekend feeds) or holidays. Fall back to OpenAlex
+        # (arXiv works of the last 3 days matching KEYWORDS; the arXiv API itself rate-limits shared CI IPs).
+        print("RSS feeds are empty (weekend/holiday) -> OpenAlex fallback, last 3 days")
+        try:
+            out = [p for p in fetch_openalex_recent(cfg, get, now or dt.datetime.now(dt.timezone.utc))
+                   if not (p.arxiv_id in seen or seen.add(p.arxiv_id))]
+        except Exception as e:  # a fallback outage must not fail the run
+            print(f"  fallback unavailable: {e}", file=sys.stderr)
     return out
 
 
