@@ -11,7 +11,7 @@ jobs:
   keep-alive:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: |
           date -u +'%Y-%m-%dT%H:%M:%SZ' > .github/keep-alive.txt
           git config user.name "github-actions[bot]"
