@@ -1,0 +1,85 @@
+name: daily-paper
+
+on:
+  schedule:
+    # Fires every hour; the "Gate" step only lets the run through once per UTC day,
+    # at or after vars.RUN_HOUR_UTC. Change the hour via the variable, not here.
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run now, ignoring RUN_HOUR_UTC and today''s finished run'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-paper
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Gate (ENABLED)
+        id: enabled
+        env:
+          ENABLED: ${{ vars.ENABLED }}
+        run: |
+          if [ "$(echo "$ENABLED" | tr '[:upper:]' '[:lower:]')" != "true" ]; then
+            echo "ENABLED is not 'true' -> skip without using any quota"
+            echo "go=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "go=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.enabled.outputs.go == 'true'
+        uses: actions/checkout@v4
+
+      - name: Gate (RUN_HOUR_UTC, once per day)
+        id: gate
+        if: steps.enabled.outputs.go == 'true'
+        env:
+          RUN_HOUR_UTC: ${{ vars.RUN_HOUR_UTC }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+        run: |
+          today=$(date -u +%Y-%m-%d); hour=$((10#$(date -u +%H))); want=$((10#${RUN_HOUR_UTC:-0}))
+          last=$(python3 -c "import json;print(json.load(open('docs/status.json')).get('last_run',''))" 2>/dev/null || true)
+          if [ "$FORCE" = "true" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$hour" -lt "$want" ]; then echo "UTC hour $hour < RUN_HOUR_UTC $want -> wait"; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$last" = "$today" ]; then echo "already ran today ($today)"; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "go=true" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Python
+        if: steps.gate.outputs.go == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Pick today's paper
+        if: steps.gate.outputs.go == 'true'
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          KEYWORDS: ${{ vars.KEYWORDS }}
+          CATEGORIES: ${{ vars.CATEGORIES }}
+          EXCLUDE_KEYWORDS: ${{ vars.EXCLUDE_KEYWORDS }}
+          MODEL_NAME: ${{ vars.MODEL_NAME }}
+          LANGUAGE: ${{ vars.LANGUAGE }}
+          EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+          TOP_N: ${{ vars.TOP_N }}
+          INCLUDE_CROSS_LIST: ${{ vars.INCLUDE_CROSS_LIST }}
+        run: python src/daily_paper.py
+
+      - name: Commit results
+        if: steps.gate.outputs.go == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -m "daily paper $(date -u +%Y-%m-%d)"
+          git push

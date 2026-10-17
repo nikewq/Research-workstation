@@ -1,7 +1,7 @@
 // PhD Workstation Service Worker
 // Caches index.html for offline use and faster loads
 
-const CACHE_NAME = 'phd-workstation-v41';
+const CACHE_NAME = 'phd-workstation-v42';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -30,7 +30,7 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch: network-first for index.html (get latest), cache-first for other assets
+// Fetch: network-first for index.html and modules/ (get latest), cache-first for other assets
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
@@ -39,7 +39,7 @@ self.addEventListener('fetch', event => {
     return; // Let CDN / external requests (KaTeX, JSZip, AI APIs) pass through
   }
 
-  if (url.pathname.endsWith('index.html') || url.pathname === '/' || url.pathname.endsWith('/')) {
+  if (url.pathname.endsWith('index.html') || url.pathname === '/' || url.pathname.endsWith('/') || url.pathname.includes('/modules/')) {
     // Network-first for index.html: 优先服务器，离线才回退缓存。
     // 这条让数据保护修复尽快覆盖旧版客户端 — 避免"用户首次刷新仍跑旧版 bug 代码"。
     event.respondWith(

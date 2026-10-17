@@ -903,6 +903,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+<link rel="stylesheet" href="modules/modules.css?v=1">
 </head>
 <body>
 
@@ -1147,6 +1148,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
     </div>
     <div id="ms-panel" onclick="event.stopPropagation()" title=""></div>
   </div>
+  <div id="dly-ov-card" hidden></div>
 
   <div class="grid-2">
     <div class="card">
@@ -1547,6 +1549,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="research-tab-btn active" id="rtab-papers-btn" onclick="switchResearchTab('papers')">📚 文献库</button>
       <button class="research-tab-btn" id="rtab-subs-btn" onclick="switchResearchTab('subs')">📄 投稿管理</button>
       <button class="research-tab-btn" id="rtab-writing-btn" onclick="switchResearchTab('writing')">✍️ 写作</button>
+      <button class="research-tab-btn" id="rtab-dly-btn" onclick="switchResearchTab('dly')">📬 日推</button>
     </div>
   </div>
 
@@ -1702,6 +1705,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
   </div>
 
   <!-- ── 写作面板 ── -->
+  <div id="rs-dly" style="display:none"></div>
   <div id="rs-writing" style="display:none">
     <!-- ── 研究元数据·阅读-写作上下文桥接 ── -->
     <div id="wr-ctx-banner">
@@ -2520,6 +2524,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       💡 <b>注意：</b>不同 AI 模型因训练数据、架构设计和参数规模各异，在润色、摘要、翻译、代码等任务上的表现<b>可能存在明显差异</b>。若某个功能效果不理想，建议切换模型重试。一般而言，参数量更大的模型（如 Pro / Plus 系列）在复杂学术写作任务上更稳定。
     </div>
   </div>
+  <div class="settings-section" id="dly-settings"></div>
   <div class="settings-section">
     <h3>📚 论文数据库认证</h3>
     <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
@@ -3794,6 +3799,8 @@ const K = {
   moments:    'phd_moments',
   // ── 时间节点（独立命名空间；纳入全量备份/导入/云同步）──
   milestones: 'phd_milestones',
+  // ── Rebuttal 工作台（独立命名空间，按投稿 id 关联，不改 phd_subs）──
+  rebuttals:  'phd_rebuttals',
   // ── 墨墨小猫（隐藏状态+聊天记录）──
   pet:        'phd_pet_v1',
 };
@@ -6053,7 +6060,7 @@ function renderSubmissions(){
       :''
     const statusEn=SUB_LBL[s.status]||s.status
     const statusCn=SUB_LBL_CN[s.status]||''
-    return `<div class="sub-item status-${s.status}">
+    return `<div class="sub-item status-${s.status}" data-sid="${escHtml(s.id)}">
       <div class="flex items-center gap-8">
         <div style="flex:1">
           <div class="sub-title">${escHtml(s.title)}</div>
@@ -6072,6 +6079,7 @@ function renderSubmissions(){
       ${s.notes?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${escHtml(s.notes)}</div>`:''}
     </div>`
   }).join('');
+  if(window.rbtDecorate)window.rbtDecorate(el);
 }
 
 // ══════════════════════════════════════
@@ -10155,6 +10163,7 @@ function switchResearchTab(tab){
   if(wb)wb.classList.toggle('active',isWriting)
   // init writing panel on first open
   if(isWriting)initWritingPanel()
+  if(window.dlyOnResearchTab)window.dlyOnResearchTab(tab)
 }
 
 // ══════════════════════════════════════════════
@@ -18890,5 +18899,7 @@ function _petResetSleep(){
   }catch(_){}},200); });
 })();
 </script>
+<script src="modules/daily-paper.js?v=1" defer></script>
+<script src="modules/rebuttal.js?v=1" defer></script>
 </body>
 </html>
