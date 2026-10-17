@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+<channel><title>cs.LG updates on arXiv.org</title>
+<item><title>Paper A: Your-Keyword Meets Another Topic</title><link>https://arxiv.org/abs/2601.00001</link>
+<description>arXiv:2601.00001v1 Announce Type: new
+Abstract: We study your-keyword and another topic with a placeholder method on Dataset X.</description>
+<category>cs.LG</category><arxiv:announce_type>new</arxiv:announce_type><dc:creator>Author One, Author Two</dc:creator></item>
+<item><title>Paper B: A Placeholder Benchmark</title><link>https://arxiv.org/abs/2601.00002</link>
+<description>arXiv:2601.00002v1 Announce Type: new
+Abstract: A benchmark where your-keyword matters; accuracy improves from 70.1% to 75.3%.</description>
+<category>cs.LG</category><arxiv:announce_type>new</arxiv:announce_type><dc:creator>Author Three</dc:creator></item>
+<item><title>Paper C: Unrelated Placeholder Study</title><link>https://arxiv.org/abs/2601.00003</link>
+<description>arXiv:2601.00003v1 Announce Type: new
+Abstract: Something unrelated to the stated interests.</description>
+<category>cs.LG</category><arxiv:announce_type>new</arxiv:announce_type><dc:creator>Author Four</dc:creator></item>
+<item><title>Paper D: Your-Keyword on an Excluded-Topic</title><link>https://arxiv.org/abs/2601.00004</link>
+<description>arXiv:2601.00004v1 Announce Type: new
+Abstract: your-keyword applied to excluded-topic.</description>
+<category>cs.LG</category><arxiv:announce_type>new</arxiv:announce_type><dc:creator>Author Five</dc:creator></item>
+<item><title>Paper E: Cross-listed Your-Keyword Work</title><link>https://arxiv.org/abs/2601.00005</link>
+<description>arXiv:2601.00005v1 Announce Type: cross
+Abstract: your-keyword from another category.</description>
+<category>cs.CV</category><arxiv:announce_type>cross</arxiv:announce_type><dc:creator>Author Six</dc:creator></item>
+</channel></rss>

@@ -1,0 +1,19 @@
+name: keep-alive
+# GitHub disables scheduled workflows after 60 days without repository activity.
+# Daily commits normally keep the repo active; this covers long ENABLED=false periods.
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > .github/keep-alive.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/keep-alive.txt && git commit -m "keep-alive" && git push || true
