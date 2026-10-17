@@ -903,7 +903,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-<link rel="stylesheet" href="modules/modules.css?v=1">
+<link rel="stylesheet" href="modules/modules.css?v=2">
 </head>
 <body>
 
@@ -1218,6 +1218,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         入口：「📄 投稿管理」每张投稿卡片下方的「🛡 Rebuttal」按钮，旁边的进度条显示完成度（major 计 2、minor 计 1）。
         <ul style="margin:4px 0 8px 18px;padding:0">
           <li><strong>导入：</strong>整段粘贴审稿意见自动切条（识别 Reviewer 1 / W1 / Q1 / Rating 等），也支持导入 OpenReview 导出的 JSON；可合并、拆分、改归属；</li>
+          <li><strong>🆕 上传 PDF 自动识别：</strong>OpenReview 打印版 / ARR / 期刊决定信都能认，自动去掉页眉页码、识别审稿人与分数，只挑出需要回复的意见（总结、称赞、客套自动忽略，可一键恢复），每条标注来源页码；扫描版可手动开启本地 OCR。全部在浏览器本地完成，PDF 不上传；</li>
           <li><strong>整理：</strong>按审稿人或类别分组，标记严重度与回复状态，关联要补的实验；多位审稿人问同一问题时互相关联，显示「同问题 ×N」；</li>
           <li><strong>导出：</strong>一键生成 Response Letter 骨架（Markdown / LaTeX），逐条 Comment → Response → Changes，同一问题在每位审稿人处完整重复回答；多轮返修自动保留旧轮（只读）；</li>
           <li><strong>AI 辅助（默认关）：</strong>只解读审稿人意图、给回复结构建议，不替你写最终回复。投稿前请留意会议对生成式 AI 的披露要求。</li>
@@ -18930,6 +18931,7 @@ function _petResetSleep(){
 })();
 </script>
 <script src="modules/daily-paper.js?v=1" defer></script>
-<script src="modules/rebuttal.js?v=1" defer></script>
+<script src="modules/rebuttal-pdf.js?v=1" defer></script>
+<script src="modules/rebuttal.js?v=2" defer></script>
 </body>
 </html>

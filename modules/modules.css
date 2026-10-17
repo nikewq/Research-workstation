@@ -114,3 +114,14 @@ mark.dly-kw{background:color-mix(in srgb,var(--green) 20%,transparent);color:inh
 #rbt-paste-modal textarea{width:100%;box-sizing:border-box;margin-top:8px;font-family:inherit}
 .rbt-wide .rbt-grid{grid-template-columns:repeat(4,1fr)}
 @media(max-width:640px){.rbt-wide .rbt-grid{grid-template-columns:1fr 1fr}}
+
+/* ── rebuttal · PDF recognition preview ── */
+.rbt-pdf-item{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px;background:var(--card)}
+.rbt-pdf-item.off{opacity:.45}
+.rbt-pdf-chk input{width:auto;margin-top:4px}
+.rbt-pdf-main{flex:1;min-width:0}
+.rbt-pdf-main select{width:auto;font-size:12px;padding:2px 6px}
+.rbt-pdf-q{font-size:12px;line-height:1.6;margin-top:6px;white-space:pre-wrap}
+.rbt-pdf-ign{margin-top:10px;font-size:12px}
+.rbt-pdf-ign summary{cursor:pointer;color:var(--text2);margin-bottom:6px}
+.rbt-pdf-ign .rbt-prev{display:flex;flex-wrap:wrap;gap:4px;align-items:center}

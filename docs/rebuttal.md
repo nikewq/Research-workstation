@@ -17,6 +17,12 @@
    - **⬆ OpenReview JSON**：导入论文讨论页的全部记录（`{"notes":[…]}` 或数组，API v1 和 v2 都支持）。
      - 匿名访问 OpenReview API 现在需要通过人机验证，所以请登录后用 `openreview-py` 导出：`client.get_all_notes(forum='<forum id>')`，再保存成 JSON。
      - 映射规则：每条 `Official_Review` 对应一位审稿人。匿名审稿人按出现顺序依次记为 R1、R2…，原始 id 保存在 `source_id`。评分取 `rating` / `confidence` 的前导数字，其余子分数放进 `extra`。`weaknesses` 和 `questions` 分别切条。审稿人的 `Official_Comment` 追加为新的意见。作者已经提交过的 `Rebuttal` 会按 `replyto` 填入对应意见的回复草稿（只在草稿为空时填入）。
+   - **📄 PDF**：上传审稿意见的 PDF，在**浏览器本地**识别，文件不上传也不保存，识别完先在预览里核对再导入。支持三类格式：
+     - OpenReview 论文页打印成的 PDF；
+     - ARR 审稿（Summary Of Weaknesses / Comments Suggestions And Typos …）；
+     - 期刊决定信（Reviewer #1 / Referee 2 / Associate Editor …）。
+
+     识别其他格式时用通用规则。详见下文「PDF 识别」。
 2. **整理**
    - 点开任意一条即可编辑：审稿原文摘录、所属审稿人、类别、严重度、回复状态、回复草稿（Markdown）、修改位置、关联实验、跨审稿人引用。
    - **✂ 在光标处拆分**：把一条意见从光标位置拆成两条。**⤒ 合并到上一条**：原文、草稿和关联实验都会合并过去。
@@ -30,6 +36,30 @@
 6. **进度条**：按严重度加权计算完成度，major 记 2、minor 记 1，回复状态为 done 的算作完成。
 
 ![Rebuttal · 宽屏](images/rebuttal-wide-dark.png)
+
+## PDF 识别
+
+![PDF 识别预览](images/rebuttal-pdf-light.png)
+
+处理流程：
+1. 用 pdf.js 按坐标还原行和段落；
+2. 删去页眉页脚、页码和打印页里的多余内容，拼接跨行断开的单词；
+3. 判断来源平台；
+4. 识别审稿人和各项分数（Rating / Confidence / Soundness / Overall Assessment / Excitement …）；
+5. 切条：参照 DISAPERE 数据集的标注体系，只有"请求"和"负面评价"的句子才成为一条意见，总结、夸奖、客套归入「已忽略」；
+6. 按 ASAP 的审稿方面打标签，再对应到类别和严重度。
+
+预览里可以对每条意见改审稿人、类别、严重度，或者取消勾选：
+- 每条意见标有来源页码（`p.N`），导入后也会保存为 `source_page`，方便回到原文核对；
+- 标 ⚠ 的条目是规则拿不准的，请重点核对；
+- 「已忽略」里的句子可以一键恢复成一条意见；
+- 识别到的作者回复（OpenReview 里 Authors 发的评论）会填入对应审稿人第一条意见的回复草稿（仅在草稿为空时）。
+
+**扫描版 PDF**：几乎提取不到文字时，会提示改用 OCR。点「用 OCR 识别」后才会加载 tesseract.js，首次使用需要下载：英文约 6 MB，中英约 8 MB，之后由浏览器缓存。识别全程在本机进行。
+
+**AI 校正**（只有打开「AI 辅助」时才显示）：把**带编号的句子**发给你自己配置的模型，模型只返回"哪些编号属于同一条意见 + 类别 + 严重度"，工作台再用原句拼出引用原文，不会改写；模型编造的编号会被丢弃。审稿意见通常属于保密内容，请确认你的模型服务可信。
+
+测试样本和检查脚本在 `tests/rebuttal-pdf/`，全部为占位数据。运行方法：先在仓库根目录执行 `python3 -m http.server 8799`，再运行 `node tests/rebuttal-pdf/check.js`；加上 `OCR=1` 会额外测试 OCR 流程。
 
 ## 导出
 
