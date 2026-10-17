@@ -363,12 +363,15 @@ def summary_prompt(p: Paper, cfg: Config, fulltext: str) -> str:
     )
 
 
-def chat(prompt: str, cfg: Config, max_tokens: int = 1500) -> str:
+def chat(prompt: str, cfg: Config, max_tokens: int = 4096) -> str:
     r = with_retry(lambda: http_post_json(f"{cfg.base_url}/chat/completions", {
         "model": cfg.model, "temperature": 0.2, "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": prompt}],
     }, cfg.api_key))
-    return r["choices"][0]["message"]["content"] or ""
+    choice = r["choices"][0]
+    if choice.get("finish_reason") == "length":
+        print(f"  warning: LLM output hit max_tokens={max_tokens} (reasoning models spend tokens on thinking)", file=sys.stderr)
+    return choice["message"].get("content") or ""
 
 
 def parse_scores(text: str, n: int) -> list[Optional[tuple[float, str]]]:
@@ -420,13 +423,16 @@ def fetch_fulltext(arxiv_id: str, get: Callable[[str], str] = http_get) -> str:
 
 def summarize(p: Paper, cfg: Config, ask: Callable[[str], str], fulltext: str) -> dict:
     obj: Optional[dict] = None
-    for _ in range(2):
+    for attempt in range(2):
+        raw = ""
         try:
-            obj = parse_json_object(ask(summary_prompt(p, cfg, fulltext)))
+            raw = ask(summary_prompt(p, cfg, fulltext))
+            obj = parse_json_object(raw)
         except Exception as e:
             print(f"  summary call failed: {e}", file=sys.stderr)
         if obj and all(k in obj for k in LLM_FIELDS):
             break
+        print(f"  summary attempt {attempt + 1} unusable; response starts with: {raw[:300]!r}", file=sys.stderr)
     obj = obj or {}
     missing = [k for k in LLM_FIELDS if not obj.get(k)]
     words = len((p.abstract + " " + fulltext).split())
