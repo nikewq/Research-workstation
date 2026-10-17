@@ -1196,14 +1196,44 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
-    <!-- 开发者置顶公告：时间节点 -->
+    <!-- 开发者置顶公告：文献日推 + Rebuttal 工作台 -->
     <details class="dev-ann" open style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-left:4px solid #10b981;border-radius:8px;padding:12px 14px">
       <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span class="dev-chev" style="color:#059669">▶</span>
-        <span style="font-size:13px">⏰</span>
+        <span style="font-size:13px">📬</span>
         <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 新功能</span>
         <span style="font-size:10px;color:#047857;background:#a7f3d0;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
-        <span style="font-size:10px;color:#059669;margin-left:auto">时间节点 · 2026-10-07</span>
+        <span style="font-size:10px;color:#059669;margin-left:auto">文献日推 & Rebuttal 工作台 · 2026-10-17</span>
+      </summary>
+      <div style="font-size:12px;color:#064e3b;line-height:1.75">
+        <strong>📬 「文献日推」上线——每天只推 1 篇最新且最相关的 arXiv 论文</strong><br>
+        入口：「📖 文献 &amp; 投稿」→ 第四个子 tab「📬 日推」。
+        <ul style="margin:4px 0 8px 18px;padding:0">
+          <li><strong>一眼读完：</strong>一句话贡献 + 问题 / 方法 / 关键结果 / 为什么与你相关 / 局限，关键数字和你的关键词高亮，附相关度分数与预计阅读时长；</li>
+          <li><strong>加入精读：</strong>一键存进文献库，在「学习驾驶舱 → 从文献库建精读」里直接可选；「不感兴趣」只记在你本机；</li>
+          <li><strong>按时提醒：</strong>在「个人设置 → 📬 文献日推」设推送时段与推送日，时段内概览页弹出今日论文卡、子 tab 亮红点；总开关默认关闭；</li>
+          <li><strong>零服务器：</strong>抓取在<strong>你自己的</strong> GitHub 仓库里运行——打开 <a href="https://github.com/nikewq/daily-paper-template" target="_blank" rel="noopener" style="color:#047857">daily-paper-template</a>，点 Use this template，按 README 五步配置（填一个 LLM Key 即可），日推页的引导卡会帮你生成要填的变量。</li>
+        </ul>
+        <strong>🛡 「Rebuttal 工作台」上线——审稿意见逐条追踪</strong><br>
+        入口：「📄 投稿管理」每张投稿卡片下方的「🛡 Rebuttal」按钮，旁边的进度条显示完成度（major 计 2、minor 计 1）。
+        <ul style="margin:4px 0 8px 18px;padding:0">
+          <li><strong>导入：</strong>整段粘贴审稿意见自动切条（识别 Reviewer 1 / W1 / Q1 / Rating 等），也支持导入 OpenReview 导出的 JSON；可合并、拆分、改归属；</li>
+          <li><strong>整理：</strong>按审稿人或类别分组，标记严重度与回复状态，关联要补的实验；多位审稿人问同一问题时互相关联，显示「同问题 ×N」；</li>
+          <li><strong>导出：</strong>一键生成 Response Letter 骨架（Markdown / LaTeX），逐条 Comment → Response → Changes，同一问题在每位审稿人处完整重复回答；多轮返修自动保留旧轮（只读）；</li>
+          <li><strong>AI 辅助（默认关）：</strong>只解读审稿人意图、给回复结构建议，不替你写最终回复。投稿前请留意会议对生成式 AI 的披露要求。</li>
+        </ul>
+        <span style="color:#065f46">🔒</span> 两个功能都使用独立存储，<strong>不改动你已有的任务、投稿、文献等任何数据</strong>；日推设置只存本机，Rebuttal 数据纳入备份与云同步。使用说明见仓库 docs/ 目录。看不到新功能的话，刷新一次页面即可。
+      </div>
+    </details>
+
+    <!-- 历史开发者公告：时间节点（折叠） -->
+    <details class="dev-ann" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px">
+      <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="dev-chev" style="color:#a16207">▶</span>
+        <span style="font-size:13px">⏰</span>
+        <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
+        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">历史</span>
+        <span style="font-size:10px;color:#a16207;margin-left:auto">时间节点 · 2026-10-07</span>
       </summary>
       <div style="font-size:12px;color:#064e3b;line-height:1.75">
         <strong>⏰ 「时间节点」上线——重要日子不再忘</strong><br>
