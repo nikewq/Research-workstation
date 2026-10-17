@@ -155,15 +155,60 @@ def parse_rss(xml_text: str) -> list[Paper]:
     return papers
 
 
-def fetch_candidates(cfg: Config, get: Callable[[str], str] = http_get) -> list[Paper]:
-    seen, out = set(), []
+ATOM = {"a": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
+
+
+def parse_atom(xml_text: str, since: dt.datetime) -> list[Paper]:
+    root = ET.fromstring(xml_text)
+    papers = []
+    for e in root.findall("a:entry", ATOM):
+        m = re.search(r"(\d{4}\.\d{4,5})", e.findtext("a:id", default="", namespaces=ATOM))
+        published = e.findtext("a:published", default="", namespaces=ATOM)
+        if not m or not published:
+            continue
+        if dt.datetime.fromisoformat(published.replace("Z", "+00:00")) < since:
+            continue
+        prim = e.find("arxiv:primary_category", ATOM)
+        papers.append(Paper(
+            arxiv_id=m.group(1),
+            title=re.sub(r"\s+", " ", e.findtext("a:title", default="", namespaces=ATOM)).strip(),
+            abstract=re.sub(r"\s+", " ", e.findtext("a:summary", default="", namespaces=ATOM)).strip(),
+            authors=[a.findtext("a:name", default="", namespaces=ATOM) for a in e.findall("a:author", ATOM)],
+            categories=[c.get("term") for c in e.findall("a:category", ATOM) if c.get("term")],
+            announce_type="api:" + (prim.get("term") if prim is not None else ""),
+        ))
+    return papers
+
+
+def fetch_api_recent(cfg: Config, get: Callable[[str], str], now: dt.datetime, days: int = 3) -> list[Paper]:
+    query = "+OR+".join(f"cat:{c}" for c in cfg.categories)
+    url = (f"https://export.arxiv.org/api/query?search_query={query}"
+           "&sortBy=submittedDate&sortOrder=descending&max_results=400")
+    xml_text = with_retry(lambda: get(url), tries=4, wait=20.0)
+    papers = parse_atom(xml_text, now - dt.timedelta(days=days))
+    if not cfg.include_cross:
+        papers = [p for p in papers if p.announce_type.split(":", 1)[1] in cfg.categories]
+    return papers
+
+
+def fetch_candidates(cfg: Config, get: Callable[[str], str] = http_get,
+                     now: Optional[dt.datetime] = None) -> list[Paper]:
+    seen, out, rss_items = set(), [], 0
     allowed = {"new", "cross"} if cfg.include_cross else {"new"}
     for cat in cfg.categories:
         xml_text = with_retry(lambda: get(f"https://rss.arxiv.org/rss/{cat}"))
-        for p in parse_rss(xml_text):
+        papers = parse_rss(xml_text)
+        rss_items += len(papers)
+        for p in papers:
             if p.announce_type in allowed and p.arxiv_id not in seen:
                 seen.add(p.arxiv_id)
                 out.append(p)
+    if rss_items == 0:
+        # arXiv does not announce on Fri/Sat nights (empty weekend feeds) or holidays:
+        # fall back to the API listing of the last 3 days so weekends and first-time setups still get a pick.
+        print("RSS feeds are empty (weekend/holiday) -> arXiv API fallback, last 3 days")
+        out = [p for p in fetch_api_recent(cfg, get, now or dt.datetime.now(dt.timezone.utc))
+               if not (p.arxiv_id in seen or seen.add(p.arxiv_id))]
     return out
 
 
@@ -417,10 +462,11 @@ def run(cfg: Config, today: str, get: Callable[[str], str] = http_get,
     history = {x["arxiv_id"] for x in index}
     status = {"last_run": today, "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
 
-    cands = [p for p in fetch_candidates(cfg, get) if p.arxiv_id not in history and not is_excluded(p, cfg.exclude)]
+    now = dt.datetime.fromisoformat(today + "T23:59:59+00:00")
+    cands = [p for p in fetch_candidates(cfg, get, now) if p.arxiv_id not in history and not is_excluded(p, cfg.exclude)]
     print(f"{len(cands)} new candidate papers after dedup/exclusion")
     if not cands:
-        status.update(status="no_new_papers", message="arXiv has no new papers for these categories today")
+        status.update(status="no_new_papers", message="no new arXiv papers for these categories (all recent ones already recommended)")
         write_json(os.path.join(cfg.out_dir, "status.json"), status)
         return status
 
