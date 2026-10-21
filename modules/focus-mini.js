@@ -112,9 +112,10 @@
     const dots = Array.from({ length: Math.max(p.goal, Math.min(st.n, 8)) }, (_, i) => `<i class="${i < st.n ? 'on' : ''}"></i>`).join('');
     const taskSel = (s.kind === 'flow' || pomo.running || s.paused) ? (s.task && !/^自由专注/.test(s.task) ? `<span class="fm-task" title="${E(clean(s.task))}">🎯 ${E(clean(s.task))}</span>` : '')
       : `<select class="fm-tasksel" title="${E(l.task)}" onchange="fmTask(this.value)">${taskOptions(($('pomo-task-sel') || {}).value || '')}</select>`;
-    const off = (C * (1 - Math.min(1, Math.max(0, prog)))).toFixed(1);
+    const off = (C * (1 - Math.min(1, Math.max(0, prog)))).toFixed(1), lv = Math.min(1, Math.max(0, prog)).toFixed(3);
     const html = `
       <div class="fm-ring fm-${tone}" title="${E(label)}">
+        <div class="fm-water ${s.running ? '' : 'still'}" style="--lv:@@LV@@"><i></i><i></i></div>
         <svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="${R}" class="fm-track"/><circle cx="36" cy="36" r="${R}" class="fm-bar" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="@@OFF@@"/></svg>
         <span class="fm-time ${timeTxt.length > 5 ? 'long' : ''}">@@TIME@@</span></div>
       <div class="fm-side">
@@ -136,11 +137,12 @@
       </div>`;
     const typing = el.contains(document.activeElement) && /^(SELECT|INPUT)$/.test(document.activeElement.tagName);
     if (force || (html !== lastStruct && !typing)) {
-      el.innerHTML = html.replace('@@OFF@@', off).replace('@@TIME@@', timeTxt); lastStruct = html;
+      el.innerHTML = html.replace('@@OFF@@', off).replace('@@LV@@', lv).replace('@@TIME@@', timeTxt); lastStruct = html;
     } else {
       const t = el.querySelector('.fm-time'), bar = el.querySelector('.fm-bar');
       if (t) t.textContent = timeTxt;
       if (bar) bar.setAttribute('stroke-dashoffset', off);
+      const w = el.querySelector('.fm-water'); if (w) w.style.setProperty('--lv', lv);
     }
     const card = $('identity-card');
     if (card) card.classList.toggle('fm-live', !!(s.running));
