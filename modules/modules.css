@@ -125,3 +125,46 @@ mark.dly-kw{background:color-mix(in srgb,var(--green) 20%,transparent);color:inh
 .rbt-pdf-ign{margin-top:10px;font-size:12px}
 .rbt-pdf-ign summary{cursor:pointer;color:var(--text2);margin-bottom:6px}
 .rbt-pdf-ign .rbt-prev{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+
+/* ── 🌊 focus mini (identity card middle) ── */
+#focus-mini{flex:0 0 auto;width:340px;max-width:100%;align-self:stretch;display:flex;align-items:center;gap:12px;border-left:1px dashed var(--border);padding-left:16px;cursor:default;position:relative;--fm-c:var(--primary)}
+.fm-ring{position:relative;width:72px;height:72px;flex-shrink:0}
+.fm-ring svg{width:72px;height:72px;transform:rotate(-90deg)}
+.fm-track{fill:none;stroke:var(--surface2);stroke-width:6}
+.fm-bar{fill:none;stroke:var(--fm-c);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .5s linear,stroke .3s}
+.fm-ring.fm-brk{--fm-c:var(--green)}.fm-ring.fm-flow{--fm-c:var(--accent,var(--primary))}
+.fm-time{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.fm-time.long{font-size:12px}
+.fm-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.fm-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:24px}
+.fm-label{font-size:12px;font-weight:600;color:var(--text2)}
+.fm-label.fm-work{color:var(--primary)}.fm-label.fm-brk{color:var(--green)}.fm-label.fm-flow{color:var(--accent,var(--primary))}
+.fm-seg{display:inline-flex;background:var(--surface2);border-radius:999px;padding:2px}
+.fm-seg button{border:none;background:transparent;font-size:11px;padding:2px 8px;border-radius:999px;color:var(--text2);cursor:pointer}
+.fm-seg button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow-xs)}
+.fm-seg.locked{opacity:.55}.fm-seg.locked button{cursor:not-allowed}
+.fm-icon{border:none;background:transparent;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:6px;color:var(--text2)}
+.fm-icon:hover{background:var(--surface2)}
+.fm-btn{border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;padding:3px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.fm-btn:hover{border-color:var(--primary)}
+.fm-btn.fm-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.fm-tasksel{font-size:11px;padding:2px 6px;max-width:130px;width:auto;border-radius:999px}
+.fm-task{font-size:11px;color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm-chip{border:1px solid var(--border);background:transparent;font-size:11px;padding:0 8px;border-radius:999px;color:var(--text2);cursor:pointer;line-height:20px}
+.fm-chip.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary);font-weight:600}
+.fm-chip.fm-soft{cursor:default;background:var(--surface2);border-color:transparent}
+.fm-unit{font-size:11px;color:var(--text2)}
+.fm-stat{font-size:11px;color:var(--text2);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.fm-dots{display:inline-flex;gap:3px}
+.fm-dots i{width:6px;height:6px;border-radius:50%;background:var(--border)}
+.fm-dots i.on{background:var(--primary)}
+.fm-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg,0 8px 24px rgba(0,0,0,.15));padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:12px;min-width:220px}
+.fm-pop label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fm-pop input[type=number]{width:64px;font-size:12px;padding:2px 6px}
+.fm-pop .fm-check{justify-content:flex-start}.fm-pop .fm-check input{width:auto}
+.fm-keys{font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:6px}
+#identity-card.fm-live{animation:fm-breathe 4s ease-in-out infinite}
+@keyframes fm-breathe{0%,100%{box-shadow:var(--shadow-xs,none)}50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent)}}
+@media(prefers-reduced-motion:reduce){#identity-card.fm-live{animation:none}.fm-bar{transition:none}}
+@media(max-width:1180px){#identity-card{flex-wrap:wrap}#ms-panel{flex-basis:100%;border-left:none;border-top:1px dashed var(--border);padding:10px 0 0}}
+@media(max-width:640px){#focus-mini{width:100%;flex-basis:100%;border-left:none;border-top:1px dashed var(--border);padding:10px 0 0}}
