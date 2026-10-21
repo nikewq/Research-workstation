@@ -903,7 +903,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-<link rel="stylesheet" href="modules/modules.css?v=2">
+<link rel="stylesheet" href="modules/modules.css?v=3">
 </head>
 <body>
 
@@ -1146,6 +1146,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <div id="identity-desc" style="font-size:12px;color:var(--text2);line-height:1.5"></div>
       <div id="identity-tip" style="font-size:11px;margin-top:5px;opacity:0.55;font-style:italic"></div>
     </div>
+    <div id="focus-mini" onclick="event.stopPropagation()" title=""></div>
     <div id="ms-panel" onclick="event.stopPropagation()" title=""></div>
   </div>
   <div id="dly-ov-card" hidden></div>
@@ -1223,6 +1224,15 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <li><strong>导出：</strong>一键生成 Response Letter 骨架（Markdown / LaTeX），逐条 Comment → Response → Changes，同一问题在每位审稿人处完整重复回答；多轮返修自动保留旧轮（只读）；</li>
           <li><strong>AI 辅助（默认关）：</strong>只解读审稿人意图、给回复结构建议，不替你写最终回复。投稿前请留意会议对生成式 AI 的披露要求。</li>
         </ul>
+        <strong>🌊 「心流」搬上总览页（10-21 更新）</strong><br>
+        身份卡中间新增心流小组件，不用切页面就能专注：
+        <ul style="margin:4px 0 8px 18px;padding:0">
+          <li><strong>圆环计时：</strong>一键开始/暂停，25 / 50 / 90 分钟一键切换并自动记住，可直接选关联任务；休息时可「跳过休息」；</li>
+          <li><strong>⏱ Flow 正计时：</strong>不设结束时间，专注多久算多久，结束后按 1/5 时长建议休息；</li>
+          <li><strong>今日一眼可见：</strong>已完成几段、共多少分钟，小圆点对照每日目标；</li>
+          <li><strong>提醒与快捷键：</strong>⚙ 里可开系统通知和提示音（默认关）；<b>Alt+P</b> 开始/暂停，<b>Alt+R</b> 重置/结束。</li>
+        </ul>
+        与「心流时光」页、论文阅读器里的番茄钟是同一个计时器，记录照旧写入你的心流历史。<br><br>
         <span style="color:#065f46">🔒</span> 两个功能都使用独立存储，<strong>不改动你已有的任务、投稿、文献等任何数据</strong>；日推设置只存本机，Rebuttal 数据纳入备份与云同步。使用说明见仓库 docs/ 目录。看不到新功能的话，刷新一次页面即可。
       </div>
     </details>
@@ -18931,6 +18941,7 @@ function _petResetSleep(){
 })();
 </script>
 <script src="modules/daily-paper.js?v=1" defer></script>
+<script src="modules/focus-mini.js?v=1" defer></script>
 <script src="modules/rebuttal-pdf.js?v=1" defer></script>
 <script src="modules/rebuttal.js?v=2" defer></script>
 </body>
