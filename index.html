@@ -1197,14 +1197,40 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
       <button class="wall-tab" data-tag="help" onclick="switchWallTab(this)">🆘 求助</button>
       <button class="wall-tab" data-tag="vent" onclick="switchWallTab(this)">💬 吐槽</button>
     </div>
-    <!-- 开发者置顶公告：文献日推 + Rebuttal 工作台 -->
+    <!-- 开发者置顶公告：补签卡 + 下班提醒 -->
     <details class="dev-ann" open style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-left:4px solid #10b981;border-radius:8px;padding:12px 14px">
       <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span class="dev-chev" style="color:#059669">▶</span>
-        <span style="font-size:13px">📬</span>
+        <span style="font-size:13px">🎫</span>
         <span style="font-size:12px;font-weight:700;color:#065f46">开发者公告 · 新功能</span>
         <span style="font-size:10px;color:#047857;background:#a7f3d0;padding:1px 6px;border-radius:10px;margin-left:4px">置顶</span>
-        <span style="font-size:10px;color:#059669;margin-left:auto">文献日推 & Rebuttal 工作台 · 2026-10-17</span>
+        <span style="font-size:10px;color:#059669;margin-left:auto">补签卡 & 下班提醒 · 2026-10-23</span>
+      </summary>
+      <div style="font-size:12px;color:#064e3b;line-height:1.75">
+        <strong>🎫 「补签卡」上线——漏签一天，连续天数也不断</strong><br>
+        入口：「今日概览」顶部签到栏的「🎫 补签卡 ×N」按钮，点开是本月补签日历。
+        <ul style="margin:4px 0 8px 18px;padding:0">
+          <li><strong>怎么得卡：</strong>某天工时 ≥ 10 小时（手动点下班），或在下方留言墙发帖互动（每天最多 1 张）；每月最多得 4 张，卡当月有效；</li>
+          <li><strong>怎么补签：</strong>日历里虚线框的就是本月缺勤、可补的日子，点一下确认即可，每月最多补 4 次；补签日会单独标出，接上连续天数，但不计工时；</li>
+          <li><strong>🌙 下班提醒：</strong>按你最近的下班习惯，到点还没签出会提醒「该下班休息了」（在心流组件 ⚙ 里开过通知的，还会弹系统通知）；</li>
+          <li><strong>🤖 忘记下班自动补：</strong>当晚 23:59 还没点下班，会自动帮你签出（没开网页的话，下次打开时补上），并标上 🤖。</li>
+        </ul>
+        <div style="background:rgba(16,185,129,0.1);border-radius:6px;padding:8px 10px;margin:6px 0">
+          <strong>💬 回应留言墙：</strong><br>
+          · <b>@Bubu</b> 说"想要补签功能"——<strong>已经上线啦！</strong>点签到栏的「🎫 补签卡」就能用；在留言墙发帖本身就能换一张补签卡，谢谢你的建议 🙏
+        </div>
+        <span style="color:#065f46">🔒</span> 补签卡使用独立存储并纳入备份与云同步；<strong>已有的签到记录一条都不会改</strong>，规则从上线当天开始生效，不追溯处理过去的记录。看不到按钮的话，刷新一次页面即可。
+      </div>
+    </details>
+
+    <!-- 历史开发者公告：文献日推 + Rebuttal 工作台 + 心流小组件（折叠） -->
+    <details class="dev-ann" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px">
+      <summary style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="dev-chev" style="color:#a16207">▶</span>
+        <span style="font-size:13px">📬</span>
+        <span style="font-size:12px;font-weight:700;color:#92400e">开发者公告</span>
+        <span style="font-size:10px;color:#b45309;background:#fde68a;padding:1px 6px;border-radius:10px;margin-left:4px">历史</span>
+        <span style="font-size:10px;color:#a16207;margin-left:auto">文献日推 & Rebuttal 工作台 · 2026-10-17</span>
       </summary>
       <div style="font-size:12px;color:#064e3b;line-height:1.75">
         <strong>📬 「文献日推」上线——每天只推 1 篇最新且最相关的 arXiv 论文</strong><br>
@@ -1224,8 +1250,6 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <li><strong>导出：</strong>一键生成 Response Letter 骨架（Markdown / LaTeX），逐条 Comment → Response → Changes，同一问题在每位审稿人处完整重复回答；多轮返修自动保留旧轮（只读）；</li>
           <li><strong>AI 辅助（默认关）：</strong>只解读审稿人意图、给回复结构建议，不替你写最终回复。投稿前请留意会议对生成式 AI 的披露要求。</li>
         </ul>
-        <strong>🎫 补签卡 & 下班提醒（10-23 更新）</strong><br>
-        签到栏新增「🎫 补签卡」：单日工时 ≥ 10 小时或在留言墙发帖可得 1 张（每月最多 4 张，当月有效），在补签日历里点缺勤的日子即可补上，连续天数不断。还会按你平时的下班时间提醒「该下班休息了」；忘记点下班的话，当晚 23:59 自动帮你补上（标 🤖）。已有的签到记录一条都不会改。<br><br>
         <strong>🌊 「心流」搬上总览页（10-21 更新）</strong><br>
         身份卡中间新增心流小组件，不用切页面就能专注：
         <ul style="margin:4px 0 8px 18px;padding:0">
