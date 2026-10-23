@@ -8,7 +8,7 @@
   const I18N = {
     zh: {
       btn: '🎫 补签卡', title: '🎫 补签日历', bal: '可用 {n} 张', earned: '本月获得 {n}/4', used: '本月补签 {n}/4',
-      how: '获得方式：单日工时 ≥ 10 小时（手动下班）或在留言墙发帖（每天 1 张），每月最多 4 张；卡仅当月有效。',
+      how: '获得方式：单日工时 ≥ 10 小时（须手动下班，自动补下班的时长不计）或在留言墙发帖（每天 1 张），每月最多 4 张；卡仅当月有效。',
       pick: '点击本月缺勤的日子补签', none: '没有可用的补签卡', cap: '本月补签次数已用完', done: '✅ 已补签 {d}',
       confirm: '用 1 张补签卡补签 {d}？', ok: '确认补签', cancel: '取消', close: '关闭',
       gotHours: '🎫 单日工时超过 10 小时，获得 1 张补签卡', gotWall: '🎫 留言互动，获得 1 张补签卡',
@@ -18,7 +18,7 @@
     },
     en: {
       btn: '🎫 Make-up', title: '🎫 Make-up calendar', bal: '{n} card(s)', earned: 'Earned {n}/4 this month', used: 'Used {n}/4 this month',
-      how: 'Earn a card by working ≥ 10 h in a day (manual check-out) or posting on the message wall (1/day). Up to 4 per month; cards expire at month end.',
+      how: 'Earn a card by working ≥ 10 h in a day (manual check-out only; auto check-out hours do not count) or posting on the message wall (1/day). Up to 4 per month; cards expire at month end.',
       pick: 'Click a missed day this month to fill it', none: 'No make-up cards left', cap: 'Monthly make-up limit reached', done: '✅ Filled {d}',
       confirm: 'Use 1 card to fill {d}?', ok: 'Fill', cancel: 'Cancel', close: 'Close',
       gotHours: '🎫 10+ hours today — earned a make-up card', gotWall: '🎫 Thanks for posting — earned a make-up card',

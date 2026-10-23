@@ -1210,10 +1210,10 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
         <strong>🎫 「补签卡」上线——漏签一天，连续天数也不断</strong><br>
         入口：「今日概览」顶部签到栏的「🎫 补签卡 ×N」按钮，点开是本月补签日历。
         <ul style="margin:4px 0 8px 18px;padding:0">
-          <li><strong>怎么得卡：</strong>某天工时 ≥ 10 小时（手动点下班），或在下方留言墙发帖互动（每天最多 1 张）；每月最多得 4 张，卡当月有效；</li>
+          <li><strong>怎么得卡：</strong>某天工时 ≥ 10 小时（须手动点下班；当天只要有 23:59 自动补的下班，整天时长都不计入得卡），或在下方留言墙发帖互动（每天最多 1 张）；每月最多得 4 张，卡当月有效；</li>
           <li><strong>怎么补签：</strong>日历里虚线框的就是本月缺勤、可补的日子，点一下确认即可，每月最多补 4 次；补签日会单独标出，接上连续天数，但不计工时；</li>
           <li><strong>🌙 下班提醒：</strong>按你最近的下班习惯，到点还没签出会提醒「该下班休息了」（在心流组件 ⚙ 里开过通知的，还会弹系统通知）；</li>
-          <li><strong>🤖 忘记下班自动补：</strong>当晚 23:59 还没点下班，会自动帮你签出（没开网页的话，下次打开时补上），并标上 🤖。</li>
+          <li><strong>🤖 忘记下班自动补：</strong>当晚 23:59 还没点下班，会自动帮你签出（没开网页的话，下次打开时补上），并标上 🤖；自动补出来的时长只记入统计，<strong>不能用来换补签卡</strong>。</li>
         </ul>
         <div style="background:rgba(16,185,129,0.1);border-radius:6px;padding:8px 10px;margin:6px 0">
           <strong>💬 回应留言墙：</strong><br>
@@ -18970,7 +18970,7 @@ function _petResetSleep(){
 </script>
 <script src="modules/daily-paper.js?v=1" defer></script>
 <script src="modules/focus-mini.js?v=2" defer></script>
-<script src="modules/checkin-plus.js?v=1" defer></script>
+<script src="modules/checkin-plus.js?v=2" defer></script>
 <script src="modules/rebuttal-pdf.js?v=1" defer></script>
 <script src="modules/rebuttal.js?v=2" defer></script>
 </body>
