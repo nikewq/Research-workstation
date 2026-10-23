@@ -903,7 +903,7 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-<link rel="stylesheet" href="modules/modules.css?v=6">
+<link rel="stylesheet" href="modules/modules.css?v=7">
 </head>
 <body>
 
@@ -1224,6 +1224,8 @@ body[data-mode=dark] #wr-line-nums{background:#1a1a1a;color:#555;border-color:va
           <li><strong>导出：</strong>一键生成 Response Letter 骨架（Markdown / LaTeX），逐条 Comment → Response → Changes，同一问题在每位审稿人处完整重复回答；多轮返修自动保留旧轮（只读）；</li>
           <li><strong>AI 辅助（默认关）：</strong>只解读审稿人意图、给回复结构建议，不替你写最终回复。投稿前请留意会议对生成式 AI 的披露要求。</li>
         </ul>
+        <strong>🎫 补签卡 & 下班提醒（10-23 更新）</strong><br>
+        签到栏新增「🎫 补签卡」：单日工时 ≥ 10 小时或在留言墙发帖可得 1 张（每月最多 4 张，当月有效），在补签日历里点缺勤的日子即可补上，连续天数不断。还会按你平时的下班时间提醒「该下班休息了」；忘记点下班的话，当晚 23:59 自动帮你补上（标 🤖）。已有的签到记录一条都不会改。<br><br>
         <strong>🌊 「心流」搬上总览页（10-21 更新）</strong><br>
         身份卡中间新增心流小组件，不用切页面就能专注：
         <ul style="margin:4px 0 8px 18px;padding:0">
@@ -3842,6 +3844,8 @@ const K = {
   milestones: 'phd_milestones',
   // ── Rebuttal 工作台（独立命名空间，按投稿 id 关联，不改 phd_subs）──
   rebuttals:  'phd_rebuttals',
+  // ── 补签卡账本（只追加；补签记录写入 phd_checkins 新条目）──
+  makeup:     'phd_makeup',
   // ── 墨墨小猫（隐藏状态+聊天记录）──
   pet:        'phd_pet_v1',
 };
@@ -18942,6 +18946,7 @@ function _petResetSleep(){
 </script>
 <script src="modules/daily-paper.js?v=1" defer></script>
 <script src="modules/focus-mini.js?v=2" defer></script>
+<script src="modules/checkin-plus.js?v=1" defer></script>
 <script src="modules/rebuttal-pdf.js?v=1" defer></script>
 <script src="modules/rebuttal.js?v=2" defer></script>
 </body>
