@@ -173,3 +173,24 @@ mark.dly-kw{background:color-mix(in srgb,var(--green) 20%,transparent);color:inh
 @media(prefers-reduced-motion:reduce){#identity-card.fm-live{animation:none}.fm-bar{transition:none}.fm-water i{animation:none;transition:none}}
 @media(max-width:1180px){#identity-card{flex-wrap:wrap}#ms-panel{flex-basis:100%;border-left:none;border-top:1px dashed var(--border);padding:10px 0 0}}
 @media(max-width:640px){#focus-mini{width:100%;flex-basis:100%;border-left:none;border-top:1px dashed var(--border);padding:10px 0 0}}
+
+/* ── 🎫 make-up check-in ── */
+#ckp-btn{white-space:nowrap}
+#ckp-btn.ckp-has{border-color:var(--primary);color:var(--primary)}
+.ckp-pill{font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px;background:var(--primary-soft,var(--surface2));color:var(--primary)}
+.ckp-meter{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin:-6px 0 12px}
+.ckp-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.ckp-cal b{font-size:11px;font-weight:500;color:var(--text2)}
+.ckp-d{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border-radius:8px;font-size:12px;font-variant-numeric:tabular-nums;border:1px solid transparent}
+.ckp-ci{background:color-mix(in srgb,var(--green) 22%,transparent);color:var(--text)}
+.ckp-mk{background:color-mix(in srgb,var(--primary) 18%,transparent);border:1px dashed var(--primary);color:var(--primary)}
+.ckp-miss{border:1px dashed var(--border-strong,var(--border));color:var(--text2)}
+.ckp-fut{color:var(--text2);opacity:.45}
+.ckp-today{box-shadow:inset 0 0 0 2px var(--primary)}
+.ckp-go{cursor:pointer;transition:.15s}.ckp-go:hover,.ckp-go:focus-visible{border-color:var(--primary);color:var(--primary);outline:none}
+.ckp-legend{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text2);margin-top:10px}
+.ckp-legend .ckp-d{width:14px;height:14px;aspect-ratio:auto;border-radius:4px;margin-left:6px}
+.ckp-ask{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding:8px 10px;border-radius:8px;background:var(--surface2);font-size:13px}
+.ckp-ask[hidden]{display:none}
+.ckp-how{font-size:11px;color:var(--text2);line-height:1.6;margin-top:10px}
+@media(max-width:640px){.checkin-bar:has(#ckp-btn){flex-wrap:wrap}}
